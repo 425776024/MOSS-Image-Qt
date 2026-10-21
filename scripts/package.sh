@@ -36,7 +36,7 @@ python3 scripts/public_release.py app "$build_dir/MossStudio.app"
 cp -R "$build_dir/MossStudio.app" "$app"
 mkdir -p "$app/Contents/Helpers" "$app/Contents/Resources/licenses"
 cp .local/build-engine/bin/sd-cli "$build_dir/workers/moss-ditto" \
-    "$build_dir/workers/moss-voice" .local/build-audio/bin/sa3-generate "$app/Contents/Helpers/"
+    "$build_dir/workers/moss-voice" "${MOSS_SFX_PATH:-.local/build-audio/bin/sa3-generate}" "$app/Contents/Helpers/"
 mkdir -p "$app/Contents/Resources/assets"
 cp -R assets/voices "$app/Contents/Resources/assets/"
 cp -R vendor/videocut-voice/licenses "$app/Contents/Resources/licenses/audio"
@@ -45,6 +45,10 @@ cp .local/deps/stable-diffusion.cpp/LICENSE "$app/Contents/Resources/licenses/st
 cp vendor/xinshen-ditto/LICENSE.upstream "$app/Contents/Resources/licenses/Ditto.txt"
 cp vendor/xinshen-ditto/LICENSE.mediapipe "$app/Contents/Resources/licenses/MediaPipe.txt"
 cp THIRD_PARTY.md "$app/Contents/Resources/licenses/"
+if [ -n "${MOSS_CI_NATIVE_ROOT:-}" ]; then
+    cp -R "$MOSS_CI_NATIVE_ROOT/licenses" "$app/Contents/Resources/licenses/ci-dependencies"
+    cp config/macos-dependencies.json "$app/Contents/Resources/licenses/ci-dependencies/"
+fi
 "$qt_root/bin/macdeployqt" "$app" -qmldir="$PWD/qml" -no-strip
 # The app does not use SQL. Qt's optional SQL plugins can reference databases
 # installed on the Qt builder's machine, so exclude that unused plugin group.

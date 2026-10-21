@@ -1,0 +1,38 @@
+{
+  "onnxruntime": {
+    "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-osx-arm64-1.23.2.tgz",
+    "sha256": "b4d513ab2b26f088c66891dbbc1408166708773d7cc4163de7bdca0e9bbb7856"
+  },
+  "sherpa": {
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-v1.13.2-osx-universal2-static.tar.bz2",
+    "sha256": "11c56c6577812e30ad3422a826a07f2a4a04b20d926af45b17e7dd9af99dd035"
+  },
+  "kaldifst": {
+    "url": "https://github.com/k2-fsa/kaldifst/archive/refs/tags/v1.8.0.tar.gz",
+    "sha256": "3f247b7e5a2409071202f5e2bc6200060f66728c0a3443c03923ad2723e040b3"
+  },
+  "openfst": {
+    "url": "https://github.com/csukuangfj/openfst/archive/refs/tags/v1.8.5-2026-04-11.tar.gz",
+    "sha256": "57fbc4b950ae81b1a0e1e298af15652da968a6723a592b7874e9b4027a80a5b4"
+  },
+  "mediapipe-wheel": {
+    "url": "https://files.pythonhosted.org/packages/aa/c2/439e948d2a9a542498aee5d8fa3fb91ac6f4478be5d502f0c78ca3fb2333/mediapipe-0.10.35-py3-none-macosx_11_0_arm64.whl",
+    "sha256": "3b31376f34ca3665e34b834565996464cd66c9c91316e914fa7f149c891ce7ac"
+  },
+  "mediapipe-source": {
+    "url": "https://codeload.github.com/google-ai-edge/mediapipe/tar.gz/f8ef212d5c962c0e853db7e59d217056b187084b",
+    "sha256": "fc9ada7df78b27422c29e68990e111e1f44aa21bf171728ac92934f422521a57"
+  },
+  "opencv": {
+    "url": "https://codeload.github.com/opencv/opencv/tar.gz/49486f61fb25722cbcf586b7f4320921d46fb38e",
+    "sha256": "8f00b42869ab2836be36090f6631ae4c38ba59171e22a69a8e0f92f8ef1771d4"
+  },
+  "ffmpeg": {
+    "url": "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz",
+    "sha256": "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c"
+  },
+  "sa3": {
+    "repository": "https://github.com/betweentwomidnights/sa3.cpp.git",
+    "revision": "10d0373ec4f3e195cfee9bc73a39feefa933ecab"
+  }
+}

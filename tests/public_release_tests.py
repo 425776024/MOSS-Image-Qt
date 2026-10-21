@@ -11,6 +11,14 @@ release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
 
 class ReleaseTest(unittest.TestCase):
+    def test_signing_secrets_cannot_enter_source_export(self):
+        for suffix in ('.p12', '.p8', '.key', '.pem', '.keychain-db'):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp); (root / 'config').mkdir()
+                (root / 'config' / ('signing' + suffix)).write_bytes(b'private-key')
+                with patch.object(release, 'ROOT', root), patch.object(release, 'SOURCE_DOCS', ()), patch.object(release, 'SOURCE_DIRS', ('config',)):
+                    with self.assertRaises(ValueError): release.source_files()
+
     def test_server_source_is_rejected_even_when_added_back(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'scripts').mkdir()
