@@ -19,7 +19,33 @@
 它不会自动进入 Releases。流程运行 CTest、公开源码边界审计、App 依赖审计、DMG 校验，
 以及部署后离屏启动测试。CI 不下载大模型，也不宣称已验收模型推理、GPU 性能或真实用户首次安装。
 
-## 一次性配置 Apple 凭据
+## 先在本机公证（无需导出签名私钥）
+
+本机已经有正式的 Developer ID Application 证书及私钥时，可直接使用钥匙串签名。
+从成功的主分支 Actions 下载测试包，核对 `SHA256SUMS.txt`，再用 `ditto -x -k` 解压 App ZIP。
+
+首次公证需在 [Apple 账号](https://account.apple.com/)的“登录与安全 → App 专用密码”中
+生成专用密码，然后在自己的终端运行下面的命令。替换账号和 Team ID，
+专用密码由 Apple 工具隐藏输入，不要写入命令参数、脚本或聊天：
+
+```sh
+xcrun notarytool store-credentials MossStudio-release \
+  --apple-id '你的开发者账号邮箱' --team-id '你的 Team ID'
+```
+
+凭据验证成功后保存在本机钥匙串。用 `security find-identity -v -p codesigning`
+查找正式 Apple 签发的 Developer ID Application 的 40 位 SHA-1 指纹，然后运行：
+
+```sh
+python3 scripts/macos_distribution.py sign-notarize-local 'dist/Moss Studio.app' \
+  --identity '你的证书指纹' --keychain-profile MossStudio-release --output dist/notarized
+```
+
+本机模式与 CI 使用同样的签名、公证、附票和 Gatekeeper 检查；不导出 `.p12`，也不上传私钥到 GitHub。
+它适合先完成一次发布。若要让 GitHub 后续全自动公证，再配置下一节的 CI 凭据。
+证书名称相同的自签名证书不能代替 Apple 正式签发的 Developer ID 证书。
+
+## 一次性配置 GitHub Apple 凭据
 
 本机 Xcode 已登录，不代表 GitHub 的临时 Mac 拥有签名权限。需要手动、安全地配置一次：
 

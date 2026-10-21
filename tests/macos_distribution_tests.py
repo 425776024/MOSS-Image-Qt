@@ -25,6 +25,29 @@ class DistributionSecurityTest(unittest.TestCase):
             distribution.run('/usr/bin/true')
             self.assertTrue(set(distribution.SECRET_NAMES).isdisjoint(run.call_args.kwargs['env']))
 
+    def test_local_authentication_failure_does_not_resign_app(self):
+        identity = 'A' * 40
+
+        def command(*args, **kwargs):
+            if args[0] == '/usr/bin/security':
+                return subprocess.CompletedProcess(args, 0, f'{identity} "Developer ID Application: Test (TEAM)"')
+            raise subprocess.CalledProcessError(1, args)
+
+        with patch.object(distribution, 'run', side_effect=command), patch.object(distribution, 'sign_code') as sign:
+            with self.assertRaises(subprocess.CalledProcessError):
+                distribution.sign_notarize_local(Path('/app'), Path('/out'), identity, 'missing-profile')
+            sign.assert_not_called()
+
+    def test_local_signing_uses_existing_keychain_without_export(self):
+        identity = 'A' * 40
+        result = subprocess.CompletedProcess([], 0, f'{identity} "Developer ID Application: Test (TEAM)"')
+        with patch.object(distribution, 'run', return_value=result) as run, patch.object(distribution, 'sign_code') as sign, patch.object(distribution, 'artifacts') as artifacts:
+            distribution.sign_notarize_local(Path('/app'), Path('/out'), identity, 'local-profile')
+            sign.assert_called_once_with(Path('/app'), identity)
+            self.assertEqual([call.args[1] for call in run.call_args_list], ['find-identity', 'notarytool'])
+            self.assertEqual(artifacts.call_args.args[5], ['--keychain-profile', 'local-profile'])
+            self.assertFalse(artifacts.call_args.args[6].exists())
+
     def test_failed_import_deletes_keychain_and_private_files(self):
         env = {name: 'test-only' for name in distribution.SECRET_NAMES}
         env['APPLE_CERTIFICATE_P12_BASE64'] = base64.b64encode(b'fake-p12').decode()

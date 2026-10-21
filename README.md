@@ -1,5 +1,10 @@
 # Moss Studio
 
+[**下载 macOS 安装包（DMG）**](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.dmg) · [App ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.app.zip) · [版本说明与校验文件](https://github.com/425776024/MOSS-Image-Qt/releases/tag/macos-0.1.0-preview.1)
+
+当前为 0.1.0 预览版，适用于 **Apple Silicon（M1 及后续芯片）和 macOS 15+**。
+App 与 DMG 已完成 Developer ID 签名、Apple 公证并附加公证票据。打开 DMG 后将 Moss Studio 拖入 Applications；无需安装 Python，模型按需下载。
+
 ![图像创作](assets/screenshots/studio.png)
 
 面向 Apple Silicon Mac 的本地 AI 创作 App，用对话完成图像、声音与视频创作。

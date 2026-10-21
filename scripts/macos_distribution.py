@@ -113,8 +113,8 @@ def artifacts(app, output, signed=False, identity=None, keychain=None, credentia
     zip_app(app, archive)
     create_dmg(app, dmg)
     if signed:
-        run('/usr/bin/codesign', '--force', '--sign', identity, '--keychain', keychain,
-            '--timestamp', dmg)
+        keychain_args = ['--keychain', keychain] if keychain else []
+        run('/usr/bin/codesign', '--force', '--sign', identity, *keychain_args, '--timestamp', dmg)
         submissions.append(notarize(dmg, credentials, work))
         run('/usr/bin/xcrun', 'stapler', 'staple', dmg)
         run('/usr/bin/xcrun', 'stapler', 'validate', dmg)
@@ -127,6 +127,37 @@ def artifacts(app, output, signed=False, identity=None, keychain=None, credentia
         'modelWeightsIncluded': False, 'notarySubmissionIds': submissions, 'sha256': files,
     }, indent=2) + '\n')
     print(f'Created {suffix} App ZIP and DMG in {output}')
+
+
+def sign_code(app, identity, keychain=None):
+    keychain_args = ['--keychain', keychain] if keychain else []
+    for item in code_items(app):
+        args = ['/usr/bin/codesign', '--force', '--sign', identity, *keychain_args,
+                '--timestamp', '--options', 'runtime']
+        if item == app:
+            args += ['--entitlements', ROOT / 'config/macos-app.entitlements']
+        run(*args, item)
+    run('/usr/bin/codesign', '--verify', '--deep', '--strict', app)
+
+
+def sign_notarize_local(app, output, identity, profile):
+    # Use the existing private key in the login keychain without exporting it.
+    if not identity or not re.fullmatch(r'[A-Fa-f0-9]{40}', identity):
+        raise ValueError('Provide the SHA-1 fingerprint of a Developer ID Application identity')
+    if not profile:
+        raise ValueError('Provide an existing notarytool keychain profile')
+    identities = run('/usr/bin/security', 'find-identity', '-v', '-p', 'codesigning',
+                     stdout=subprocess.PIPE, text=True).stdout
+    pattern = rf'\b{re.escape(identity)}\s+"Developer ID Application:[^"\n]+"'
+    if not re.search(pattern, identities, re.IGNORECASE):
+        raise ValueError('The selected Developer ID Application private key is unavailable')
+    credentials = ['--keychain-profile', profile]
+    # Fail before changing the bundle if authentication has not been configured.
+    run('/usr/bin/xcrun', 'notarytool', 'history', *credentials,
+        '--output-format', 'json', stdout=subprocess.DEVNULL)
+    with tempfile.TemporaryDirectory(prefix='moss-local-notary-') as tmp:
+        sign_code(app, identity)
+        artifacts(app, output, True, identity, None, credentials, Path(tmp))
 
 
 def sign_notarize(app, output):
@@ -168,13 +199,7 @@ def sign_notarize(app, output):
             if len(matches) != 1:
                 raise ValueError('P12 must contain exactly one valid Developer ID Application identity')
             identity = matches[0]
-            for item in code_items(app):
-                args = ['/usr/bin/codesign', '--force', '--sign', identity, '--keychain', keychain,
-                        '--timestamp', '--options', 'runtime']
-                if item == app:
-                    args += ['--entitlements', ROOT / 'config/macos-app.entitlements']
-                run(*args, item)
-            run('/usr/bin/codesign', '--verify', '--deep', '--strict', app)
+            sign_code(app, identity, keychain)
             artifacts(app, output, True, identity, keychain, credentials, work)
         finally:
             if keychain.exists():
@@ -183,15 +208,19 @@ def sign_notarize(app, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('package', 'sign-notarize'))
+    parser.add_argument('command', choices=('package', 'sign-notarize', 'sign-notarize-local'))
     parser.add_argument('app', type=Path)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--identity', help='Local Developer ID Application SHA-1 fingerprint')
+    parser.add_argument('--keychain-profile', help='Existing local notarytool credential profile')
     args = parser.parse_args()
     app = args.app.resolve()
     if not (app / 'Contents/MacOS/MossStudio').is_file():
         raise ValueError('Expected a deployed Moss Studio.app')
     if args.command == 'sign-notarize':
         sign_notarize(app, args.output.resolve())
+    elif args.command == 'sign-notarize-local':
+        sign_notarize_local(app, args.output.resolve(), args.identity, args.keychain_profile)
     else:
         run('/usr/bin/codesign', '--verify', '--deep', '--strict', app)
         artifacts(app, args.output.resolve())
