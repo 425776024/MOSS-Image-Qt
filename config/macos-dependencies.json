@@ -1,4 +1,12 @@
 {
+  "developer-id-ca": {
+    "url": "https://www.apple.com/certificateauthority/DeveloperIDCA.cer",
+    "sha256": "7afc9d01a62f03a2de9637936d4afe68090d2de18d03f29c88cfb0b1ba63587f"
+  },
+  "developer-id-g2-ca": {
+    "url": "https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer",
+    "sha256": "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a"
+  },
   "onnxruntime": {
     "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-osx-arm64-1.23.2.tgz",
     "sha256": "b4d513ab2b26f088c66891dbbc1408166708773d7cc4163de7bdca0e9bbb7856"

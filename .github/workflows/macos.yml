@@ -51,6 +51,7 @@ jobs:
       - name: Build native workers, run CTest, deploy and package
         run: ./scripts/build_ci_macos.sh
       - name: Smoke test the deployed app without development paths
+        timeout-minutes: 3
         env:
           MOSS_DISABLE_DEV_PATHS: '1'
         run: |
@@ -126,6 +127,7 @@ jobs:
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
         run: python3 scripts/macos_distribution.py sign-notarize 'dist/Moss Studio.app' --output dist/signed
       - name: Smoke test after credentials have been removed
+        timeout-minutes: 3
         env:
           MOSS_DISABLE_DEV_PATHS: '1'
         run: |

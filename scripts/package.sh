@@ -50,6 +50,9 @@ if [ -n "${MOSS_CI_NATIVE_ROOT:-}" ]; then
     cp config/macos-dependencies.json "$app/Contents/Resources/licenses/ci-dependencies/"
 fi
 "$qt_root/bin/macdeployqt" "$app" -qmldir="$PWD/qml" -no-strip
+# macdeployqt normally deploys only Cocoa. Release-boundary and CI smoke checks
+# deliberately run offscreen, without opening windows or reading user workspaces.
+cp "$qt_root/plugins/platforms/libqoffscreen.dylib" "$app/Contents/PlugIns/platforms/"
 # The app does not use SQL. Qt's optional SQL plugins can reference databases
 # installed on the Qt builder's machine, so exclude that unused plugin group.
 if [ -d "$app/Contents/PlugIns/sqldrivers" ]; then
@@ -61,7 +64,7 @@ python3 scripts/bundle_native.py "$app"
 if [ "$with_models" = 1 ]; then
     python3 scripts/public_release.py models "$model_root" "$app/Contents/Resources/models" --quant "$image_quant"
 fi
-python3 scripts/public_release.py app "$app"
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --strict "$app"
+python3 scripts/public_release.py app "$app"
 echo "$app"

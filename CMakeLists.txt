@@ -91,4 +91,5 @@ qt_add_resources(model_manager_tests model_resources PREFIX "/models" FILES conf
 add_test(NAME model_manager COMMAND model_manager_tests)
 if(Python3_Interpreter_FOUND)
     add_test(NAME public_release COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/public_release_tests.py")
+    add_test(NAME macos_distribution COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/macos_distribution_tests.py")
 endif()

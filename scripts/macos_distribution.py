@@ -23,7 +23,8 @@ MAGIC = {b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xca\xfe\xba\xbe', b'\xbe\x
 def run(*args, **kwargs):
     # Never echo commands: security/notarytool arguments can contain credentials.
     env = {k: v for k, v in os.environ.items() if k not in SECRET_NAMES}
-    return subprocess.run([str(a) for a in args], check=True, env=env, **kwargs)
+    kwargs.setdefault('check', True)
+    return subprocess.run([str(a) for a in args], env=env, **kwargs)
 
 
 def sha256(path):
@@ -70,10 +71,14 @@ def create_dmg(app, output):
 def notarize(path, credentials, work):
     result = run('/usr/bin/xcrun', 'notarytool', 'submit', path, *credentials,
                  '--wait', '--timeout', '30m', '--output-format', 'json',
-                 stdout=subprocess.PIPE, text=True)
-    submission = json.loads(result.stdout)
-    if submission.get('status') != 'Accepted':
-        if submission.get('id'):
+                 stdout=subprocess.PIPE, text=True, check=False)
+    try:
+        submission = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        raise ValueError(f'Notary service returned no JSON result (exit {result.returncode})') from None
+    if result.returncode or submission.get('status') != 'Accepted':
+        print(f'Notary submission: {submission.get("id", "unavailable")}; status: {submission.get("status", "unknown")}')
+        if submission.get('id') and submission.get('status') in ('Invalid', 'Rejected'):
             log = work / 'notary-log.json'
             run('/usr/bin/xcrun', 'notarytool', 'log', submission['id'], *credentials, log)
             print(log.read_text())
@@ -139,6 +144,16 @@ def sign_notarize(app, output):
             run('/usr/bin/security', 'create-keychain', '-p', password, keychain)
             run('/usr/bin/security', 'set-keychain-settings', '-lut', '7200', keychain)
             run('/usr/bin/security', 'unlock-keychain', '-p', password, keychain)
+            # A fresh runner may lack the intermediate for the exported identity.
+            # Import public Apple intermediates only; never alter trust settings.
+            lock = json.loads((ROOT / 'config/macos-dependencies.json').read_text())
+            for name in ('developer-id-ca', 'developer-id-g2-ca'):
+                certificate = work / f'{name}.cer'
+                run('/usr/bin/curl', '--fail', '--silent', '--show-error', '--location', '--retry', '3',
+                    '--proto', '=https', '--proto-redir', '=https', lock[name]['url'], '-o', certificate)
+                if sha256(certificate) != lock[name]['sha256']:
+                    raise ValueError('Apple intermediate certificate checksum mismatch')
+                run('/usr/bin/security', 'import', certificate, '-k', keychain, stdout=subprocess.DEVNULL)
             run('/usr/bin/security', 'import', p12, '-k', keychain,
                 '-P', os.environ['APPLE_CERTIFICATE_PASSWORD'], '-T', '/usr/bin/codesign',
                 stdout=subprocess.DEVNULL)
