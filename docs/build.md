@@ -1,5 +1,8 @@
 # 构建与运行
 
+GitHub 托管 Mac 的自动构建、App/DMG 下载、Developer ID 签名与 Apple 公证配置，见
+[macOS 自动发布](macos-release.md)。完整 CI 依赖从公开上游下载，不使用开发者的本地 SDK 路径。
+
 
 目标平台为 Apple Silicon macOS。需要 Xcode/Metal、CMake、Ninja、Qt 6.10.2，
 以及 ONNX Runtime、OpenCV、OpenSSL、FFmpeg、nlohmann/json、MediaPipe C API，

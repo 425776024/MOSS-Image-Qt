@@ -16,6 +16,14 @@ __pycache__/
 /.env
 /.env.*
 *.log
+*.p12
+*.p8
+*.pem
+*.key
+*.keychain
+*.keychain-db
+*.mobileprovision
+*.provisionprofile
 *.part
 *.onnx
 *.pth

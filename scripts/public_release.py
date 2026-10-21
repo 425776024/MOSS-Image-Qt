@@ -11,12 +11,14 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_SUFFIXES = {'.npz', '.engine', '.onnx', '.pth', '.pt', '.ckpt', '.gguf', '.safetensors', '.mlmodel', '.task', '.fst', '.bin', '.dylib', '.a', '.so', '.mp4', '.mov'}
-SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets')
-SOURCE_DOCS = ('README.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', 'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md')
+MODEL_SUFFIXES |= {'.p12', '.p8', '.pem', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile'}
+SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets', '.github')
+SOURCE_DOCS = ('README.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', 'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md', 'docs/macos-release.md')
 
 PUBLIC_SCRIPTS = {
     "audit_bundle.py", "build.sh", "build_media_dependencies.sh", "bundle_native.py",
     "package.sh", "prepare_audio.sh", "public_release.py", "run-local.sh", "run_background_test.sh",
+    "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",
 }
 
 PRIVATE_SERVER_FILES = {

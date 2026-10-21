@@ -36,4 +36,4 @@
 
 基于 Qt / QML / C++，运行无需 Python。模型按需下载，Ditto 使用公开原始权重。
 
-[构建与运行](docs/build.md) · [模型管理](docs/model-management.md) · [Ditto 模型说明](docs/ditto-default-model.md) · [第三方来源](THIRD_PARTY.md)
+[构建与运行](docs/build.md) · [macOS 自动打包与公证](docs/macos-release.md) · [模型管理](docs/model-management.md) · [Ditto 模型说明](docs/ditto-default-model.md) · [第三方来源](THIRD_PARTY.md)

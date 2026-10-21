@@ -36,7 +36,7 @@ python3 scripts/public_release.py app "$build_dir/MossStudio.app"
 cp -R "$build_dir/MossStudio.app" "$app"
 mkdir -p "$app/Contents/Helpers" "$app/Contents/Resources/licenses"
 cp .local/build-engine/bin/sd-cli "$build_dir/workers/moss-ditto" \
-    "$build_dir/workers/moss-voice" .local/build-audio/bin/sa3-generate "$app/Contents/Helpers/"
+    "$build_dir/workers/moss-voice" "${MOSS_SFX_PATH:-.local/build-audio/bin/sa3-generate}" "$app/Contents/Helpers/"
 mkdir -p "$app/Contents/Resources/assets"
 cp -R assets/voices "$app/Contents/Resources/assets/"
 cp -R vendor/videocut-voice/licenses "$app/Contents/Resources/licenses/audio"
@@ -45,7 +45,14 @@ cp .local/deps/stable-diffusion.cpp/LICENSE "$app/Contents/Resources/licenses/st
 cp vendor/xinshen-ditto/LICENSE.upstream "$app/Contents/Resources/licenses/Ditto.txt"
 cp vendor/xinshen-ditto/LICENSE.mediapipe "$app/Contents/Resources/licenses/MediaPipe.txt"
 cp THIRD_PARTY.md "$app/Contents/Resources/licenses/"
+if [ -n "${MOSS_CI_NATIVE_ROOT:-}" ]; then
+    cp -R "$MOSS_CI_NATIVE_ROOT/licenses" "$app/Contents/Resources/licenses/ci-dependencies"
+    cp config/macos-dependencies.json "$app/Contents/Resources/licenses/ci-dependencies/"
+fi
 "$qt_root/bin/macdeployqt" "$app" -qmldir="$PWD/qml" -no-strip
+# macdeployqt normally deploys only Cocoa. Release-boundary and CI smoke checks
+# deliberately run offscreen, without opening windows or reading user workspaces.
+cp "$qt_root/plugins/platforms/libqoffscreen.dylib" "$app/Contents/PlugIns/platforms/"
 # The app does not use SQL. Qt's optional SQL plugins can reference databases
 # installed on the Qt builder's machine, so exclude that unused plugin group.
 if [ -d "$app/Contents/PlugIns/sqldrivers" ]; then
@@ -57,7 +64,7 @@ python3 scripts/bundle_native.py "$app"
 if [ "$with_models" = 1 ]; then
     python3 scripts/public_release.py models "$model_root" "$app/Contents/Resources/models" --quant "$image_quant"
 fi
-python3 scripts/public_release.py app "$app"
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --strict "$app"
+python3 scripts/public_release.py app "$app"
 echo "$app"
