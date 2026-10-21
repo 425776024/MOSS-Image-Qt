@@ -61,6 +61,9 @@ def create_dmg(app, output):
     with tempfile.TemporaryDirectory(prefix='moss-dmg-') as tmp:
         stage = Path(tmp) / 'volume'
         stage.mkdir()
+        # Signing uses umask 077 for private keys. The mounted volume must still
+        # be readable by other users; hdiutil preserves the source root's mode.
+        stage.chmod(0o755)
         run('/usr/bin/ditto', app, stage / app.name)
         (stage / 'Applications').symlink_to('/Applications')
         run('/usr/bin/hdiutil', 'create', '-volname', 'Moss Studio', '-srcfolder', stage,
