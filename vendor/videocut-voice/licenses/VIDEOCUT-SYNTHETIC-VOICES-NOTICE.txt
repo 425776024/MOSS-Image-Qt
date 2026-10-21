@@ -1,0 +1,51 @@
+VideoCut original synthetic Chinese and English reference voices — 2026-10-16
+License reference: LicenseRef-VideoCut-Synthetic-Reference
+
+Covered resources:
+  videocut-original-mandarin-01.wav — Gentle Narration
+  videocut-original-mandarin-02.wav — Steady Narration
+  videocut-original-{zh,en}-{child,teen,young,middle,senior}-{female,male}.wav
+    — 20 additional voices, one for each language / age group / gender combination.
+  videocut-original-dongbei-{female,male}-{a,b}.wav
+  videocut-original-sichuan-male-{a,b}.wav
+    — 6 user-selected original regional-accent references, second-round A/B variants.
+  Their authored reference transcripts in the voice catalog.
+
+These 28 voices were generated locally from VideoCut-authored Chinese/English
+text and generic voice descriptions. Age groups, regional accent and gender are synthetic design
+targets, not claims about a real speaker. No real person's reference recording was
+provided and no named person, actor or existing character was requested.
+The presets are AI-generated voices, not recordings of consenting donors.
+
+The references and transcripts are supplied for local voice synthesis in
+VideoCut, including commercial and non-commercial generated media. VideoCut
+may distribute them with the App and use them as Hojo reference inputs.
+The project does not claim exclusive ownership of an abstract voice identity,
+endorsement by Qwen or a real speaker, or rights in third-party inputs.
+Normal App terms and applicable law continue to apply.
+
+Authoring model: Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign
+Model revision: 5ecdb67327fd37bb2e042aab12ff7391903235d3
+Code: https://github.com/QwenLM/Qwen3-TTS
+Code revision: 022e286b98fbec7e1e916cb940cdf532cd9f488e
+Model card:
+https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign/blob/5ecdb67327fd37bb2e042aab12ff7391903235d3/README.md
+
+Qwen's model, tokenizer and code remain attributed third-party Apache-2.0
+works. They are authoring tools and are not bundled in this App. Their model
+license does not automatically license the resulting WAVs as Apache-2.0.
+The applicable published licenses add no restriction on commercial output,
+redistribution of output, or use as another model's inference reference.
+This is the project's adoption decision, not a Qwen-specific endorsement.
+
+The catalog's legacy consent_confirmed field records project authorization
+for these synthetic references. human_speaker_consent is not_applicable;
+there is no donor consent document and the donor evidence URL is empty.
+Existing human-donor presets retain their separate donation evidence.
+
+The App contains mono 16 kHz PCM16 derivatives and the authored input text.
+Original-rate WAVs, recipes and generation logs accompany the separate source
+materials. The user listened to and approved the six second-round accent clips.
+No automated pronunciation/text-alignment checks or Hojo synthesis were run.
+The regional label is a reference-voice design, not a guarantee of dialect
+pronunciation or accent retention when Hojo synthesizes new text.

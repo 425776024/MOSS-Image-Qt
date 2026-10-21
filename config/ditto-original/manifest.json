@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "engine": "ditto-native-v1",
+  "pipelineId": "b463568cb5adb284e023733730633abc7075678ebf82209f0c382231ad7a5323",
+  "upstreamCommit": "c3e47eee2e626500017a0556b470d6d4182f85e8",
+  "audioModel": {
+    "name": "ditto-original",
+    "trainingSteps": 0
+  },
+  "files": {
+    "hubert.onnx": {
+      "bytes": 1460740880,
+      "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697"
+    },
+    "detector.onnx": {
+      "bytes": 16923827,
+      "sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91"
+    },
+    "landmark106.onnx": {
+      "bytes": 5030888,
+      "sha256": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf"
+    },
+    "landmark203.onnx": {
+      "bytes": 114666491,
+      "sha256": "31d22a5041326c31f19b78886939a634a5aedcaa5ab8b9b951a1167595d147db"
+    },
+    "denoise.onnx": {
+      "bytes": 192453963,
+      "sha256": "ea6664518746a1c2e13db496ffe97216da715742be83e069a02cc86873c6dcfc"
+    },
+    "appearance.onnx": {
+      "bytes": 3355896,
+      "sha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6"
+    },
+    "motion.onnx": {
+      "bytes": 112610626,
+      "sha256": "91bd0c05e9fa2cb4918d32cfe547db1d3f3fbbf79713ffbe207670f422e069a1"
+    },
+    "stitch.onnx": {
+      "bytes": 185542,
+      "sha256": "d3629a08268f1125d60c194e6dbd495126424e8de1112f2fc368170660dde043"
+    },
+    "decoder.onnx": {
+      "bytes": 221530139,
+      "sha256": "94fca15fe5b67885edebfacbcadcac29e79238ac0d9ffbf0d688391cefb890be"
+    },
+    "warp.onnx": {
+      "bytes": 199684279,
+      "sha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099"
+    },
+    "config.json": {
+      "bytes": 227816,
+      "sha256": "5b090413ffca2b91736cff0f91c14bbcbfef124067c2b52f3565aa280ea4f161"
+    },
+    "schedule.json": {
+      "bytes": 3267,
+      "sha256": "21dd3bcca09b695391c9a8a05e48cd9d2355ca612ec52c0c3d8f5e03d7722e03"
+    }
+  }
+}

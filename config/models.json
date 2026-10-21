@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "image-q4",
+      "title": "MOSS-Image · Q4",
+      "description": "轻量扩散模型，与 Q8 共用图像组件"
+    },
+    {
+      "id": "image-q8",
+      "title": "MOSS-Image · Q8",
+      "description": "较高精度扩散模型，与 Q4 共用图像组件"
+    },
+    {
+      "id": "image-shared",
+      "title": "MOSS 共用组件",
+      "description": "Qwen 文本编码器、VAE、分词器；Q4 / Q8 都需要"
+    },
+    {
+      "id": "ditto",
+      "title": "Ditto · 公开原版",
+      "description": "原始音频动作权重及 ONNX 渲染组件"
+    },
+    {
+      "id": "voice",
+      "title": "Hojo 语音与音色克隆",
+      "description": "原生 ONNX 模型、分词器和中文文本规则"
+    },
+    {
+      "id": "sfx",
+      "title": "Stable Audio · 音效",
+      "description": "Small SFX、T5Gemma 和音频解码组件"
+    }
+  ],
+  "files": [
+    {
+      "group": "image-q4",
+      "path": "MOSS-Image-SFT-Q4_K.gguf",
+      "repo": "leejet/MOSS-Image-SFT-GGUF",
+      "revision": "238daf423f0de65316207453591f275407aac9a7",
+      "file": "MOSS-Image-SFT-Q4_K.gguf",
+      "sha256": "902dbb0364d8b313cd91792b3cfe7c87b987386f0c5414986f3f1027b82b2225",
+      "bytes": 3327400800
+    },
+    {
+      "group": "image-q8",
+      "path": "MOSS-Image-SFT-Q8_0.gguf",
+      "repo": "leejet/MOSS-Image-SFT-GGUF",
+      "revision": "238daf423f0de65316207453591f275407aac9a7",
+      "file": "MOSS-Image-SFT-Q8_0.gguf",
+      "sha256": "740040af6492ae5f951d5b7a8cb56927c1a02e64696f4bd4bd124bb798ce5635",
+      "bytes": 5705571168
+    },
+    {
+      "group": "image-shared",
+      "path": "Qwen3.5-9B-Q4_K_M.gguf",
+      "repo": "unsloth/Qwen3.5-9B-GGUF",
+      "revision": "3885219b6810b007914f3a7950a8d1b469d598a5",
+      "file": "Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+      "bytes": 5680522464
+    },
+    {
+      "group": "image-shared",
+      "path": "flux2-vae_small.safetensors",
+      "repo": "Comfy-Org/MOSS-Image",
+      "revision": "ee64003102c8470ee32501cf883419235db81884",
+      "file": "vae/flux2-vae_small.safetensors",
+      "sha256": "d8d52ba036475f5fb07c8b435e176d3d97ebfa82f0d1a1c317f9cc1e25bd013b",
+      "bytes": 249521340
+    },
+    {
+      "group": "image-shared",
+      "path": "tokenizer.json",
+      "repo": "OpenMOSS-Team/MOSS-Image-Base",
+      "revision": "85975793d8b3d432f1b6e27f352abaa4c2a4c0d3",
+      "file": "tokenizer/tokenizer.json",
+      "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "bytes": 19989325
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/hubert.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_pytorch/aux_models/hubert_streaming_fix_kv.onnx",
+      "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697",
+      "bytes": 1460740880
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/detector.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_pytorch/aux_models/det_10g.onnx",
+      "sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
+      "bytes": 16923827
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/landmark106.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_pytorch/aux_models/2d106det.onnx",
+      "sha256": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
+      "bytes": 5030888
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/landmark203.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_pytorch/aux_models/landmark203.onnx",
+      "sha256": "31d22a5041326c31f19b78886939a634a5aedcaa5ab8b9b951a1167595d147db",
+      "bytes": 114666491
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/denoise.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/lmdm_v0.4_hubert.onnx",
+      "sha256": "ea6664518746a1c2e13db496ffe97216da715742be83e069a02cc86873c6dcfc",
+      "bytes": 192453963
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/appearance.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/appearance_extractor.onnx",
+      "sha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6",
+      "bytes": 3355896
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/motion.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/motion_extractor.onnx",
+      "sha256": "91bd0c05e9fa2cb4918d32cfe547db1d3f3fbbf79713ffbe207670f422e069a1",
+      "bytes": 112610626
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/stitch.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/stitch_network.onnx",
+      "sha256": "d3629a08268f1125d60c194e6dbd495126424e8de1112f2fc368170660dde043",
+      "bytes": 185542
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/decoder.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/decoder.onnx",
+      "sha256": "94fca15fe5b67885edebfacbcadcac29e79238ac0d9ffbf0d688391cefb890be",
+      "bytes": 221530139
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/warp.onnx",
+      "repo": "voxta/ditto-talkinghead-onnx",
+      "revision": "930ae658ab5247e6209b21c4265cecf2a5b45610",
+      "file": "warp_network_opset20.onnx",
+      "sha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099",
+      "bytes": 199684279
+    },
+    {
+      "group": "voice",
+      "path": "voice/encoder.onnx",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "Hojo-TTS-Light-encoder.onnx",
+      "sha256": "c3c95e0e7e09684ab4924736f8dacbd77c907a9d2192ed06a749e266f2e78160",
+      "bytes": 42570241
+    },
+    {
+      "group": "voice",
+      "path": "voice/decoder.onnx",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "Hojo-TTS-Light-decoder.onnx",
+      "sha256": "e9a82d419eb3bd37b163907fefc4ee8d6ed8e74f4e098b20e6401e8f97369031",
+      "bytes": 113072515
+    },
+    {
+      "group": "voice",
+      "path": "voice/language-model.onnx",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "Hojo-TTS-Light-llm.onnx",
+      "sha256": "7960fe7ea07f0d9f259789cd848d824e7fcb98d5157fc981d4d45a4774043e34",
+      "bytes": 188487041
+    },
+    {
+      "group": "voice",
+      "path": "voice/config.json",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "config.json",
+      "sha256": "8d055f7f9eb79776a2e8e46ffce87f4231c85227f9178b7e72744eec8cc7afbb",
+      "bytes": 1221
+    },
+    {
+      "group": "voice",
+      "path": "voice/tokenizer.json",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "tokenizer.json",
+      "sha256": "395daae9cd5a4e166f1892d22e01c28a22421cfc92bc97aeb5d2b0fc6eaac499",
+      "bytes": 2071007
+    },
+    {
+      "group": "voice",
+      "path": "voice/tokenizer_config.json",
+      "repo": "HojoAI/Hojo-TTS-Light",
+      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
+      "file": "tokenizer_config.json",
+      "sha256": "14476be0ed729810c2a382dea664b491d645576e6fccec709a49052b672a6aa2",
+      "bytes": 1634641
+    },
+    {
+      "group": "voice",
+      "path": "voice/zh_tn_tagger.fst",
+      "repo": "M5Stack/MeloTTS-Chinese-ax630c",
+      "revision": "8e75341a5c7591188f6af95bbe00834288252630",
+      "file": "zh_tn_tagger.fst",
+      "sha256": "bc87c97977560ef392c0b566b8d0de5a4b48ab6f5491c5947db2a3067318ddc0",
+      "bytes": 3479454
+    },
+    {
+      "group": "voice",
+      "path": "voice/zh_tn_verbalizer.fst",
+      "repo": "M5Stack/MeloTTS-Chinese-ax630c",
+      "revision": "8e75341a5c7591188f6af95bbe00834288252630",
+      "file": "zh_tn_verbalizer.fst",
+      "sha256": "5686678dec3b6220d1a030ba4e00c729786b91c4863b3d37d0f9ea69df0985c1",
+      "bytes": 558366
+    },
+    {
+      "group": "sfx",
+      "path": "sound-effects/stable-audio-3-small-sfx-dit-0.5B-v1.0-F16.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-dit-0.5B-v1.0-F16.gguf",
+      "sha256": "5927385381d7d675839f27923705bb536638d45c95e344309136d88a93b30436",
+      "bytes": 919265984
+    },
+    {
+      "group": "sfx",
+      "path": "sound-effects/stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
+      "sha256": "c4f253c47d8feadb236619b2fe72a5df9c6a99751382738ed4b96be7ad1bc517",
+      "bytes": 793184
+    },
+    {
+      "group": "sfx",
+      "path": "sound-effects/stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+      "sha256": "e1854b7045a059f355639e0b92dd52a5f8701becb4a8a599035adb43124f4c89",
+      "bytes": 216721696
+    },
+    {
+      "group": "sfx",
+      "path": "sound-effects/t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf",
+      "repo": "thepatch/t5gemma-b-b-ul2-GGUF",
+      "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
+      "file": "t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf",
+      "sha256": "23868718e395c555608e33128994c39a23d509281011e52173ff28a64ab6c43c",
+      "bytes": 1126329120
+    },
+    {
+      "group": "sfx",
+      "path": "sound-effects/t5gemma-b-b-ul2-v1.0-vocab.gguf",
+      "repo": "thepatch/t5gemma-b-b-ul2-GGUF",
+      "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
+      "file": "t5gemma-b-b-ul2-v1.0-vocab.gguf",
+      "sha256": "d58ef75568789d5d394a67231c853803bd24778d136aa0d1990210bcdd485d32",
+      "bytes": 13838496
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/config.json",
+      "resource": ":/models/config/ditto-original/config.json",
+      "sha256": "5b090413ffca2b91736cff0f91c14bbcbfef124067c2b52f3565aa280ea4f161",
+      "bytes": 227816
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/schedule.json",
+      "resource": ":/models/config/ditto-original/schedule.json",
+      "sha256": "21dd3bcca09b695391c9a8a05e48cd9d2355ca612ec52c0c3d8f5e03d7722e03",
+      "bytes": 3267
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/manifest.json",
+      "resource": ":/models/config/ditto-original/manifest.json",
+      "bytes": 1938,
+      "sha256": "be8a16168fb972685fbb23f774e4b5e405ab1030f9fcb54ab47fbdfad7106b85"
+    }
+  ]
+}
