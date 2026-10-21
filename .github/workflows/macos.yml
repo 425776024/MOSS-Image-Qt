@@ -2,7 +2,7 @@ name: macOS App and DMG
 
 on:
   push:
-    branches: [codex/public-release, codex/macos-release-ci]
+    branches: [codex/public-release]
     tags: ['v*']
   pull_request:
     branches: [codex/public-release]

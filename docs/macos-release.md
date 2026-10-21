@@ -5,7 +5,7 @@
 
 ## 普通构建
 
-推送到 `codex/public-release`、`codex/macos-release-ci`，向默认分支提交 PR，或手动运行工作流，
+推送到 `codex/public-release`，向默认分支提交 PR，或手动运行工作流，
 会从公开依赖构建完整 App：Qt 界面、sd-cli、moss-ditto、moss-voice、sa3-generate。
 模型不进入包，由用户在模型中心按需下载。无需配置 Apple Secrets 即可构建。
 
