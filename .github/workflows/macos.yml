@@ -44,7 +44,9 @@ jobs:
           python3 -m unittest discover -s tests -p '*_tests.py'
       - name: Install build tools and Qt 6.10.2
         run: |
-          brew install cmake ninja pkg-config openssl@3 nlohmann-json
+          # ffmpeg is a test-only CLI for generating MP3/AAC fixtures. The app
+          # links the isolated FFmpeg build prepared by prepare_ci_macos.py.
+          brew install cmake ninja pkg-config openssl@3 nlohmann-json ffmpeg
           python3 -m pip install aqtinstall==3.3.0
           python3 -m aqt install-qt mac desktop 6.10.2 clang_64 -m qtmultimedia qtshadertools -O "$RUNNER_TEMP/Qt"
           echo "QT_ROOT=$RUNNER_TEMP/Qt/6.10.2/macos" >> "$GITHUB_ENV"
