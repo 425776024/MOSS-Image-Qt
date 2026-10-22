@@ -95,6 +95,11 @@ def package(qt, prefix, native, image_build, sfx_build, build):
                     '--ui-language', language, '--ui-theme', theme, env=env, timeout=90)
         run(destination / 'sd-cli.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
         run(destination / 'sa3-generate.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
+        for worker in ('moss-voice.exe', 'moss-ditto.exe'):
+            result = subprocess.run([str(destination / worker)], env=env, timeout=30,
+                capture_output=True, text=True, encoding='utf-8', errors='replace')
+            if result.returncode != 1 or 'usage:' not in (result.stdout + result.stderr):
+                raise ValueError(f'Native worker failed to load: {worker}: {result.returncode}')
     finally:
         os.environ.clear()
         os.environ.update(saved)

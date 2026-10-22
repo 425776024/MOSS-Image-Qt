@@ -10,6 +10,7 @@ $reportRoot = Join-Path ([Environment]::GetFolderPath('Desktop')) ("Moss-Test-" 
 New-Item -ItemType Directory -Path $reportRoot | Out-Null
 Start-Transcript -Path (Join-Path $reportRoot 'test.log') | Out-Null
 $results = @()
+$failed = $false
 $env:MOSS_DISABLE_DEV_PATHS = '1'
 $env:MOSS_EVIDENCE_ROOT = $reportRoot
 $env:MOSS_OUTPUT_ROOT = Join-Path $reportRoot 'works'
@@ -61,6 +62,7 @@ try {
     }
     Write-Host 'Tests passed. GPU backend and output quality still require inspection of engine.log and media.'
 } catch {
+    $failed = $true
     $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $reportRoot 'failure.txt')
     Write-Host "Test stopped: $_"
 } finally {
@@ -69,3 +71,4 @@ try {
     Compress-Archive -Path "$reportRoot/*" -DestinationPath "$reportRoot.zip"
     Write-Host "Report: $reportRoot.zip"
 }
+if ($failed) { exit 1 }
