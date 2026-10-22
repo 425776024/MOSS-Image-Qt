@@ -7,6 +7,7 @@ HomeDialog {
     objectName: "modelDownloadDialog"
     property bool termsExpanded: false
     property bool sourceExpanded: false
+    property bool detailsExpanded: false
     property bool wasDownloading: false
     readonly property bool ready: wasDownloading && !studio.models.busy && !studio.models.error && studio.models.progress>=1
     title: HomeTheme.t(ready ? "准备完成" : studio.models.error ? "下载未完成" : "准备创作资源")
@@ -20,7 +21,7 @@ HomeDialog {
         function onDownloadRequested() { dialog.open() }
         function onChanged() { if(studio.models.busy)dialog.wasDownloading=true }
     }
-    onOpened: {termsConsent.checked=false;termsExpanded=false;sourceExpanded=false;wasDownloading=studio.models.busy}
+    onOpened: {termsConsent.checked=false;termsExpanded=false;sourceExpanded=false;detailsExpanded=false;wasDownloading=studio.models.busy}
     onClosed: studio.models.dismissRequest()
     contentItem: ColumnLayout {
         spacing: 14
@@ -66,6 +67,29 @@ HomeDialog {
             model: studio.models.sourceNames.map(function(name) {return HomeTheme.t(name)})
             currentIndex: studio.models.sourceValues.indexOf(studio.models.endpoint)
             onActivated: studio.models.endpoint=studio.models.sourceValues[currentIndex]
+        }
+        ColumnLayout {
+            visible: !!studio.models.error && !studio.models.busy
+            Layout.fillWidth: true; spacing: 6
+            HomeButton {
+                objectName: "modelDownloadDetailsToggle"
+                text: HomeTheme.t(dialog.detailsExpanded ? "收起详情" : "查看详情")
+                quiet: true; compact: true
+                onClicked: dialog.detailsExpanded=!dialog.detailsExpanded
+            }
+            ScrollView {
+                visible: dialog.detailsExpanded
+                Layout.fillWidth: true; Layout.preferredHeight: 100
+                contentWidth: availableWidth; clip: true
+                TextArea {
+                    objectName: "modelDownloadErrorDetails"
+                    text: studio.models.error; textFormat: TextEdit.PlainText
+                    readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
+                    color: HomeTheme.secondary; font.pixelSize: 12
+                    background: Rectangle { radius: 8; color: HomeTheme.preview }
+                    Accessible.name: HomeTheme.t("下载未完成")
+                }
+            }
         }
         RowLayout {
             Layout.fillWidth: true; spacing: 8
