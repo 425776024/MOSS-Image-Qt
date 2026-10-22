@@ -28,14 +28,6 @@ Generate images through conversation, transform an existing image with a prompt,
 
 Screenshots show the current development UI; the published preview build may differ. Click any screenshot to view it at full size. [All English screenshots](assets/screenshots/en) · [中文截图](assets/screenshots/zh-Hans)
 
-## Sound-effects preview
-
-**Garden wind · 5 seconds**, generated with Stable Audio 3 Small SFX. Click to play; use the speaker button to unmute if needed.
-
-https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
-
-[Download the original WAV](assets/showcase/garden-wind-sfx.wav)
-
 ## Image editing examples
 
 ### Image to Image
@@ -116,3 +108,11 @@ Built with Qt / QML / C++. Pinned model revisions, hashes, and sources are liste
 ## License
 
 Original project code is licensed under [MIT](LICENSE). Third-party code, model weights, and media retain their own licenses. See [THIRD_PARTY.md](THIRD_PARTY.md) for attribution and terms.
+
+## Sound-effects preview
+
+**Garden wind · 5 seconds**, generated with Stable Audio 3 Small SFX. Click to play; use the speaker button to unmute if needed.
+
+https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
+
+[Download the original WAV](assets/showcase/garden-wind-sfx.wav)

@@ -28,14 +28,6 @@ Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 V
 
 截图展示当前开发界面，已发布预览安装包可能有所不同。点击截图查看原图。[全部中文截图](assets/screenshots/zh-Hans) · [English screenshots](assets/screenshots/en)
 
-## 音效试听
-
-**花园微风 · 5 秒**，由 Stable Audio 3 Small SFX 生成。点击播放；若无声，点扬声器取消静音。
-
-https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
-
-[下载原始 WAV](assets/showcase/garden-wind-sfx.wav)
-
 ## 图像编辑效果
 
 ### 图生图
@@ -117,3 +109,11 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 ## 许可证
 
 原创代码采用 [MIT 许可证](LICENSE)。第三方代码、模型权重及素材保留各自许可证，来源与许可说明见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+
+## 音效试听
+
+**花园微风 · 5 秒**，由 Stable Audio 3 Small SFX 生成。点击播放；若无声，点扬声器取消静音。
+
+https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
+
+[下载原始 WAV](assets/showcase/garden-wind-sfx.wav)
