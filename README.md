@@ -8,7 +8,7 @@
 
 0.1.0 预览版，支持 **Apple Silicon（M1 及后续芯片）、macOS 15+**。App 与 DMG 已完成 Developer ID 签名及 Apple 公证。运行无需 Python，模型按需下载。
 
-[**下载 Windows 便携包（ZIP）**](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.1/Moss-Studio-0.1.0-Windows-x64-preview.zip) · [Windows 版本说明与校验文件](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1)
+[**下载 Windows 便携包（ZIP）**](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.2/Moss-Studio-0.1.0-Windows-x64-preview.zip) · [Windows 版本说明与校验文件](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2)
 
 Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 Vulkan / DirectML 后端。完整解压后运行 `MossStudio.exe`；无需安装 Python，模型按需下载。CI 构建与启动检查已通过，显卡完整推理及真实桌面、导出验收仍待实测。首轮测试可双击包内 `test_windows.cmd`。
 
