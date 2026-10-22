@@ -43,6 +43,13 @@ def dependency_available(name, destination, system):
     return (system / name).is_file()
 
 
+def check_worker_startup(binary, env):
+    result = subprocess.run([str(binary)], env=env, timeout=30,
+        capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if result.returncode != 1 or 'usage:' not in (result.stdout + result.stderr):
+        raise ValueError(f'Native worker failed to load: {binary.name}: {result.returncode}')
+
+
 def package(qt, prefix, native, image_build, sfx_build, build):
     destination = ROOT / 'dist/windows/MossStudio'
     if destination.exists():
@@ -125,12 +132,10 @@ def package(qt, prefix, native, image_build, sfx_build, build):
                 run(destination / 'MossStudio.exe', '--home-smoke', '--minimum-window',
                     '--ui-language', language, '--ui-theme', theme, env=env, timeout=90)
         run(destination / 'sd-cli.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
-        run(destination / 'sa3-generate.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
-        for worker in ('moss-voice.exe', 'moss-ditto.exe'):
-            result = subprocess.run([str(destination / worker)], env=env, timeout=30,
-                capture_output=True, text=True, encoding='utf-8', errors='replace')
-            if result.returncode != 1 or 'usage:' not in (result.stdout + result.stderr):
-                raise ValueError(f'Native worker failed to load: {worker}: {result.returncode}')
+        # The pinned sa3 CLI has no --help branch: no model arguments print
+        # usage and return 1, just like our voice and Ditto workers.
+        for worker in ('sa3-generate.exe', 'moss-voice.exe', 'moss-ditto.exe'):
+            check_worker_startup(destination / worker, env)
     finally:
         os.environ.clear()
         os.environ.update(saved)

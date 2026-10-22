@@ -26,6 +26,19 @@ package = module('windows_package', 'scripts/package_windows.py')
 
 
 class WindowsDistributionTest(unittest.TestCase):
+    def test_worker_usage_exit_is_accepted_but_loader_failures_are_not(self):
+        for code, output, valid in ((1, 'usage: sa3-generate --model ...', True),
+                                     (1, 'missing runtime DLL', False),
+                                     (3221225781, '', False)):
+            with self.subTest(code=code, output=output):
+                result = subprocess.CompletedProcess([], code, stdout='', stderr=output)
+                with patch.object(package.subprocess, 'run', return_value=result):
+                    if valid:
+                        package.check_worker_startup(Path('sa3-generate.exe'), {})
+                    else:
+                        with self.assertRaises(ValueError):
+                            package.check_worker_startup(Path('sa3-generate.exe'), {})
+
     def test_portable_runtime_cannot_be_satisfied_by_ci_system_dlls(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
