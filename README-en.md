@@ -2,11 +2,15 @@
 
 [简体中文](README.md) · **English**
 
-A local AI creation app for Apple Silicon Macs. Create images, speech, and talking-avatar videos through conversation.
+A local AI creation app for Apple Silicon Macs and Windows x64 PCs. Create images, speech, and talking-avatar videos through conversation.
 
 [**Download for macOS (DMG)**](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.dmg) · [App ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.app.zip) · [Release notes and checksums](https://github.com/425776024/MOSS-Image-Qt/releases/tag/macos-0.1.0-preview.1)
 
 Version 0.1.0 preview for **Apple Silicon (M1 or later) and macOS 15+**. The app and DMG are Developer ID signed and Apple notarized. No Python installation is required; models download on demand.
+
+[**Download for Windows (portable ZIP)**](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.1/Moss-Studio-0.1.0-Windows-x64-preview.zip) · [Windows release notes and checksums](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1)
+
+The Windows test preview targets **Windows 10 1903+ / Windows 11, x64**, with Vulkan / DirectML backends. Extract the complete ZIP and run `MossStudio.exe`; no Python installation is required, and models download on demand. CI build and startup checks passed; full GPU inference, desktop interaction and export still need real-PC validation. Run the included `test_windows.cmd` for an initial diagnostic report.
 
 ## Feature preview
 
