@@ -1,10 +1,14 @@
 # Windows 编译与验收
 
-Windows 版目标为 **Windows 10 1903+ / Windows 11、x64**。Qt 6.10 支持 Windows 10 1809+；本包额外使用 Windows 10 1903 起的 UTF-8 进程清单处理中文路径。当前是待实机验收的预览构建，尚无正式 Windows 下载版本。
+Windows 版目标为 **Windows 10 1903+ / Windows 11、x64**。Qt 6.10 支持 Windows 10 1809+；本包额外使用 Windows 10 1903 起的 UTF-8 进程清单处理中文路径。当前已发布待实机验收的测试预览版。
 
 ## 用户使用
 
-CI 成功后，从对应 Actions 运行下载 `Windows-x64-preview`，解开其中的 ZIP，再完整解压 `Moss-Studio-0.1.0-Windows-x64-preview.zip`，运行 `MossStudio.exe`。保留整个目录，不能只复制 EXE。版本标签构建还会把 ZIP 和 SHA-256 文件上传至草稿 Release；发布草稿后才有无需登录的公开下载入口。
+从 [Windows 预览版 Release](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1) 下载 [便携 ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.1/Moss-Studio-0.1.0-Windows-x64-preview.zip)，完整解压后打开 `MossStudio` 文件夹，运行 `MossStudio.exe`。保留整个目录，不能只复制 EXE。公开下载无需登录 GitHub，也没有 Actions Artifact 的 14 天保留期限。
+
+首个预览包对应源码提交 `c76320df428d9051a8d44865a76fd23ac699b6db`，与 [成功 Windows CI](https://github.com/425776024/MOSS-Image-Qt/actions/runs/39765491699) 的 ZIP 完全一致。包内 README 是构建时的快照，其中“尚无下载版本”已由公开 Release 取代。使用同页 `SHA256SUMS-windows-x64.txt` 校验 ZIP。
+
+开发构建仍可从 Actions 下载 `Windows-x64-preview`，需解开 Artifact 外层 ZIP 和应用内层 ZIP；Release 下载只需解压应用 ZIP。
 
 不需要 Python、Qt SDK 或 CUDA Toolkit。模型在 App 中按需下载；显卡需安装提供 Vulkan / DirectX 12 的厂商驱动。Windows N 版可能需要系统 Media Feature Pack。
 
@@ -46,6 +50,8 @@ $env:QT_ROOT = 'C:\Qt\6.10.2\msvc2022_64'
 python scripts/build_ci_windows.py
 ```
 
-依赖固定于 `config/windows-dependencies.json`、`config/windows-vcpkg/vcpkg.json`，跨平台上游提交沿用 `config/macos-dependencies.json`。vcpkg 只启用 LGPL FFmpeg 组件，不启用 GPL / nonfree / x264。MediaPipe 从校验后的官方 Windows wheel 提取 C DLL，分发不包含 Python。运行库与许可随 ZIP 携带。包内检查开发路径隔离、导入 DLL、公开源码边界和模型／Python 排除；测试结果仍须以首次 Windows CI 及实机记录为准。
+依赖固定于 `config/windows-dependencies.json`、`config/windows-vcpkg/vcpkg.json`，跨平台上游提交沿用 `config/macos-dependencies.json`。vcpkg 只启用 LGPL FFmpeg 组件，不启用 GPL / nonfree / x264。MediaPipe 从校验后的官方 Windows wheel 提取 C DLL，分发不包含 Python。运行库与许可随 ZIP 携带。首轮 Windows CI 已通过 15 项 CTest、31 项 Python 分发测试、开发路径隔离启动、941 项 DLL 导入检查、公开源码边界及模型／Python 排除审计；Ditto 已验证 ONNX Runtime 1.23.0 初始化、CPU 张量及 DirectML provider 枚举。实际 GPU 推理及桌面验收仍以实机记录为准。
+
+首次 `win-0.1.0-preview.1` 是从已通过 CI 的 Windows 分支提交手动发布，未合并待实机验收的 PR；与上面的 `v*` / `windows-*` 标签自动生成草稿流程分开。
 
 官方依据：[Qt 6.10 平台要求](https://doc.qt.io/qt-6.10/supported-platforms.html)、[sd.cpp 构建](https://github.com/leejet/stable-diffusion.cpp/blob/b13a48219d5cdf408edcb93da6cd69b612ed03d3/docs/build.md)、[DirectML](https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html)、[Windows UTF-8 清单](https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page)。
