@@ -91,7 +91,7 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 
 [设计规范](DESIGN.md) · [构建与运行](docs/build.md) · [macOS 打包与公证](docs/macos-release.md) · [模型管理](docs/model-management.md) · [Ditto 模型说明](docs/ditto-default-model.md) · [第三方来源](THIRD_PARTY.md)
 
-Windows 预览包已在 [Releases](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1) 提供公开下载；实机测试方式见 [Windows 构建与验收](docs/windows-release.md)。
+Windows 预览包已在 [Releases](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2) 提供公开下载；实机测试方式见 [Windows 构建与验收](docs/windows-release.md)。
 
 ## 许可证
 

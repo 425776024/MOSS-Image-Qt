@@ -90,7 +90,7 @@ Built with Qt / QML / C++. Pinned model revisions, hashes, and sources are liste
 
 [Design guidelines](DESIGN.md) · [Build and run](docs/build.md) · [macOS packaging and notarization](docs/macos-release.md) · [Model management](docs/model-management.md) · [Ditto model notes](docs/ditto-default-model.md) · [Third-party sources](THIRD_PARTY.md)
 
-The Windows preview is publicly available in [Releases](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1). See [Windows build and validation](docs/windows-release.md) for real-PC test steps.
+The Windows preview is publicly available in [Releases](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2). See [Windows build and validation](docs/windows-release.md) for real-PC test steps.
 
 ## License
 

@@ -4,9 +4,11 @@ Windows 版目标为 **Windows 10 1903+ / Windows 11、x64**。Qt 6.10 支持 Wi
 
 ## 用户使用
 
-从 [Windows 预览版 Release](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.1) 下载 [便携 ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.1/Moss-Studio-0.1.0-Windows-x64-preview.zip)，完整解压后打开 `MossStudio` 文件夹，运行 `MossStudio.exe`。保留整个目录，不能只复制 EXE。公开下载无需登录 GitHub，也没有 Actions Artifact 的 14 天保留期限。
+从 [Windows 预览版 2 Release](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2) 下载 [便携 ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.2/Moss-Studio-0.1.0-Windows-x64-preview.zip)，完整解压后打开 `MossStudio` 文件夹，运行 `MossStudio.exe`。保留整个目录，不能只复制 EXE。公开下载无需登录 GitHub，也没有 Actions Artifact 的 14 天保留期限。
 
-首个预览包对应源码提交 `c76320df428d9051a8d44865a76fd23ac699b6db`，与 [成功 Windows CI](https://github.com/425776024/MOSS-Image-Qt/actions/runs/39765491699) 的 ZIP 完全一致。包内 README 是构建时的快照，其中“尚无下载版本”已由公开 Release 取代。使用同页 `SHA256SUMS-windows-x64.txt` 校验 ZIP。
+预览版 2 对应源码提交 `4669d6be81fd2f34172351e148a8da2747408309`，与 [成功 Windows CI](https://github.com/425776024/MOSS-Image-Qt/actions/runs/39787609238) 的 ZIP 完全一致。使用同页 `SHA256SUMS-windows-x64.txt` 校验 ZIP。修复旧模型安装、中文路径及完整残留复用问题，并增加可展开的失败详情；Windows 模型管理测试 21 项通过。
+
+旧版下载最后失败时，关闭旧 App，把新版本完整解压到新目录，沿用原模型目录后重试。不要先清理下载残留。若仍失败，展开“查看详情”并提供完整错误文字。默认镜像为 `hf-mirror.com`，换源需要手动操作，当前没有自动测速或自动换源。
 
 开发构建仍可从 Actions 下载 `Windows-x64-preview`，需解开 Artifact 外层 ZIP 和应用内层 ZIP；Release 下载只需解压应用 ZIP。
 
