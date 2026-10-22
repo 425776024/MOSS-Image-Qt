@@ -22,9 +22,30 @@ def module(name, path):
 
 build = module('windows_build', 'scripts/build_ci_windows.py')
 release = module('windows_release', 'scripts/public_release.py')
+package = module('windows_package', 'scripts/package_windows.py')
 
 
 class WindowsDistributionTest(unittest.TestCase):
+    def test_portable_runtime_cannot_be_satisfied_by_ci_system_dlls(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            destination, system = root / 'app', root / 'system'
+            destination.mkdir()
+            system.mkdir()
+            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'kernel32.dll'):
+                (system / name).write_bytes(b'installed on CI only')
+            self.assertTrue(package.dependency_available('kernel32.dll', destination, system))
+            self.assertFalse(package.dependency_available('msvcp140.dll', destination, system))
+            redist = root / 'redist'
+            crt = redist / 'x64/Microsoft.VC143.CRT'
+            crt.mkdir(parents=True)
+            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
+                (crt / name).write_bytes(b'redistributable')
+            package.deploy_msvc_runtime(destination, redist)
+            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
+                self.assertEqual((destination / name).read_bytes(), b'redistributable')
+                self.assertTrue(package.dependency_available(name, destination, system))
+
     @unittest.skipUnless(shutil.which('cmake') and shutil.which('ninja'), 'CMake and Ninja are required')
     def test_compiler_probe_and_nested_executable_manifests(self):
         # On Windows this uses the exact production configure helper, so a

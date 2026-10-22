@@ -16,6 +16,28 @@ def run(*args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
 
 
+def deploy_msvc_runtime(destination, redist):
+    folders = sorted((redist / 'x64').glob('Microsoft.VC*.CRT'))
+    if len(folders) != 1:
+        raise ValueError(f'Expected one x64 MSVC CRT directory in {redist}')
+    runtime = folders[0]
+    for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
+        if not (runtime / name).is_file():
+            raise ValueError(f'Missing redistributable runtime: {runtime / name}')
+    for dll in runtime.glob('*.dll'):
+        shutil.copy2(dll, destination / dll.name)
+
+
+def dependency_available(name, destination, system):
+    if (destination / name).is_file():
+        return True
+    # System32 on the CI image has Visual Studio runtimes installed already.
+    # Requiring app-local copies prevents that image from hiding missing DLLs.
+    if re.match(r'(?:msvcp|vcruntime|concrt|vcomp)\d', name, re.I):
+        return False
+    return (system / name).is_file()
+
+
 def package(qt, prefix, native, image_build, sfx_build, build):
     destination = ROOT / 'dist/windows/MossStudio'
     if destination.exists():
@@ -26,7 +48,11 @@ def package(qt, prefix, native, image_build, sfx_build, build):
                    sfx_build / 'bin/sa3-generate.exe'):
         shutil.copy2(source, destination)
     run(qt / 'bin/windeployqt.exe', '--release', '--qmldir', ROOT / 'qml',
-        '--compiler-runtime', '--dir', destination, destination / 'MossStudio.exe')
+        '--no-compiler-runtime', '--include-plugins', 'qoffscreen',
+        '--dir', destination, destination / 'MossStudio.exe')
+    # windeployqt bundles a VC installer for release builds. A portable ZIP
+    # instead needs the redistributable DLLs beside its executables.
+    deploy_msvc_runtime(destination, Path(os.environ['VCToolsRedistDir']))
     # Dependencies loaded at runtime (ORT providers and Vulkan) are not all
     # visible to windeployqt. Ship the pinned release DLLs and their notices.
     for folder in (prefix / 'bin', native / 'onnxruntime/lib', native / 'bin',
@@ -80,7 +106,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
             if dependency.lower().startswith(('api-ms-', 'ext-ms-')):
                 continue
             # Windows DLL lookup is case-insensitive; Path.exists follows it.
-            if not (destination / dependency).exists() and not (system / dependency).exists():
+            if not dependency_available(dependency, destination, system):
                 raise ValueError(f'Unresolved import: {binary.name}: {dependency}')
             dlls.append({'file': binary.relative_to(destination).as_posix(), 'dependency': dependency})
     # Audit without inheriting Qt/plugin/search paths from the build shell.
