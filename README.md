@@ -37,11 +37,17 @@ App 与 DMG 已完成 Developer ID 签名、Apple 公证并附加公证票据。
 
 ![数字人创作](assets/screenshots/avatar.png)
 
-口型优化对比：点击封面打开完整 MP4（含声音）。
+口型优化对比（含声音），点击播放。
 
-| 内置主持形象 · 84 秒 | 视频人物 · 20 秒 |
-| --- | --- |
-| [![主持形象口型对比](assets/showcase/avatar-demo-01.jpg)](assets/showcase/avatar-demo-01.mp4) | [![视频人物口型对比](assets/showcase/avatar-demo-02.jpg)](assets/showcase/avatar-demo-02.mp4) |
+**多种形象 · 84 秒**
+
+https://github.com/user-attachments/assets/c8c14e41-5ce8-4330-bbd6-d52f6e8f06cb
+
+**视频人物 · 20 秒**
+
+https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
+
+[下载原始视频一](assets/showcase/avatar-demo-01.mp4) · [下载原始视频二](assets/showcase/avatar-demo-02.mp4)
 
 ## 视频打包
 
