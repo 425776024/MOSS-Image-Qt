@@ -39,7 +39,8 @@ jobs:
         with:
           path: .local/vcpkg-bincache
           key: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}
+          # Exclude the obsolete exact key, which may contain an empty cache.
+          restore-keys: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-
       - name: Enter the MSVC 2022 x64 build environment
         shell: pwsh
         run: |
@@ -83,7 +84,7 @@ jobs:
           include-hidden-files: true
           retention-days: 14
       - name: Save completed dependency packages even if later checks fail
-        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        if: always() && !cancelled() && steps.native-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .local/vcpkg-bincache
