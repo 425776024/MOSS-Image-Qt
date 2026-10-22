@@ -26,7 +26,7 @@
 
 ## 音效试听
 
-**花园微风 · 5 秒**，由 Stable Audio 3 Small SFX 生成。点击播放。
+**花园微风 · 5 秒**，由 Stable Audio 3 Small SFX 生成。点击播放；若无声，点扬声器取消静音。
 
 https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
 

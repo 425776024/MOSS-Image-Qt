@@ -26,7 +26,7 @@ Screenshots show the current development UI; the published preview build may dif
 
 ## Sound-effects preview
 
-**Garden wind · 5 seconds**, generated with Stable Audio 3 Small SFX. Click to play.
+**Garden wind · 5 seconds**, generated with Stable Audio 3 Small SFX. Click to play; use the speaker button to unmute if needed.
 
 https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
 
