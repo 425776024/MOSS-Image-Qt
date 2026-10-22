@@ -2,10 +2,10 @@ name: macOS App and DMG
 
 on:
   push:
-    branches: [codex/public-release]
+    branches: [public-release]
     tags: ['v*']
   pull_request:
-    branches: [codex/public-release]
+    branches: [public-release]
   workflow_dispatch:
     inputs:
       notarize:
@@ -147,6 +147,9 @@ jobs:
 
   release:
     name: Create a draft GitHub Release
+    concurrency:
+      group: release-assets-${{ github.ref }}
+      cancel-in-progress: false
     needs: sign
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

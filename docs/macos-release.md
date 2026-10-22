@@ -5,7 +5,7 @@
 
 ## 普通构建
 
-推送到 `codex/public-release`，向默认分支提交 PR，或手动运行工作流，
+推送到 `public-release`，向默认分支提交 PR，或手动运行工作流，
 会从公开依赖构建完整 App：Qt 界面、sd-cli、moss-ditto、moss-voice、sa3-generate。
 模型不进入包，由用户在模型中心按需下载。无需配置 Apple Secrets 即可构建。
 
@@ -57,7 +57,7 @@ python3 scripts/macos_distribution.py sign-notarize-local 'dist/Moss Studio.app'
    本流程使用带 Issuer ID 的团队密钥，不接受需要省略 issuer 的个人 API key。
    `.p8` 只可下载一次；保存在仓库外。无需 Apple 主密码或双重认证验证码。
 3. 在仓库 Settings → Environments 创建 `macos-release`，限制允许的部署分支为
-   `codex/public-release`，允许的标签为 `v*`。如默认分支改名，更新这里及工作流触发条件。
+   `public-release`，允许的标签为 `v*`。如默认分支改名，更新这里及工作流触发条件。
    同时通过仓库 Rulesets 限制发布标签只能由维护者创建/修改，并保护默认分支和 workflow 修改。
    如套餐支持，可添加 Required reviewers。只有一个维护者时不要启用“禁止自行批准”。
 4. 在该 Environment 的 Secrets 中添加下表内容。不要使用普通 Variables。
