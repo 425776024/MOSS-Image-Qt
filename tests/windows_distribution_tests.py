@@ -32,17 +32,21 @@ class WindowsDistributionTest(unittest.TestCase):
             destination, system = root / 'app', root / 'system'
             destination.mkdir()
             system.mkdir()
-            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'kernel32.dll'):
+            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll', 'kernel32.dll'):
                 (system / name).write_bytes(b'installed on CI only')
             self.assertTrue(package.dependency_available('kernel32.dll', destination, system))
             self.assertFalse(package.dependency_available('msvcp140.dll', destination, system))
+            self.assertFalse(package.dependency_available('vcomp140.dll', destination, system))
             redist = root / 'redist'
             crt = redist / 'x64/Microsoft.VC143.CRT'
             crt.mkdir(parents=True)
             for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
                 (crt / name).write_bytes(b'redistributable')
+            openmp = redist / 'x64/Microsoft.VC143.OpenMP'
+            openmp.mkdir()
+            (openmp / 'vcomp140.dll').write_bytes(b'redistributable')
             package.deploy_msvc_runtime(destination, redist)
-            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
+            for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll'):
                 self.assertEqual((destination / name).read_bytes(), b'redistributable')
                 self.assertTrue(package.dependency_available(name, destination, system))
 

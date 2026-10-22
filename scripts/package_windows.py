@@ -17,15 +17,20 @@ def run(*args, **kwargs):
 
 
 def deploy_msvc_runtime(destination, redist):
-    folders = sorted((redist / 'x64').glob('Microsoft.VC*.CRT'))
-    if len(folders) != 1:
-        raise ValueError(f'Expected one x64 MSVC CRT directory in {redist}')
-    runtime = folders[0]
-    for name in ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'):
-        if not (runtime / name).is_file():
-            raise ValueError(f'Missing redistributable runtime: {runtime / name}')
-    for dll in runtime.glob('*.dll'):
-        shutil.copy2(dll, destination / dll.name)
+    libraries = {
+        'CRT': ('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll'),
+        'OpenMP': ('vcomp140.dll',),
+    }
+    for library, required in libraries.items():
+        folders = sorted((redist / 'x64').glob(f'Microsoft.VC*.{library}'))
+        if len(folders) != 1:
+            raise ValueError(f'Expected one x64 MSVC {library} directory in {redist}')
+        runtime = folders[0]
+        for name in required:
+            if not (runtime / name).is_file():
+                raise ValueError(f'Missing redistributable runtime: {runtime / name}')
+        for dll in runtime.glob('*.dll'):
+            shutil.copy2(dll, destination / dll.name)
 
 
 def dependency_available(name, destination, system):
