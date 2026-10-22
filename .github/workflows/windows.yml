@@ -78,9 +78,11 @@ jobs:
           path: |
             dist/windows-bundle-audit.json
             build-windows/Testing/Temporary/LastTest.log
+            build-windows/*-test.txt
             build-windows/CMakeFiles/CMakeConfigureLog.yaml
             .local/ci-windows/build/**/CMakeFiles/CMakeConfigureLog.yaml
             .local/ci-windows/build/app-check/Testing/Temporary/LastTest.log
+            .local/ci-windows/build/app-check/*-test.txt
             .local/ci-windows/deployed-smoke/
             .local/ci-windows/vcpkg_installed/vcpkg/issue_body.md
           if-no-files-found: ignore

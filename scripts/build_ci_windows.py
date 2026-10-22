@@ -28,6 +28,17 @@ def run(*args, **kwargs):
     subprocess.run([str(a) for a in args], check=True, **kwargs)
 
 
+def test_build(build):
+    try:
+        run('ctest', '--test-dir', build, '--output-on-failure', '--timeout', '180')
+    except subprocess.CalledProcessError:
+        # QtTest stdout can be unavailable on Windows. Keep file logs as
+        # artifacts and expose their final test/function in the CI console.
+        for log in sorted(build.glob('*-test.txt')):
+            print(f'\nQtTest log: {log.name}\n' + log.read_text(encoding='utf-8', errors='replace')[-16000:], flush=True)
+        raise
+
+
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -95,15 +106,6 @@ def main(check_app_only=False):
     os.chdir(ROOT)
     qt = Path(os.environ['QT_ROOT'])
     os.environ['PATH'] = str(qt / 'bin') + os.pathsep + os.environ['PATH']
-    if check_app_only:
-        # Catch app/test portability errors before rebuilding three engines.
-        # Keep the Qt-only configure separate from the vcpkg worker toolchain.
-        check_build = BASE / 'build/app-check'
-        cmake(ROOT, check_build, f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
-              '-DMOSS_BUILD_DITTO=OFF', '-DMOSS_BUILD_VOICE=OFF')
-        run('cmake', '--build', check_build, '--parallel', JOBS)
-        run('ctest', '--test-dir', check_build, '--output-on-failure', '--timeout', '180')
-        return
     NATIVE.mkdir(parents=True, exist_ok=True)
     (ROOT / '.local/vcpkg-bincache').mkdir(parents=True, exist_ok=True)
     notices = NATIVE / 'licenses'
@@ -115,9 +117,18 @@ def main(check_app_only=False):
         f'--x-manifest-root={ROOT / "config/windows-vcpkg"}', f'--x-install-root={installed}')
     prefix = installed / 'x64-windows'
     # Keep vcpkg DLLs visible to tests, not to the final isolated smoke test.
-    os.environ['PATH'] = os.pathsep.join([str(qt / 'bin'), str(prefix / 'bin'),
+    os.environ['PATH'] = os.pathsep.join([str(qt / 'bin'), str(prefix / 'bin'), str(prefix / 'tools/ffmpeg'),
         str(NATIVE / 'bin'), os.environ['PATH']])
     os.environ['PKG_CONFIG_PATH'] = str(prefix / 'lib/pkgconfig')
+    if check_app_only:
+        # Check app sources before rebuilding engines, using the same pinned
+        # FFmpeg executable needed by compressed-audio acceptance tests.
+        check_build = BASE / 'build/app-check'
+        cmake(ROOT, check_build, f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
+              '-DMOSS_BUILD_DITTO=OFF', '-DMOSS_BUILD_VOICE=OFF')
+        run('cmake', '--build', check_build, '--parallel', JOBS)
+        test_build(check_build)
+        return
     glslc = prefix / 'tools/shaderc/glslc.exe'
     if not glslc.exists():
         raise ValueError('shaderc did not provide glslc.exe')
@@ -209,7 +220,7 @@ def main(check_app_only=False):
           f'-DVOICE_JSON_INCLUDE={(prefix / "include").as_posix()}')
     run('cmake', '--build', BUILD, '--parallel', JOBS)
     # Side-loaded DLLs are needed beside test executables as well as on PATH.
-    run('ctest', '--test-dir', BUILD, '--output-on-failure', '--timeout', '180')
+    test_build(BUILD)
     from package_windows import package
     package(qt, prefix, NATIVE, engine_build, sfx_build, BUILD)
 

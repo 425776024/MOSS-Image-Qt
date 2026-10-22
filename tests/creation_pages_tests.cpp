@@ -17,6 +17,14 @@ private:
         file.write(QJsonDocument(value).toJson());
     }
 private slots:
+    void unownedMediaTraversalStopsAtFilesystemRoot(){
+        QTemporaryDir directory;QVERIFY(directory.isValid());
+        const auto path=directory.filePath("unowned.png");
+        QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));file.write("fixture");file.close();
+        QCOMPARE(ConversationMediaStore::ownedDirectory(path),QString());
+        QVERIFY(ConversationMediaStore::pin(QVariantMap{{"source",path}}));
+        QVERIFY(QFileInfo::exists(path));
+    }
     void missingAvatarImageModelsDoNotChangeEditor(){
         QTemporaryDir work,models;const auto previousRoot=qgetenv("MOSS_MODEL_ROOT");
         qputenv("MOSS_OUTPUT_ROOT",work.path().toUtf8());qputenv("MOSS_MODEL_ROOT",models.path().toUtf8());
