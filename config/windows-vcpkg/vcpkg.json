@@ -3,7 +3,7 @@
   "version-string": "0.1.0",
   "builtin-baseline": "bd8298ae219367a606c74c6c25dc50cc6d66eca8",
   "dependencies": [
-    { "name": "ffmpeg", "default-features": false, "features": ["avcodec", "avformat", "swresample", "swscale", "ffmpeg"] },
+    { "name": "ffmpeg", "default-features": false, "features": ["avcodec", "avformat", "swresample", "swscale", "ffmpeg", "mp3lame"] },
     { "name": "opencv4", "default-features": false, "features": ["dnn"] },
     "openssl",
     "nlohmann-json",

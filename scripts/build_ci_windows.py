@@ -90,6 +90,7 @@ def main():
     os.chdir(ROOT)
     qt = Path(os.environ['QT_ROOT'])
     NATIVE.mkdir(parents=True, exist_ok=True)
+    (ROOT / '.local/vcpkg-bincache').mkdir(parents=True, exist_ok=True)
     notices = NATIVE / 'licenses'
     notices.mkdir(exist_ok=True)
     vcpkg = checkout('vcpkg', LOCK['vcpkg'])
