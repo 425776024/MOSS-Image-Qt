@@ -2,10 +2,10 @@ name: Windows x64 App
 
 on:
   push:
-    branches: [codex/public-release]
+    branches: [public-release]
     tags: ['v*', 'windows-*']
   pull_request:
-    branches: [codex/public-release]
+    branches: [public-release]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +25,7 @@ jobs:
       QT_QPA_PLATFORM: offscreen
       QT_QUICK_BACKEND: software
       VCPKG_BINARY_SOURCES: clear
+      VCPKG_MAX_CONCURRENCY: '3'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:

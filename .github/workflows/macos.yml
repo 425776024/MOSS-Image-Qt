@@ -2,10 +2,10 @@ name: macOS App and DMG
 
 on:
   push:
-    branches: [codex/public-release]
+    branches: [public-release]
     tags: ['v*']
   pull_request:
-    branches: [codex/public-release]
+    branches: [public-release]
   workflow_dispatch:
     inputs:
       notarize:

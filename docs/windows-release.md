@@ -37,7 +37,7 @@ CI 成功后，从对应 Actions 运行下载 `Windows-x64-preview`，解开其�
 
 ## CI 与本地构建
 
-工作流为 `.github/workflows/windows.yml`，在 `windows-2022` 上用 MSVC 2022、Qt 6.10.2 和 Python 3.12 构建。`codex/public-release` 的 push / PR、`v*` / `windows-*` 标签以及手动触发均会运行；普通构建上传 Artifact，标签上传草稿 Release。Windows 与 macOS 共用 Release 写入锁，校验文件分别命名。
+工作流为 `.github/workflows/windows.yml`，在 `windows-2022` 上用 MSVC 2022、Qt 6.10.2 和 Python 3.12 构建。`public-release` 的 push / PR、`v*` / `windows-*` 标签以及手动触发均会运行；普通构建上传 Artifact，标签上传草稿 Release。Windows 与 macOS 共用 Release 写入锁，校验文件分别命名。
 
 本地使用 MSVC x64 Developer PowerShell，安装 CMake 3.31、Ninja、Python 3.12、Git，设置 Qt 路径后运行：
 
