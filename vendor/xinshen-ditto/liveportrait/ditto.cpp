@@ -1387,7 +1387,7 @@ void saveMouthCache(const fs::path &path, const J &value) {
          std::to_string(Clock::now().time_since_epoch().count())+".partial";
     avatar::writeJson(temp, {{"value",value},{"sha256",jsonHash(value)}});
     avatar::checkCancelled();
-    fs::rename(temp,path);
+    avatar::replaceFile(temp,path);
     mouth_cache::prune(path.parent_path());
   } catch (const std::exception &) {
     std::error_code ignored;

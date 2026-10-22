@@ -38,6 +38,8 @@ inline std::array<float, 8> eyeCondition(const std::filesystem::path &model,
   options.base_options.model_asset_path = path.c_str();
 #if defined(__APPLE__)
   options.base_options.host_system = HOST_SYSTEM_MAC;
+#elif defined(_WIN32)
+  options.base_options.host_system = HOST_SYSTEM_WINDOWS;
 #else
   options.base_options.host_system = HOST_SYSTEM_LINUX;
 #endif

@@ -75,6 +75,8 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 
 [设计规范](DESIGN.md) · [构建与运行](docs/build.md) · [macOS 打包与公证](docs/macos-release.md) · [模型管理](docs/model-management.md) · [Ditto 模型说明](docs/ditto-default-model.md) · [第三方来源](THIRD_PARTY.md)
 
+Windows 10/11 x64 的自动构建与显卡测试正在接入，尚未发布可下载版本；进展与测试方式见 [Windows 构建与验收](docs/windows-release.md)。
+
 ## 许可证
 
 原创代码采用 [MIT 许可证](LICENSE)。第三方代码、模型权重及素材保留各自许可证，来源与许可说明见 [THIRD_PARTY.md](THIRD_PARTY.md)。

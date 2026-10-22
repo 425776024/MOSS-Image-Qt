@@ -17,6 +17,9 @@
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace avatar {
 namespace {
@@ -44,7 +47,15 @@ void writeJson(const std::filesystem::path& path, const Json& value) {
   { std::ofstream out(temp); out << value.dump(2) << '\n'; out.flush();
     if (!out) throw std::runtime_error("无法写入 " + path.string()); }
   checkCancelled();
-  std::filesystem::rename(temp, path);
+  replaceFile(temp, path);
+}
+void replaceFile(const std::filesystem::path& temporary, const std::filesystem::path& destination) {
+#ifdef _WIN32
+  if (!MoveFileExW(temporary.c_str(), destination.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+    throw std::runtime_error("Cannot atomically replace file: " + destination.string());
+#else
+  std::filesystem::rename(temporary, destination);
+#endif
 }
 std::filesystem::path member(const std::filesystem::path& root, const std::string& relative) {
   const std::filesystem::path rel(relative);

@@ -19,6 +19,14 @@ int main() {
     if (avatar::sha256(path) == expected) throw std::runtime_error("Changed file was not detected");
   } catch (...) { std::filesystem::remove(path); throw; }
   std::filesystem::remove(path);
+  const auto jsonPath = std::filesystem::temp_directory_path() / "xinshen-replace-json-test.json";
+  try {
+    avatar::writeJson(jsonPath, {{"version",1}});
+    avatar::writeJson(jsonPath, {{"version",2}});
+    if (avatar::readJson(jsonPath).at("version") != 2)
+      throw std::runtime_error("Atomic replacement did not replace existing JSON");
+  } catch (...) { std::filesystem::remove(jsonPath); throw; }
+  std::filesystem::remove(jsonPath);
   bool missingRejected = false;
   try { avatar::sha256(path); } catch (const std::runtime_error&) { missingRejected = true; }
   if (!missingRejected) throw std::runtime_error("Missing file accepted");

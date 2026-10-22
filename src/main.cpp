@@ -71,6 +71,10 @@ int main(int argc,char **argv){
     // on normal desktop launch, even when this Mac still has that checkout.
     if(QFileInfo::exists(QCoreApplication::applicationDirPath()+"/../Resources/assets/voices/catalog.json"))
         qputenv("MOSS_DISABLE_DEV_PATHS","1");
+#ifdef Q_OS_WIN
+    if(QFileInfo::exists(QCoreApplication::applicationDirPath()+"/assets/voices/catalog.json"))
+        qputenv("MOSS_DISABLE_DEV_PATHS","1");
+#endif
     Studio studio;WorkspaceLibrary workspace(studio.outputRoot());QQmlApplicationEngine engine;
     app.setApplicationDisplayName(workspace.appName());
     QObject::connect(&workspace,&WorkspaceLibrary::preferencesChanged,&app,[&]{app.setApplicationDisplayName(workspace.appName());});

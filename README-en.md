@@ -74,6 +74,8 @@ Built with Qt / QML / C++. Pinned model revisions, hashes, and sources are liste
 
 [Design guidelines](DESIGN.md) · [Build and run](docs/build.md) · [macOS packaging and notarization](docs/macos-release.md) · [Model management](docs/model-management.md) · [Ditto model notes](docs/ditto-default-model.md) · [Third-party sources](THIRD_PARTY.md)
 
+Windows 10/11 x64 builds and GPU validation are being added; a Windows download is not yet available. See [Windows build and validation](docs/windows-release.md).
+
 ## License
 
 Original project code is licensed under [MIT](LICENSE). Third-party code, model weights, and media retain their own licenses. See [THIRD_PARTY.md](THIRD_PARTY.md) for attribution and terms.

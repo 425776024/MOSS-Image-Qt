@@ -49,7 +49,7 @@ int main(int argc,char **argv){
         }
         int faces=-1;
         if(pageMode){
-            faces=request.value("speech",true)?pageFaceCount(source):0;
+            faces=request.value("speech",true)?pageFaceCount(source,models):0;
             const auto route=faces>0?"portrait":"still";
             std::cout<<avatar::Json{{"event","page-route"},{"route",route},{"faces",faces}}.dump()<<std::endl;
             if(faces==0){

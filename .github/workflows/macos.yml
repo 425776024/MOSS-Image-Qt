@@ -147,6 +147,9 @@ jobs:
 
   release:
     name: Create a draft GitHub Release
+    concurrency:
+      group: release-assets-${{ github.ref }}
+      cancel-in-progress: false
     needs: sign
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

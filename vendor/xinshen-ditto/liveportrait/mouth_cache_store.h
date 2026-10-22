@@ -5,29 +5,64 @@
 #include <regex>
 #include <stdexcept>
 #include <vector>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
 #include <fcntl.h>
 #include <sys/file.h>
 #include <unistd.h>
+#endif
 
 // Shared by the native worker and Settings. Never manages media or model files.
 namespace ditto::mouth_cache {
 namespace fs = std::filesystem;
 inline constexpr uintmax_t limitBytes = 128ULL * 1024 * 1024;
 class Lock {
+#ifdef _WIN32
+    HANDLE handle = INVALID_HANDLE_VALUE;
+    OVERLAPPED overlapped{};
+#else
     int fd = -1;
+#endif
 public:
     explicit Lock(const fs::path &directory) {
         fs::create_directories(directory);
         if (fs::is_symlink(fs::symlink_status(directory))) throw std::runtime_error("cache directory is a symlink");
+#ifdef _WIN32
+        handle = CreateFileW((directory / L".lock").c_str(), GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS,
+            FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+        if (handle == INVALID_HANDLE_VALUE) throw std::runtime_error("cannot open cache lock");
+        FILE_ATTRIBUTE_TAG_INFO info{};
+        if (!GetFileInformationByHandleEx(handle, FileAttributeTagInfo, &info, sizeof(info)) ||
+            (info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ||
+            !LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                0, 1, 0, &overlapped)) {
+            CloseHandle(handle); handle = INVALID_HANDLE_VALUE;
+            throw std::runtime_error("cache is busy or lock is unsafe");
+        }
+#else
         fd = ::open((directory / ".lock").c_str(), O_CREAT | O_RDWR | O_NOFOLLOW | O_CLOEXEC, 0600);
         if (fd < 0) throw std::runtime_error("cannot open cache lock");
         if (::flock(fd, LOCK_EX | LOCK_NB) != 0) {
             ::close(fd); fd = -1; throw std::runtime_error("cache is busy");
         }
+#endif
     }
     Lock(const Lock &) = delete;
     Lock &operator=(const Lock &) = delete;
-    ~Lock() { if (fd >= 0) { ::flock(fd, LOCK_UN); ::close(fd); } }
+    ~Lock() {
+#ifdef _WIN32
+        if (handle != INVALID_HANDLE_VALUE) {
+            UnlockFileEx(handle, 0, 1, 0, &overlapped); CloseHandle(handle);
+        }
+#else
+        if (fd >= 0) { ::flock(fd, LOCK_UN); ::close(fd); }
+#endif
+    }
 };
 struct Entry { fs::path path; uintmax_t bytes; fs::file_time_type used; bool partial; };
 inline std::vector<Entry> entries(const fs::path &directory) {

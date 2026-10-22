@@ -6,6 +6,7 @@
 #include <cmath>
 #include <memory>
 #include <set>
+#include <cstdlib>
 namespace fs=std::filesystem;
 
 static void check(audiocpp_status status) {
@@ -68,11 +69,19 @@ int main(int argc,char **argv) {
         Owner<audiocpp_registry,audiocpp_registry_free> registry(registryRaw,audiocpp_registry_free);
         const audiocpp_model_config config{"ming3_tts",nullptr,nullptr,nullptr};
         audiocpp_model *modelRaw=nullptr;
-        check(audiocpp_model_load(registry.get(),modelFile.c_str(),&config,nullptr,&modelRaw));
+        check(audiocpp_model_load(registry.get(),modelFile.string().c_str(),&config,nullptr,&modelRaw));
         Owner<audiocpp_model,audiocpp_model_free> model(modelRaw,audiocpp_model_free);
-        const audiocpp_backend_config backend{"cpu",0,4};
+        const char *backendName="cpu";
+#ifdef MOSS_VOICE_VULKAN
+        backendName=std::getenv("MOSS_VOICE_BACKEND");
+        if(!backendName)backendName="vulkan";
+        if(std::string(backendName)!="cpu"&&std::string(backendName)!="vulkan")
+            throw std::runtime_error("MOSS_VOICE_BACKEND must be cpu or vulkan");
+#endif
+        const audiocpp_backend_config backend{backendName,0,4};
         audiocpp_session *sessionRaw=nullptr;
         check(audiocpp_session_create(model.get(),design?"vdes":"clon","offline",&backend,nullptr,&sessionRaw));
+        std::cout<<avatar::Json{{"event","voice-backend"},{"backend",backendName}}.dump()<<std::endl;
         Owner<audiocpp_session,audiocpp_session_free> session(sessionRaw,audiocpp_session_free);
         Owner<audiocpp_request,audiocpp_request_free> input(audiocpp_request_create(),audiocpp_request_free);
         if(!input)throw std::runtime_error("Ming request allocation failed");

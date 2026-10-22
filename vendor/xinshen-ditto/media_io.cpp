@@ -331,7 +331,13 @@ struct VideoWriter::State {
     if (fpsNum <= 0 || fpsDen <= 0 || double(fpsNum) / fpsDen > 240)
       throw std::runtime_error("Invalid output frame rate");
     check(avformat_alloc_output_context2(&format, nullptr, lossless ? "matroska" : "mp4", path.string().c_str()), "Create video");
-    const AVCodec* videoEncoder = avcodec_find_encoder_by_name(lossless ? "ffv1" : "h264_videotoolbox");
+    const AVCodec* videoEncoder = avcodec_find_encoder_by_name(lossless ? "ffv1" :
+#ifdef _WIN32
+        "h264_mf"
+#else
+        "h264_videotoolbox"
+#endif
+    );
     if (!videoEncoder) throw std::runtime_error("Video encoder unavailable");
     videoStream = avformat_new_stream(format, nullptr);
     video = avcodec_alloc_context3(videoEncoder);
@@ -345,7 +351,13 @@ struct VideoWriter::State {
     if (lossless) { video->level = 3; }
     else {
       video->bit_rate = std::max<int64_t>(4000000, int64_t(width)*height*fpsNum/fpsDen/5);
+#ifdef _WIN32
+      // Keep the system encoder's software default available on machines
+      // without an H.264 hardware encoder. Neural inference uses the GPU.
+      av_dict_set(&options, "hw_encoding", "0", 0);
+#else
       av_dict_set(&options, "allow_sw", "0", 0);
+#endif
     }
     check(avcodec_open2(video, videoEncoder, &options), "Open H.264 encoder");
     av_dict_free(&options);

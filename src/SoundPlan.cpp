@@ -51,6 +51,9 @@ QVariantMap SoundPlan::selectedVoice()const{
 void SoundPlan::loadVoices(){
     m_voices.clear();
     QString root=QCoreApplication::applicationDirPath()+"/../Resources/assets/voices";
+#ifdef Q_OS_WIN
+    root=QCoreApplication::applicationDirPath()+"/assets/voices";
+#endif
     if(!QFileInfo::exists(root+"/catalog.json")&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
         root=QString(MOSS_SOURCE_ROOT)+"/assets/voices";
     for(const auto &value:read(root+"/catalog.json")["presets"].toArray()){
