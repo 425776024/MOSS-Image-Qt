@@ -44,6 +44,15 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def engine_fingerprint():
+    fingerprint = hashlib.sha256(os.environ.get('VCToolsVersion', '').encode())
+    for name in ('scripts/build_ci_windows.py', 'config/windows-dependencies.json',
+                 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json',
+                 'config/windows.manifest', 'config/windows-manifest.cmake'):
+        fingerprint.update((ROOT / name).read_bytes())
+    return fingerprint.hexdigest()
+
+
 def download(name, entry):
     path = BASE / 'downloads' / name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -120,15 +129,6 @@ def main(check_app_only=False):
     os.environ['PATH'] = os.pathsep.join([str(qt / 'bin'), str(prefix / 'bin'), str(prefix / 'tools/ffmpeg'),
         str(NATIVE / 'bin'), os.environ['PATH']])
     os.environ['PKG_CONFIG_PATH'] = str(prefix / 'lib/pkgconfig')
-    if check_app_only:
-        # Check app sources before rebuilding engines, using the same pinned
-        # FFmpeg executable needed by compressed-audio acceptance tests.
-        check_build = BASE / 'build/app-check'
-        cmake(ROOT, check_build, f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
-              '-DMOSS_BUILD_DITTO=OFF', '-DMOSS_BUILD_VOICE=OFF')
-        run('cmake', '--build', check_build, '--parallel', JOBS)
-        test_build(check_build)
-        return
     glslc = prefix / 'tools/shaderc/glslc.exe'
     if not glslc.exists():
         raise ValueError('shaderc did not provide glslc.exe')
@@ -174,25 +174,55 @@ def main(check_app_only=False):
     definition.write_text('LIBRARY mediapipe.dll\nEXPORTS\n' + '\n'.join(names) + '\n')
     run('lib', '/nologo', '/machine:x64', f'/def:{definition}', f'/out:{mp / "mediapipe.lib"}')
 
+    os.environ['PATH'] = os.pathsep.join([str(ort / 'lib'), str(mp), os.environ['PATH']])
+    pkgconfigs = list((vcpkg / 'downloads/tools').rglob('pkgconf.exe'))
+    pkgconf = pkgconfigs[0] if pkgconfigs else shutil.which('pkg-config')
+    if not pkgconf:
+        raise ValueError('vcpkg did not install pkgconf')
+    project_options = [*gpu, f'-DCMAKE_PREFIX_PATH={qt.as_posix()};{prefix.as_posix()}',
+        '-DMOSS_BUILD_DITTO=ON', f'-DPKG_CONFIG_EXECUTABLE={Path(pkgconf).as_posix()}',
+        f'-DONNXRUNTIME_ROOT={ort.as_posix()}', f'-DMOSS_MEDIAPIPE_ROOT={mp.as_posix()}',
+        f'-DJSON_INCLUDE={(prefix / "include").as_posix()}',
+        f'-DVOICE_JSON_INCLUDE={(prefix / "include").as_posix()}']
+    if check_app_only:
+        # Catch app and Ditto portability errors before building three engines.
+        # The final configure uses the same toolchain and reuses these objects.
+        cmake(ROOT, BUILD, *project_options, '-DMOSS_BUILD_VOICE=OFF')
+        run('cmake', '--build', BUILD, '--parallel', JOBS)
+        test_build(BUILD)
+        return
+
     engine = checkout('stable-diffusion', LOCK['stable-diffusion'])
     engine_build = BASE / 'build/image'
-    cmake(engine, engine_build, *gpu, '-DSD_VULKAN=ON', '-DSD_WEBP=OFF', '-DSD_WEBM=OFF')
-    run('cmake', '--build', engine_build, '--target', 'sd-cli', '--parallel', JOBS)
+    sfx_build = BASE / 'build/sfx'
+    ming_build = BASE / 'build/ming'
+    ready = BASE / 'build/engines-ready.txt'
+    fingerprint = engine_fingerprint()
+    cached = ready.is_file() and ready.read_text().strip() == fingerprint and all(p.is_file() for p in (
+        engine_build / 'bin/sd-cli.exe', sfx_build / 'bin/sa3-generate.exe',
+        ming_build / 'bin/audiocpp.dll', ming_build / 'bin/audiocpp.lib'))
+    if not cached:
+        ready.unlink(missing_ok=True)
+        cmake(engine, engine_build, *gpu, '-DSD_VULKAN=ON', '-DSD_WEBP=OFF', '-DSD_WEBM=OFF')
+        run('cmake', '--build', engine_build, '--target', 'sd-cli', '--parallel', JOBS)
+    else:
+        print('Reusing complete native engine binaries with matching source/toolchain fingerprint', flush=True)
     shutil.copy2(engine / 'LICENSE', notices / 'stable-diffusion-LICENSE')
     sa3 = checkout('sa3', SHARED['sa3'])
-    sfx_build = BASE / 'build/sfx'
-    cmake(sa3, sfx_build, *gpu, '-DSA3_VULKAN=ON', '-DBUILD_TESTING=OFF')
-    run('cmake', '--build', sfx_build, '--target', 'sa3-generate', '--parallel', JOBS)
+    if not cached:
+        cmake(sa3, sfx_build, *gpu, '-DSA3_VULKAN=ON', '-DBUILD_TESTING=OFF')
+        run('cmake', '--build', sfx_build, '--target', 'sa3-generate', '--parallel', JOBS)
     shutil.copy2(sa3 / 'LICENSE', notices / 'sa3-LICENSE')
     ming = checkout('ming', SHARED['ming-audio-cpp'])
-    ming_build = BASE / 'build/ming'
-    cmake(ming, ming_build, *gpu, '-DAUDIOCPP_MODEL_SET=custom', '-DAUDIOCPP_MODELS=ming3_tts',
-          '-DAUDIOCPP_BUILD_C_API=ON', '-DAUDIOCPP_DEPLOYMENT_BUILD=ON',
-          '-DENGINE_ENABLE_VULKAN=ON', '-DENGINE_ENABLE_METAL=OFF',
-          '-DENGINE_ENABLE_NATIVE_CPU=OFF', '-DENGINE_ENABLE_OPENMP=OFF',
-          '-DENGINE_ENABLE_LLAMAFILE=OFF', '-DENGINE_BUILD_TESTS=OFF',
-          '-DAUDIOCPP_STATIC_ESPEAK=OFF', '-DAUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=OFF')
-    run('cmake', '--build', ming_build, '--target', 'audiocpp', '--parallel', JOBS)
+    if not cached:
+        cmake(ming, ming_build, *gpu, '-DAUDIOCPP_MODEL_SET=custom', '-DAUDIOCPP_MODELS=ming3_tts',
+              '-DAUDIOCPP_BUILD_C_API=ON', '-DAUDIOCPP_DEPLOYMENT_BUILD=ON',
+              '-DENGINE_ENABLE_VULKAN=ON', '-DENGINE_ENABLE_METAL=OFF',
+              '-DENGINE_ENABLE_NATIVE_CPU=OFF', '-DENGINE_ENABLE_OPENMP=OFF',
+              '-DENGINE_ENABLE_LLAMAFILE=OFF', '-DENGINE_BUILD_TESTS=OFF',
+              '-DAUDIOCPP_STATIC_ESPEAK=OFF', '-DAUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=OFF')
+        run('cmake', '--build', ming_build, '--target', 'audiocpp', '--parallel', JOBS)
+        ready.write_text(fingerprint + '\n')
     ming_root = NATIVE / 'ming'
     for folder in ('bin', 'lib', 'include'):
         (ming_root / folder).mkdir(parents=True, exist_ok=True)
@@ -205,19 +235,9 @@ def main(check_app_only=False):
                 target = notices / name / path.relative_to(source)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, target)
-    os.environ['PATH'] = os.pathsep.join([str(ort / 'lib'), str(mp), str(ming_root / 'bin'), os.environ['PATH']])
-    os.environ['PATH'] = str(prefix / 'tools/ffmpeg') + os.pathsep + os.environ['PATH']
-    pkgconfigs = list((vcpkg / 'downloads/tools').rglob('pkgconf.exe'))
-    pkgconf = pkgconfigs[0] if pkgconfigs else shutil.which('pkg-config')
-    if not pkgconf:
-        raise ValueError('vcpkg did not install pkgconf')
-    cmake(ROOT, BUILD, *gpu, f'-DCMAKE_PREFIX_PATH={qt.as_posix()};{prefix.as_posix()}',
-          '-DMOSS_BUILD_DITTO=ON', '-DMOSS_BUILD_VOICE=ON',
-          f'-DPKG_CONFIG_EXECUTABLE={Path(pkgconf).as_posix()}',
-          f'-DONNXRUNTIME_ROOT={ort.as_posix()}', f'-DMOSS_MING_ROOT={ming_root.as_posix()}',
-          f'-DMOSS_MEDIAPIPE_ROOT={mp.as_posix()}',
-          f'-DJSON_INCLUDE={(prefix / "include").as_posix()}',
-          f'-DVOICE_JSON_INCLUDE={(prefix / "include").as_posix()}')
+    os.environ['PATH'] = str(ming_root / 'bin') + os.pathsep + os.environ['PATH']
+    cmake(ROOT, BUILD, *project_options, '-DMOSS_BUILD_VOICE=ON',
+          f'-DMOSS_MING_ROOT={ming_root.as_posix()}')
     run('cmake', '--build', BUILD, '--parallel', JOBS)
     # Side-loaded DLLs are needed beside test executables as well as on PATH.
     test_build(BUILD)

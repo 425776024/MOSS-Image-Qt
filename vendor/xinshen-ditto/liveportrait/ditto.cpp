@@ -693,9 +693,9 @@ struct Prep {
     auto p = transform(o[2], inv, 224);
     a = cropMatrix(p, 512, 2.3, -.125);
     cv::warpAffine(im, crop, a, {512, 512});
-    cv::Mat small;
-    cv::resize(crop, small, {256, 256}, 0, 0, cv::INTER_AREA);
-    auto input = tensor(small);
+    cv::Mat motionCrop;
+    cv::resize(crop, motionCrop, {256, 256}, 0, 0, cv::INTER_AREA);
+    auto input = tensor(motionCrop);
     auto m = motion.run({input}, {{1, 3, 256, 256}});
     require(m.size() == 7, "motion outputs");
     Source src;

@@ -58,10 +58,30 @@ jobs:
         run: |
           python scripts/public_release.py audit
           python -m unittest discover -s tests -p '*_tests.py'
-      - name: Compile and test app sources before native engines
+      - name: Compile and test app and Ditto worker before native engines
         run: python scripts/build_ci_windows.py --check-app
+      - name: Restore completely built native engines
+        id: engine-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/build/image/bin
+            .local/ci-windows/build/sfx/bin
+            .local/ci-windows/build/ming/bin
+            .local/ci-windows/build/engines-ready.txt
+          key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake') }}
       - name: Build native engines, run CTest and deploy a portable ZIP
         run: python scripts/build_ci_windows.py
+      - name: Save completed engines even if later worker or packaging checks fail
+        if: always() && !cancelled() && steps.engine-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci-windows/build/engines-ready.txt') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/build/image/bin
+            .local/ci-windows/build/sfx/bin
+            .local/ci-windows/build/ming/bin
+            .local/ci-windows/build/engines-ready.txt
+          key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake') }}
       - name: Upload Windows preview (GPU inference still requires a real PC)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -81,8 +101,6 @@ jobs:
             build-windows/*-test.txt
             build-windows/CMakeFiles/CMakeConfigureLog.yaml
             .local/ci-windows/build/**/CMakeFiles/CMakeConfigureLog.yaml
-            .local/ci-windows/build/app-check/Testing/Temporary/LastTest.log
-            .local/ci-windows/build/app-check/*-test.txt
             .local/ci-windows/deployed-smoke/
             .local/ci-windows/vcpkg_installed/vcpkg/issue_body.md
           if-no-files-found: ignore
