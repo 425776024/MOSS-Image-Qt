@@ -33,6 +33,10 @@ if [ -d "$build_dir/MossStudio.app/Contents/Resources/models" ]; then
     exit 2
 fi
 python3 scripts/public_release.py app "$build_dir/MossStudio.app"
+if [ "$(.local/build-engine/bin/sd-cli --moss-flowedit-version)" != "MOSS_FLOWEDIT_V1" ]; then
+    echo "Rebuild the image engine with scripts/build.sh before packaging FlowEdit." >&2
+    exit 1
+fi
 cp -R "$build_dir/MossStudio.app" "$app"
 mkdir -p "$app/Contents/Helpers" "$app/Contents/Resources/licenses"
 cp LICENSE "$app/Contents/Resources/licenses/Xinshen-MIT.txt"
@@ -46,6 +50,7 @@ ming_root="${MOSS_MING_ROOT:-$(sed -n 's/^MOSS_MING_ROOT:PATH=//p' "$build_dir/C
 cp -R "$ming_root/licenses" "$app/Contents/Resources/licenses/audio/ming-runtime"
 cp vendor/videocut-voice/PROVENANCE.md "$app/Contents/Resources/licenses/audio/"
 cp .local/deps/stable-diffusion.cpp/LICENSE "$app/Contents/Resources/licenses/stable-diffusion.cpp.txt"
+cp vendor/moss-flowedit/LICENSE "$app/Contents/Resources/licenses/FlowEdit.txt"
 cp vendor/xinshen-ditto/LICENSE.upstream "$app/Contents/Resources/licenses/Ditto.txt"
 cp vendor/xinshen-ditto/LICENSE.mediapipe "$app/Contents/Resources/licenses/MediaPipe.txt"
 cp vendor/xinshen-ditto/LICENSE.YuNet "$app/Contents/Resources/licenses/YuNet.txt"

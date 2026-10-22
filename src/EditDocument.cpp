@@ -14,7 +14,7 @@ QString EditDocument::load(QString path){
     auto image=reader.read();if(image.isNull())return "无法读取图片："+reader.errorString();
     m_source=image.convertToFormat(QImage::Format_ARGB32);
     m_mask=QImage(m_source.size(),QImage::Format_ARGB32);m_mask.fill(Qt::black);
-    m_sourcePath=path;m_result={};m_resultUrl.clear();m_undo.clear();m_redo.clear();m_hasMask=false;
+    m_sourcePath=path;m_sourcePrompt.clear();m_result={};m_resultUrl.clear();m_undo.clear();m_redo.clear();m_hasMask=false;
     emit changed();return {};
 }
 bool EditDocument::restoreMask(QString path){
@@ -32,7 +32,8 @@ QJsonObject EditDocument::snapshot()const{
         m_encodedMask=QString::fromLatin1(bytes.toBase64());m_maskCacheKey=m_mask.cacheKey();
     }
     return {{"source",m_sourcePath},{"mask",m_encodedMask},{"result",m_resultUrl},
-        {"prompt",m_prompt},{"strength",m_strength},{"feather",m_feather},{"blendMode",m_blendMode},{"scope",m_scope}};
+        {"prompt",m_prompt},{"strength",m_strength},{"feather",m_feather},{"blendMode",m_blendMode},{"scope",m_scope},
+        {"editMethod",m_editMethod},{"sourcePrompt",m_sourcePrompt},{"flowStrength",m_flowStrength}};
 }
 QString EditDocument::restoreSnapshot(const QJsonObject &state){
     // A page with no edit must also clear the previous page's source and undo.
@@ -43,6 +44,8 @@ QString EditDocument::restoreSnapshot(const QJsonObject &state){
     m_feather=std::clamp(state["feather"].toInt(12),0,64);
     m_blendMode=state["blendMode"].toString()=="direct"?"direct":"feather";
     m_scope=state["scope"].toString()=="whole"?"whole":"local";
+    m_editMethod=state["editMethod"].toString(state["source"].toString().isEmpty()?"flowedit":"standard")=="flowedit"?"flowedit":"standard";
+    m_flowStrength=std::clamp(state["flowStrength"].toDouble(20.0/28.0),.1,1.);
     QString error;
     if(!state["source"].toString().isEmpty()){
         error=load(state["source"].toString());
@@ -59,6 +62,7 @@ QString EditDocument::restoreSnapshot(const QJsonObject &state){
             if(!result.isEmpty())setResult(result);
         }
     }
+    m_sourcePrompt=state["sourcePrompt"].toString();
     emit changed();return error;
 }
 void EditDocument::remember(){
@@ -150,6 +154,11 @@ bool EditDocument::prepare(QString dir,QString *error)const{
     const QSize padded(std::max(256,(m_source.width()+15)/16*16),std::max(256,(m_source.height()+15)/16*16));
     QImage init(padded,QImage::Format_RGB32);init.fill(Qt::white);
     {QPainter p(&init);p.drawImage(0,0,m_source);}
+    if(usesFlowEdit()){
+        const bool ok=m_source.save(dir+"/source.png")&&init.save(dir+"/init.png")&&m_mask.save(dir+"/local-selection.png");
+        if(!ok&&error)*error="无法保存编辑原图";
+        return ok;
+    }
     QImage mask(padded,QImage::Format_RGB32);mask.fill(Qt::black);
     QImage selection=m_mask;
     if(m_scope=="whole"){selection=QImage(m_source.size(),QImage::Format_ARGB32);selection.fill(Qt::white);}

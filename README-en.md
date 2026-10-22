@@ -40,7 +40,18 @@ https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
 
 ### Image to Image
 
-In **Edit Image**, choose **Whole Image**, select a source image, and describe the new image without painting a selection. Open **Image to Image** to adjust strength. Choose **Selection** for brush or rectangular inpainting.
+In **Edit Image**, choose **Whole Image**, import an image, and open **Image to Image**:
+
+- **Preserve appearance**: describe the source, then describe the complete edited image in the conversation composer. FlowEdit aims to retain features and composition without painting a selection.
+- **Free redraw**: describe the new image using the existing image-to-image method. Higher strength usually changes more of the image.
+
+**Selection** still provides brush and rectangular inpainting.
+
+[![FlowEdit: source, purple-cyan hair, and hair with gold jewelry](assets/showcase/flowedit-portrait-comparison.png)](assets/showcase/flowedit-portrait-comparison.png)
+
+The two edits independently start from the same source: hair color only, and hair color with a necklace, earrings and nose ring. Both use the existing MOSS Q4_K weights at 768×1024, 28 steps, CFG 3, seed 42 and strength about 0.71 (20 FlowEdit steps), taking about 63 seconds each on an RTX 3090. No extra model, mask, feathering or source-pixel compositing is used. This example stays closer to the source than ordinary image-to-image, but skin tone and details still change; identity and unchanged outside pixels are not guaranteed.
+
+Source description, method and strength are saved with each work. Older works retain their previous free-redraw behavior. Rebuild both the app and image engine to use this feature; published preview packages may not include it yet. See [implementation, parameters and limitations](vendor/moss-flowedit/README.md).
 
 The real inference results below use the same source with a prompt for blue-purple crystal lettering: original, strength 0.55, and strength 0.85. Higher strength changes the material and floral decorations more visibly while retaining readable text and the two-row composition in this example.
 

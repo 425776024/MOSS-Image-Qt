@@ -120,6 +120,17 @@ int main(int argc,char **argv){
             });
         });
     }
+    auto configureEditTest=[&](QString fallback){
+        const auto value=[&](QString key,QString defaultValue){const int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:defaultValue;};
+        auto edit=studio.editDocument();edit->setProperty("editMethod",value("--edit-method",fallback));
+        edit->setProperty("flowStrength",value("--flow-strength",QString::number(20.0/28.0,'g',16)).toDouble());
+        if(args.contains("--source-prompt-file")){
+            QFile file(value("--source-prompt-file",{}));
+            if(!file.open(QIODevice::ReadOnly)){qWarning()<<"Cannot read source prompt";return false;}
+            edit->setProperty("sourcePrompt",QString::fromUtf8(file.readAll()));
+        }
+        return true;
+    };
     if(args.contains("--conversation-test")){
         auto argument=[&](QString key,QString fallback){const int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         const auto task=argument("--task","image");studio.newConversation();auto thread=studio.conversation();
@@ -133,10 +144,13 @@ int main(int argc,char **argv){
             if(studio.prepareConversationEdit()){
                 studio.editDocument()->setProperty("strength",argument("--strength","0.85").toDouble());
                 studio.editDocument()->setProperty("blendMode",argument("--blend-mode","feather"));
+                if(!configureEditTest("standard"))return 11;
             }
         }
         if(args.contains("--quant"))studio.setImageQuant(argument("--quant","Q4_K"));
         studio.prepareConversationSettings();
+        studio.setProperty("seed",argument("--seed","42").toInt());
+        studio.setProperty("cfg",argument("--cfg","3").toDouble());
         if(args.contains("--layout-template")){
             studio.document()->loadTemplate(argument("--layout-template","objects"));
             thread->setDraft(studio.document()->prompt());
@@ -199,6 +213,7 @@ int main(int argc,char **argv){
                 studio.conversation()->setTask("edit");
                 studio.conversation()->importMedia(QUrl::fromLocalFile(argument("--capture-edit-source",{})),"target");
                 studio.conversation()->setEditScope(argument("--edit-scope","whole"));
+                if(studio.prepareConversationEdit()&&!configureEditTest("flowedit"))return 5;
             }
             if(args.contains("--capture-portrait")){
                 const auto source=QUrl::fromLocalFile(argument("--capture-portrait",QString()));
@@ -301,6 +316,24 @@ int main(int argc,char **argv){
                     QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);
                 }
                 if(studio.conversation()->editScope()!="local"||studio.editDocument()->m_scope!="local")app.exit(5);
+            });
+            if(args.contains("--flowedit-keyboard-check"))QTimer::singleShot(900,&app,[&]{
+                if(app.platformName()!="offscreen"){app.exit(5);return;}
+                auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));
+                auto method=active?active->findChild<QQuickItem *>("imageEditMethod"):nullptr;
+                auto field=active?active->findChild<QQuickItem *>("imageEditSourcePromptText"):nullptr;
+                if(!method||!field){app.exit(5);return;}
+                const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);};
+                method->forceActiveFocus();key(Qt::Key_Space);key(Qt::Key_End);key(Qt::Key_Return);
+                if(studio.editDocument()->m_editMethod!="standard"){app.exit(5);return;}
+                method->forceActiveFocus();key(Qt::Key_Space);key(Qt::Key_Home);key(Qt::Key_Return);
+                if(studio.editDocument()->m_editMethod!="flowedit"){app.exit(5);return;}
+                field->forceActiveFocus();
+                QKeyEvent text(QEvent::KeyPress,0,Qt::NoModifier," source check");QCoreApplication::sendEvent(mainWindow,&text);
+                key(Qt::Key_Return);
+                if(!studio.editDocument()->m_sourcePrompt.contains(" source check")||!studio.editDocument()->m_sourcePrompt.contains('\n')){app.exit(5);return;}
+                key(Qt::Key_Tab);studio.flushWorkspace();
+                qInfo("FlowEdit keyboard: method switching, text input and multiline Return passed");
             });
             const auto dialogKey=argument("--dialog-key",QString());
             if(!dialogKey.isEmpty())QTimer::singleShot(1100,&app,[&,dialogKey]{

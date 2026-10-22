@@ -9,7 +9,7 @@ private slots:
         QVERIFY(source.save(dir.filePath("original.png")));EditDocument document;
         QVERIFY(document.load(dir.filePath("original.png")).isEmpty());QString error;
         QVERIFY(!document.prepare(dir.path(),&error));
-        document.setProperty("scope","whole");QVERIFY(document.prepare(dir.path(),&error));
+        document.m_editMethod="standard";document.setProperty("scope","whole");QVERIFY(document.prepare(dir.path(),&error));
         QVERIFY(!document.hasMask());QVERIFY(!document.canUndo());
         QCOMPARE(qRed(QImage(dir.filePath("selection.png")).pixel(80,76)),255);
         QCOMPARE(qRed(QImage(dir.filePath("mask.png")).pixel(150,150)),0);
@@ -23,6 +23,23 @@ private slots:
         restored.restoreSnapshot(document.snapshot());QCOMPARE(restored.m_scope,QString("whole"));
         auto legacy=document.snapshot();legacy.remove("scope");restored.restoreSnapshot(legacy);
         QCOMPARE(restored.m_scope,QString("local"));
+    }
+    void flowEditHasNoInferenceMaskAndRestoresDescription(){
+        QTemporaryDir dir;QImage source(81,77,QImage::Format_RGB32);source.fill(Qt::cyan);
+        const auto path=dir.filePath("source-input.png");QVERIFY(source.save(path));
+        EditDocument d;QVERIFY(d.load(path).isEmpty());d.m_scope="whole";
+        QVERIFY(d.usesFlowEdit());d.m_sourcePrompt="An unchanged source description";d.m_flowStrength=.65;
+        d.addRectangle(4,5,10,11);const auto local=d.mask();QString error;
+        QVERIFY(d.prepare(dir.path(),&error));
+        QVERIFY(!QFile::exists(dir.filePath("mask.png")));QVERIFY(!QFile::exists(dir.filePath("blend.png")));
+        QCOMPARE(QImage(dir.filePath("init.png")).size(),QSize(256,256));
+        QCOMPARE(QImage(dir.filePath("local-selection.png")),local);
+        EditDocument restored;QVERIFY(restored.restoreSnapshot(d.snapshot()).isEmpty());
+        QCOMPARE(restored.m_sourcePrompt,d.m_sourcePrompt);QCOMPARE(restored.m_flowStrength,.65);QVERIFY(restored.usesFlowEdit());
+        restored.m_scope="local";QVERIFY(!restored.usesFlowEdit());QCOMPARE(restored.mask(),local);
+        auto legacy=d.snapshot();legacy.remove("editMethod");restored.restoreSnapshot(legacy);
+        QCOMPARE(restored.m_editMethod,QString("standard"));
+        QVERIFY(restored.load(path).isEmpty());QVERIFY(restored.m_sourcePrompt.isEmpty());
     }
     void directOutputSkipsSourcePasteAndCropsPadding(){
         QImage source(32,30,QImage::Format_ARGB32),generated(48,48,QImage::Format_ARGB32);

@@ -8,6 +8,7 @@ CardSurface {
     required property var thread
     property bool maskMode: false
     readonly property bool localEdit: maskMode && thread.editScope === "local"
+    readonly property bool flowEdit: maskMode && !localEdit && edit.editMethod === "flowedit"
     property bool embedded: false
     readonly property bool narrow: width < 620
     readonly property var doc: studio.document
@@ -173,7 +174,29 @@ CardSurface {
                     ColumnLayout {
                         visible: root.maskMode; Layout.fillWidth: true; spacing: 6
                         AppCheckBox { visible: root.localEdit; Layout.alignment: Qt.AlignRight; text: HomeTheme.t("显示选区"); font.pixelSize: 11; checked: root.showMask; onClicked: root.showMask=checked; Accessible.onToggleAction: root.showMask=!root.showMask }
-                        Text { Layout.fillWidth: true; text: !root.localEdit ? HomeTheme.t("无需涂抹，描述想要的新画面。") : root.edit.blendMode === "direct" ? HomeTheme.t("直接采用模型输出，选区外也可能有细微变化。") : HomeTheme.t("涂抹要修改的区域，其他部分保留原图。"); color: HomeTheme.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
+                        Text { Layout.fillWidth: true; text: !root.localEdit ? root.flowEdit ? HomeTheme.t("填写原图描述，再在下方描述修改后的画面。") : HomeTheme.t("无需涂抹，描述想要的新画面。") : root.edit.blendMode === "direct" ? HomeTheme.t("直接采用模型输出，选区外也可能有细微变化。") : HomeTheme.t("涂抹要修改的区域，其他部分保留原图。"); color: HomeTheme.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
+                        RowLayout {
+                            visible: !root.localEdit; Layout.fillWidth: true; spacing: 8
+                            FieldLabel { text: HomeTheme.t("方式") }
+                            InspectorSelect {
+                                objectName: "imageEditMethod"; Layout.fillWidth: true; Layout.minimumWidth: 0
+                                model: [HomeTheme.t("保留原貌"), HomeTheme.t("自由重绘")]
+                                currentIndex: root.edit.editMethod === "flowedit" ? 0 : 1
+                                Accessible.name: HomeTheme.t("图像编辑方式")
+                                onActivated: root.edit.editMethod = currentIndex === 0 ? "flowedit" : "standard"
+                            }
+                        }
+                        ColumnLayout {
+                            visible: root.flowEdit; Layout.fillWidth: true; spacing: 4
+                            Text { text: HomeTheme.t("原图描述"); color: HomeTheme.secondary; font.pixelSize: 11 }
+                            InputArea {
+                                objectName: "imageEditSourcePrompt"; Layout.fillWidth: true; Layout.preferredHeight: 100
+                                label: HomeTheme.t("原图描述"); value: root.edit.sourcePrompt
+                                placeholder: HomeTheme.t("描述原图中的人物、物品和背景。")
+                                onEdited: text => root.edit.sourcePrompt=text
+                            }
+                            Text { Layout.fillWidth: true; text: HomeTheme.t("尽量保留构图与人物特征，细节仍可能变化。"); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+                        }
                         RowLayout {
                             visible: root.localEdit; Layout.fillWidth: true; spacing: 8
                             FieldLabel { text: HomeTheme.t("贴合") }
@@ -194,8 +217,8 @@ CardSurface {
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
                             FieldLabel { text: HomeTheme.t("强度") }
-                            AppSlider { Layout.fillWidth: true; Layout.minimumWidth: 40; implicitWidth: 80; implicitHeight: 28; from: .1; to: 1; stepSize: .05; value: root.edit.strength; Accessible.name: HomeTheme.t("重绘强度"); onMoved: root.edit.strength=value }
-                            Text { Layout.preferredWidth: 40; text: root.edit.strength.toFixed(2); horizontalAlignment: Text.AlignRight; color: HomeTheme.secondary; font.pixelSize: 11 }
+                            AppSlider { Layout.fillWidth: true; Layout.minimumWidth: 40; implicitWidth: 80; implicitHeight: 28; from: .1; to: 1; stepSize: root.flowEdit ? .01 : .05; value: root.flowEdit ? root.edit.flowStrength : root.edit.strength; Accessible.name: HomeTheme.t("重绘强度"); onMoved: {if(root.flowEdit)root.edit.flowStrength=value;else root.edit.strength=value} }
+                            Text { Layout.preferredWidth: 40; text: (root.flowEdit ? root.edit.flowStrength : root.edit.strength).toFixed(2); horizontalAlignment: Text.AlignRight; color: HomeTheme.secondary; font.pixelSize: 11 }
                         }
                         Text { visible: !root.localEdit; Layout.fillWidth: true; text: HomeTheme.t("强度越高，画面变化越大。"); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
                         RowLayout {

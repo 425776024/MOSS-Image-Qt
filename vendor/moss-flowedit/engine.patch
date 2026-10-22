@@ -1,0 +1,71 @@
+--- a/src/pipeline/image.cpp
++++ b/src/pipeline/image.cpp
+@@ -12,6 +12,7 @@
+ #include "runtime/denoiser.hpp"
+ #include "runtime/image_preprocess.h"
+ #include "upscaler.h"
++#include "moss_flowedit.hpp"
+
+ namespace sd::pipeline {
+
+@@ -846,6 +847,28 @@
+         }
+         ImageGenerationEmbeds embeds = std::move(*embeds_opt);
+
++        SDCondition flowedit_source;
++        if (moss_flowedit::enabled()) {
++            if (sd->version != VERSION_MOSS_IMAGE || !sd_img_gen_params->init_image.data ||
++                sd_img_gen_params->mask_image.data || sd_img_gen_params->ref_images_count ||
++                sd_img_gen_params->lora_count || sd_img_gen_params->control_image.data ||
++                sd_img_gen_params->ip_adapter_image.data || request.hires.enabled ||
++                request.batch_count != 1) {
++                LOG_ERROR("FlowEdit requires one MOSS init image and no mask, reference, adapter, control, LoRA or hires pass");
++                return false;
++            }
++            try {
++                flowedit_source = moss_flowedit::source_condition(sd, request);
++            } catch (const std::exception& error) {
++                LOG_ERROR("FlowEdit: %s", error.what());
++                return false;
++            }
++            if (moss_flowedit::option("MOSS_FLOWEDIT_MODE") == "flow" && flowedit_source.empty()) {
++                return false;
++            }
++        }
++
++
+         std::vector<sd::Tensor<float>> final_latents;
+         int64_t denoise_start = ggml_time_ms();
+         for (int b = 0; b < request.batch_count; b++) {
+@@ -869,7 +892,16 @@
+             sd->sampler_rng->manual_seed(cur_seed);
+             sd::Tensor<float> noise = sd::randn_like<float>(latents.init_latent, sd->rng);
+
+-            sd::Tensor<float> x_0 = sd->sample(sd->diffusion_model,
++            sd::Tensor<float> x_0;
++            if (moss_flowedit::enabled()) {
++                try {
++                    x_0 = moss_flowedit::sample(sd, latents.init_latent, noise, flowedit_source,
++                                               embeds, plan.sigmas, request.guidance.txt_cfg);
++                } catch (const std::exception& error) {
++                    LOG_ERROR("FlowEdit: %s", error.what());
++                    return false;
++                }
++            } else x_0 = sd->sample(sd->diffusion_model,
+                                                true,
+                                                latents.init_latent,
+                                                std::move(noise),
+--- a/examples/cli/main.cpp
++++ b/examples/cli/main.cpp
+@@ -638,6 +638,11 @@
+ }
+
+ int main(int argc, const char* argv[]) {
++    if (argc == 2 && std::string(argv[1]) == "--moss-flowedit-version") {
++        printf("MOSS_FLOWEDIT_V1\n");
++        return 0;
++    }
++
+     if (argc > 1 && std::string(argv[1]) == "--version") {
+         std::cout << version_string() << "\n";
+         return EXIT_SUCCESS;

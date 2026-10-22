@@ -52,6 +52,7 @@ inference paths. Voice import uses a user-entered transcript.
 |---|---|---|
 | Qt 6.10.2 | https://www.qt.io/ | Dynamically linked desktop UI and media playback |
 | stable-diffusion.cpp | https://github.com/leejet/stable-diffusion.cpp | MIT, commit b13a48219d5cdf408edcb93da6cd69b612ed03d3 |
+| FlowEdit | https://github.com/fallenshock/FlowEdit | MIT; native sampling adapter derived from the published algorithm, copyright and license in `vendor/moss-flowedit/LICENSE` |
 | ggml | stable-diffusion.cpp pinned submodule | MIT, CPU/Metal inference |
 | MOSS-Image SFT | https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT | Model family, Apache-2.0; Q4_K / Q8_0 conversions from https://huggingface.co/leejet/MOSS-Image-SFT-GGUF |
 | Qwen3.5 9B | https://huggingface.co/unsloth/Qwen3.5-9B-GGUF | Q4 text encoder; separate from prompt enhancement |
@@ -125,3 +126,12 @@ revision `2eb8d37c7f10672e69c8aa33091baa04c461b66c`, SHA-256
 The upstream inclusionAI model is MIT; its full license is retained under
 `vendor/videocut-voice/licenses/ming/`. Voice recording and preset rights remain
 separate from model rights. The retired Hojo backend, headers and model notices have been removed.
+
+## FlowEdit image editing
+
+`vendor/moss-flowedit/` contains the inference adapter and a small patch to the
+pinned stable-diffusion.cpp image pipeline. It follows the FlowEdit algorithm
+by Kulikov et al.; the upstream MIT notice is retained in that directory and
+bundled as `Contents/Resources/licenses/FlowEdit.txt`. The port does not change
+MOSS model weights or architecture and adds no model dependency. See its
+[implementation notes](vendor/moss-flowedit/README.md) for validation and limits.

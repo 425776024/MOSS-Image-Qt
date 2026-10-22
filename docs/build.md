@@ -25,7 +25,9 @@ ctest --test-dir build --output-on-failure
 
 仅调试界面和下载管理时可设 `-DMOSS_BUILD_DITTO=OFF -DMOSS_BUILD_VOICE=OFF`。
 图像与音效工作进程分别来自 stable-diffusion.cpp 和 sa3.cpp。
-`scripts/build.sh` 准备固定提交的 stable-diffusion.cpp；本地已配置好依赖时可运行
+`scripts/build.sh` 准备固定提交的 stable-diffusion.cpp，并应用 `vendor/moss-flowedit/` 中的原生 FlowEdit 补丁；
+更新「保留原貌」功能时须同时重建图像引擎，旧引擎会提示更新。该方式不新增模型或 Python 推理依赖。
+本地已配置好依赖时可运行
 `scripts/run-local.sh` 增量构建。`scripts/prepare_audio.sh` 是可选的开发机依赖导入器，
 要求显式设置来源路径，不导入模型。
 

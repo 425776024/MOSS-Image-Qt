@@ -14,6 +14,7 @@ if [ "$(git -C .local/deps/stable-diffusion.cpp rev-parse HEAD)" != "$engine_rev
     exit 1
 fi
 git -C .local/deps/stable-diffusion.cpp submodule update --init --recursive
+python3 scripts/prepare_flowedit.py .local/deps/stable-diffusion.cpp
 cmake -S .local/deps/stable-diffusion.cpp -B .local/build-engine -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DSD_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON \
     -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DGGML_NATIVE=OFF \

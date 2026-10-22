@@ -23,6 +23,9 @@ class EditDocument : public QObject {
     Q_PROPERTY(int feather MEMBER m_feather NOTIFY changed)
     Q_PROPERTY(QString blendMode MEMBER m_blendMode NOTIFY changed)
     Q_PROPERTY(QString scope MEMBER m_scope NOTIFY changed)
+    Q_PROPERTY(QString editMethod MEMBER m_editMethod NOTIFY changed)
+    Q_PROPERTY(QString sourcePrompt MEMBER m_sourcePrompt NOTIFY changed)
+    Q_PROPERTY(double flowStrength MEMBER m_flowStrength NOTIFY changed)
 public:
     explicit EditDocument(QObject *parent=nullptr):QObject(parent){}
     bool ready()const{return !m_source.isNull();}
@@ -51,6 +54,7 @@ public:
     Q_INVOKABLE void redo();
     Q_INVOKABLE void addRectangle(double x,double y,double width,double height);
     bool prepare(QString directory,QString *error)const;
+    bool usesFlowEdit()const{return m_scope=="whole"&&m_editMethod=="flowedit";}
     static QImage blendWeights(const QImage &mask,int feather);
     static QImage composite(const QImage &source,const QImage &generated,const QImage &weights);
     static QImage finishImage(const QImage &source,const QImage &generated,const QImage &weights,const QString &mode);
@@ -59,6 +63,8 @@ public:
     int m_feather=12;
     QString m_blendMode="feather";
     QString m_scope="local";
+    QString m_editMethod="flowedit",m_sourcePrompt;
+    double m_flowStrength=20.0/28.0;
 signals:
     void changed();
 private:

@@ -176,6 +176,8 @@ private slots:
             s.newConversation();auto second=s.conversation();secondId=second->id();
             second->importMedia(QUrl::fromLocalFile(source),"target");second->setTask("edit");QCOMPARE(second->editScope(),QString("whole"));QVERIFY(s.prepareConversationEdit());
             s.editDocument()->addRectangle(300,300,80,70);secondMask=s.editDocument()->mask();QVERIFY(firstMask!=secondMask);
+            s.editDocument()->setProperty("sourcePrompt","A cyan source image");
+            s.editDocument()->setProperty("editMethod","flowedit");s.editDocument()->setProperty("flowStrength",.65);
             for(int i=0;i<3;++i){
                 s.openConversation(firstId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),firstMask);QCOMPARE(s.document()->json(),layout);QCOMPARE(s.editDocument()->m_scope,QString("local"));
                 s.openConversation(secondId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),secondMask);QVERIFY(s.document()->regions().isEmpty());QCOMPARE(s.editDocument()->m_scope,QString("whole"));
@@ -185,7 +187,17 @@ private slots:
         Studio restored;restored.openConversation(firstId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.editDocument()->mask(),firstMask);QCOMPARE(restored.document()->json(),layout);
         restored.openConversation(secondId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.editDocument()->mask(),secondMask);
         QCOMPARE(restored.conversation()->editScope(),QString("whole"));QCOMPARE(restored.editDocument()->m_scope,QString("whole"));
+        QCOMPARE(restored.editDocument()->m_sourcePrompt,QString("A cyan source image"));
+        QCOMPARE(restored.editDocument()->m_flowStrength,.65);QVERIFY(restored.editDocument()->usesFlowEdit());
         restored.openConversation(firstId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.conversation()->editScope(),QString("local"));
+    }
+    void flowEditRejectsMissingSourceDescriptionBeforeStarting(){
+        QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio studio;
+        const auto source=dir.filePath("source.png");QImage image(64,64,QImage::Format_RGB32);image.fill(Qt::cyan);QVERIFY(image.save(source));
+        auto thread=studio.conversation();thread->importMedia(QUrl::fromLocalFile(source),"target");thread->setTask("edit");thread->setEditScope("whole");
+        QVERIFY(studio.prepareConversationEdit());studio.editDocument()->m_prompt="A green image";
+        studio.generateEdit();QVERIFY(!studio.busy());QVERIFY(studio.error().contains("原图描述"));
+        QVERIFY(QDir(dir.path()).entryList({"*-edit-*"},QDir::Dirs).isEmpty());
     }
     void localRepaintRejectsEmptySelection(){
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio studio;

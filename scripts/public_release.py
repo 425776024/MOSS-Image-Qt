@@ -25,6 +25,7 @@ PUBLIC_DEMO_MEDIA = {
 }
 
 PUBLIC_SCRIPTS = {
+    "prepare_flowedit.py",
     "audit_bundle.py", "build.sh", "build_media_dependencies.sh", "bundle_native.py",
     "package.sh", "prepare_audio.sh", "public_release.py", "run-local.sh", "run_background_test.sh",
     "prepare_ming.py", "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",

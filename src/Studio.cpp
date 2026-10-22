@@ -350,9 +350,17 @@ void Studio::start(QString exe,QStringList args,QString kind){
     }
     auto env=QProcessEnvironment::systemEnvironment();
     // Use the known default Ditto profile, independently of experimental shells.
-    for(auto k:env.keys())if(k.startsWith("XINSHEN_"))env.remove(k);
+    for(auto k:env.keys())if(k.startsWith("XINSHEN_")||k.startsWith("MOSS_FLOWEDIT_"))env.remove(k);
     env.insert("XINSHEN_COREML_CACHE",QStandardPaths::writableLocation(QStandardPaths::CacheLocation)+"/coreml");
     env.insert("XINSHEN_DITTO_MOUTH_CACHE_DIR",QStandardPaths::writableLocation(QStandardPaths::CacheLocation)+"/ditto-mouth-v2");
+    const auto editJob=kind=="edit"?readJson(m_jobDir+"/job.json"):QJsonObject();
+    if(editJob["editMethod"]=="flowedit"){
+        env.insert("MOSS_FLOWEDIT_MODE","flow");
+        env.insert("MOSS_FLOWEDIT_SOURCE_PROMPT",m_jobDir+"/source-prompt.txt");
+        env.insert("MOSS_FLOWEDIT_NMAX",QString::number(editJob["flowSteps"].toInt()));
+        env.insert("MOSS_FLOWEDIT_NMIN","0");env.insert("MOSS_FLOWEDIT_NAVG","1");
+        env.insert("MOSS_FLOWEDIT_SOURCE_CFG",QString::number(editJob["cfg"].toDouble()));
+    }
     m_process.setProcessEnvironment(env);m_timer.start();persist();m_process.start(exe,args);emit changed();
 }
 void Studio::startRemote(QStringList args,QString kind){
@@ -387,6 +395,9 @@ void Studio::resumeRemoteImage(){
             m_edit.m_strength=job["strength"].toDouble();m_edit.m_feather=job["feather"].toInt();
             m_edit.m_blendMode=job["blendMode"].toString()=="direct"?"direct":"feather";
             m_edit.m_scope=job["scope"].toString()=="whole"?"whole":"local";
+            m_edit.m_editMethod=job["editMethod"].toString()=="flowedit"?"flowedit":"standard";
+            m_edit.m_sourcePrompt=job["sourcePrompt"].toString();
+            m_edit.m_flowStrength=job["flowStrength"].toDouble(20.0/28.0);
             m_repainting=true;
         }
     }
@@ -642,20 +653,39 @@ void Studio::generateEdit(){
     if(!m_edit.ready()){fail("请先选择需要编辑的图片");return;}
     if(m_edit.m_scope!="whole"&&!m_edit.hasMask()){fail("请先涂抹或框选需要修改的区域");return;}
     if(m_edit.m_prompt.trimmed().isEmpty()){fail("请描述修改后的画面");return;}
+    const bool flow=m_edit.usesFlowEdit();
+    if(flow&&m_edit.m_sourcePrompt.trimmed().isEmpty()){fail("请在图生图中填写原图描述");return;}
+    if(flow&&m_edit.m_sourcePrompt.toUtf8().size()>65536){fail("请将原图描述缩短后重试");return;}
+    if(flow&&m_imageDevice!="local"){fail("请切换到本机使用保留原貌");return;}
     if(m_imageDevice=="local"&&!ensureModels({"image"}))return;
     if(m_imageDevice=="remote"&&!imageReady()){fail("请先在模型设置中连接远程 GPU");return;}
-    if(m_steps<1||m_steps>100||m_cfg<1||m_cfg>10||
+    if(m_steps<1||m_steps>100||!std::isfinite(m_cfg)||m_cfg<1||m_cfg>10||
+       (flow&&(!std::isfinite(m_edit.m_flowStrength)||m_edit.m_flowStrength<.1||m_edit.m_flowStrength>1))||
        !std::isfinite(m_edit.m_strength)||m_edit.m_strength<.1||m_edit.m_strength>1){fail("重绘参数超出有效范围");return;}
+    if(flow){
+        QProcess capability;capability.start(engine("sd-cli"),{"--moss-flowedit-version"});
+        if(!capability.waitForFinished(3000)||capability.exitStatus()!=QProcess::NormalExit||capability.exitCode()!=0||
+           capability.readAllStandardOutput().trimmed()!="MOSS_FLOWEDIT_V1"){
+            capability.kill();capability.waitForFinished(1000);fail("请更新图像引擎后使用保留原貌");return;
+        }
+    }
+    const int flowSteps=flow?std::clamp(qRound(m_steps*m_edit.m_flowStrength),1,m_steps):0;
     m_jobDir=(m_imageDevice=="remote"?m_remote.archiveRoot():m_outputRoot)+"/"+QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss")+"-edit-"+QUuid::createUuid().toString(QUuid::Id128).left(6);
     QDir().mkpath(m_jobDir);
     QString error;if(!m_edit.prepare(m_jobDir,&error)){fail(error);return;}
     QFile prompt(m_jobDir+"/prompt.txt");
     if(!prompt.open(QIODevice::WriteOnly)){fail("无法创建任务提示词");return;}
     prompt.write(m_edit.m_prompt.toUtf8());prompt.close();
+    if(flow){
+        QFile original(m_jobDir+"/source-prompt.txt");const auto bytes=m_edit.m_sourcePrompt.toUtf8();
+        if(!original.open(QIODevice::WriteOnly)||original.write(bytes)!=bytes.size()){fail("无法保存原图描述");return;}
+    }
     const int w=std::max(256,(m_edit.imageWidth()+15)/16*16),h=std::max(256,(m_edit.imageHeight()+15)/16*16);
     const auto files=modelFiles(m_imageQuant);
     const auto blendMode=m_edit.m_scope=="whole"?QString("direct"):m_edit.m_blendMode;
     writeJson(m_jobDir+"/job.json",{{"kind","edit"},{"steps",m_steps},{"seed",m_seed},{"cfg",m_cfg},
+        {"editMethod",flow?"flowedit":"standard"},{"sourcePrompt",m_edit.m_sourcePrompt},
+        {"flowStrength",m_edit.m_flowStrength},{"flowSteps",flowSteps},
         {"strength",m_edit.m_strength},{"feather",m_edit.m_feather},{"blendMode",blendMode},{"scope",m_edit.m_scope},{"prompt",m_edit.m_prompt},
         {"sourcePath",m_edit.sourcePath()},{"width",m_edit.imageWidth()},{"height",m_edit.imageHeight()},
         {"inferenceWidth",w},{"inferenceHeight",h},{"model","MOSS-Image-SFT-"+m_imageQuant},
@@ -663,14 +693,15 @@ void Studio::generateEdit(){
         {"outsideMaskPolicy",blendMode=="direct"?"model-output":"exact-source-pixels"},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
     QStringList args={"--diffusion-model",m_models+"/"+files[0].name,"--llm",m_models+"/"+files[1].name,
         "--vae",m_models+"/"+files[2].name,"--tokenizer",m_models+"/"+files[3].name,
-        "--init-img",m_jobDir+"/init.png","--mask",m_jobDir+"/mask.png","--strength",QString::number(m_edit.m_strength),
+        "--init-img",m_jobDir+"/init.png","--strength",QString::number(flow?1.0:m_edit.m_strength),
         "--prompt-file",m_jobDir+"/prompt.txt","-W",QString::number(w),"-H",QString::number(h),
         "--steps",QString::number(m_steps),"--cfg-scale",QString::number(m_cfg),"--seed",QString::number(m_seed),
         "--sampling-method","euler","--scheduler","discrete","--flow-shift","5","--offload-to-cpu",
         "--vae-tiling","--rng","cpu","--output",m_jobDir+"/raw.png","-v"};
+    if(!flow)args<<"--mask"<<m_jobDir+"/mask.png";
     auto job=readJson(m_jobDir+"/job.json");job["executionDevice"]=m_imageDevice;writeJson(m_jobDir+"/job.json",job);
     if(m_imageDevice=="remote")startRemote(args,"edit");else{
-        start(engine("sd-cli"),args,"edit");m_status="正在编码原图并准备局部重绘…";emit changed();
+        start(engine("sd-cli"),args,"edit");if(busy())m_status="正在准备图像编辑…";emit changed();
     }
 }
 void Studio::readOutput(){
@@ -886,6 +917,9 @@ void Studio::selectHistory(int i){
             restored.m_strength=item["strength"].toDouble();restored.m_feather=item["feather"].toInt();
             restored.m_blendMode=item["blendMode"].toString()=="direct"?"direct":"feather";
             restored.m_scope=item["scope"].toString()=="whole"?"whole":"local";
+            restored.m_editMethod=item["editMethod"].toString()=="flowedit"?"flowedit":"standard";
+            restored.m_sourcePrompt=item["sourcePrompt"].toString();
+            restored.m_flowStrength=item.value("flowStrength",20.0/28.0).toDouble();
             restored.setResult(local(item["url"].toString()));
             Document blank;
             auto page=makePage(blank.json(),QJsonObject::fromVariantMap(item));
