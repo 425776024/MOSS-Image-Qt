@@ -1,5 +1,6 @@
 #include "Studio.h"
 #include "ConversationMediaStore.h"
+#include "TestFileSystem.h"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QJsonDocument>
@@ -117,7 +118,7 @@ private slots:
         QVERIFY(ConversationMediaStore::mark(owned));
         QVERIFY(ConversationMediaStore::clean({owned},{dir.path()},QVariantMap{{"canvasLayers",QVariantMap{{"source",file}}}}).isEmpty());QVERIFY(QFileInfo::exists(file));
         const auto other=outside.filePath("data");QVERIFY(QDir().mkpath(other));QVERIFY(ConversationMediaStore::mark(other));
-        const auto link=dir.filePath("linked");QVERIFY(QFile::link(other,link));
+        const auto link=dir.filePath("linked");QVERIFY(createTestSymlink(other,link));
         ConversationMediaStore::clean({dir.path(),other,link},{dir.path()},{});QVERIFY(QFileInfo::exists(other));QVERIFY(QFileInfo::exists(file));
         ConversationMediaStore::clean({owned},{dir.path()},{});QVERIFY(!QFileInfo::exists(owned));
     }
@@ -125,7 +126,7 @@ private slots:
         QTemporaryDir dir,outside;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());
         const auto job=dir.filePath("generated-job");QVERIFY(QDir().mkpath(job));
         const auto imagePath=job+"/image.png";QImage image(32,32,QImage::Format_RGB32);image.fill(Qt::cyan);QVERIFY(image.save(imagePath));
-        const auto source=outside.filePath("original.png");QVERIFY(image.save(source));QVERIFY(QFile::link(source,job+"/linked-original.png"));
+        const auto source=outside.filePath("original.png");QVERIFY(image.save(source));QVERIFY(createTestSymlink(source,job+"/linked-original.png"));
         QVERIFY(ConversationMediaStore::mark(job));
         Studio studio;auto first=studio.conversation();const auto result=first->addAsset(imagePath,"image");first->addResults({result},"image");
         QCOMPARE(first->asset(result)["temporaryDirectory"].toString(),QFileInfo(job).canonicalFilePath());

@@ -4,6 +4,7 @@
 Run in an x64 MSVC 2022 developer shell with QT_ROOT set. Python is only a
 build tool; no Python runtime, wheel or model is included in the distribution.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -88,11 +89,21 @@ def cmake(source, build, *options):
         '-DGGML_AVX512=OFF', '-DGGML_CCACHE=OFF', *options)
 
 
-def main():
+def main(check_app_only=False):
     if os.name != 'nt':
         raise SystemExit('Run this script on Windows in an x64 MSVC developer shell.')
     os.chdir(ROOT)
     qt = Path(os.environ['QT_ROOT'])
+    os.environ['PATH'] = str(qt / 'bin') + os.pathsep + os.environ['PATH']
+    if check_app_only:
+        # Catch app/test portability errors before rebuilding three engines.
+        # Keep the Qt-only configure separate from the vcpkg worker toolchain.
+        check_build = BASE / 'build/app-check'
+        cmake(ROOT, check_build, f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
+              '-DMOSS_BUILD_DITTO=OFF', '-DMOSS_BUILD_VOICE=OFF')
+        run('cmake', '--build', check_build, '--parallel', JOBS)
+        run('ctest', '--test-dir', check_build, '--output-on-failure', '--timeout', '180')
+        return
     NATIVE.mkdir(parents=True, exist_ok=True)
     (ROOT / '.local/vcpkg-bincache').mkdir(parents=True, exist_ok=True)
     notices = NATIVE / 'licenses'
@@ -190,6 +201,7 @@ def main():
     if not pkgconf:
         raise ValueError('vcpkg did not install pkgconf')
     cmake(ROOT, BUILD, *gpu, f'-DCMAKE_PREFIX_PATH={qt.as_posix()};{prefix.as_posix()}',
+          '-DMOSS_BUILD_DITTO=ON', '-DMOSS_BUILD_VOICE=ON',
           f'-DPKG_CONFIG_EXECUTABLE={Path(pkgconf).as_posix()}',
           f'-DONNXRUNTIME_ROOT={ort.as_posix()}', f'-DMOSS_MING_ROOT={ming_root.as_posix()}',
           f'-DMOSS_MEDIAPIPE_ROOT={mp.as_posix()}',
@@ -203,4 +215,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check-app', action='store_true',
+                        help='Compile and test app sources before building native engines')
+    main(check_app_only=parser.parse_args().check_app)

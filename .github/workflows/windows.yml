@@ -58,6 +58,8 @@ jobs:
         run: |
           python scripts/public_release.py audit
           python -m unittest discover -s tests -p '*_tests.py'
+      - name: Compile and test app sources before native engines
+        run: python scripts/build_ci_windows.py --check-app
       - name: Build native engines, run CTest and deploy a portable ZIP
         run: python scripts/build_ci_windows.py
       - name: Upload Windows preview (GPU inference still requires a real PC)
@@ -78,6 +80,7 @@ jobs:
             build-windows/Testing/Temporary/LastTest.log
             build-windows/CMakeFiles/CMakeConfigureLog.yaml
             .local/ci-windows/build/**/CMakeFiles/CMakeConfigureLog.yaml
+            .local/ci-windows/build/app-check/Testing/Temporary/LastTest.log
             .local/ci-windows/deployed-smoke/
             .local/ci-windows/vcpkg_installed/vcpkg/issue_body.md
           if-no-files-found: ignore
