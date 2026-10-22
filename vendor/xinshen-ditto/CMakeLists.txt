@@ -33,6 +33,21 @@ set_source_files_properties(page_face.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 set_target_properties(moss-ditto PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/workers")
 set_target_properties(moss-ditto PROPERTIES CXX_STANDARD 17 OBJCXX_STANDARD 17)
 if(WIN32)
+    # PATH is searched after System32. Windows ships its own ONNX Runtime;
+    # keep the pinned DirectML runtime beside the executable for every check.
+    file(GLOB ORT_RUNTIME_DLLS "${ONNXRUNTIME_ROOT}/lib/*.dll")
+    if(NOT ORT_RUNTIME_DLLS)
+        message(FATAL_ERROR "The Windows ONNX Runtime SDK must include runtime DLLs")
+    endif()
+    find_file(MOSS_DIRECTML_DLL DirectML.dll
+        PATHS "${ONNXRUNTIME_ROOT}/lib" "${ONNXRUNTIME_ROOT}/../bin" REQUIRED NO_DEFAULT_PATH)
+    find_file(MOSS_MEDIAPIPE_DLL mediapipe.dll
+        PATHS "${MOSS_MEDIAPIPE_ROOT}" REQUIRED NO_DEFAULT_PATH)
+    add_custom_command(TARGET moss-ditto POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${ORT_RUNTIME_DLLS} "${MOSS_DIRECTML_DLL}" "${MOSS_MEDIAPIPE_DLL}"
+            "$<TARGET_FILE_DIR:moss-ditto>"
+        COMMAND_EXPAND_LISTS VERBATIM)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_test(NAME ditto_runtime COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/scripts/diagnose_windows_runtime.py" $<TARGET_FILE:moss-ditto> runtime-check)
