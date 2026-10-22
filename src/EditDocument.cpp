@@ -32,7 +32,7 @@ QJsonObject EditDocument::snapshot()const{
         m_encodedMask=QString::fromLatin1(bytes.toBase64());m_maskCacheKey=m_mask.cacheKey();
     }
     return {{"source",m_sourcePath},{"mask",m_encodedMask},{"result",m_resultUrl},
-        {"prompt",m_prompt},{"strength",m_strength},{"feather",m_feather},{"blendMode",m_blendMode}};
+        {"prompt",m_prompt},{"strength",m_strength},{"feather",m_feather},{"blendMode",m_blendMode},{"scope",m_scope}};
 }
 QString EditDocument::restoreSnapshot(const QJsonObject &state){
     // A page with no edit must also clear the previous page's source and undo.
@@ -42,6 +42,7 @@ QString EditDocument::restoreSnapshot(const QJsonObject &state){
     m_strength=std::clamp(state["strength"].toDouble(.85),.1,1.);
     m_feather=std::clamp(state["feather"].toInt(12),0,64);
     m_blendMode=state["blendMode"].toString()=="direct"?"direct":"feather";
+    m_scope=state["scope"].toString()=="whole"?"whole":"local";
     QString error;
     if(!state["source"].toString().isEmpty()){
         error=load(state["source"].toString());
@@ -145,13 +146,16 @@ QImage EditDocument::finishImage(const QImage &source,const QImage &generated,co
     return generated.copy(QRect(QPoint(0,0),source.size()));
 }
 bool EditDocument::prepare(QString dir,QString *error)const{
-    if(!ready()||!hasMask()){if(error)*error="请先导入原图并画出需要修改的选区";return false;}
+    if(!ready()||(m_scope!="whole"&&!hasMask())){if(error)*error="请先导入原图并画出需要修改的选区";return false;}
     const QSize padded(std::max(256,(m_source.width()+15)/16*16),std::max(256,(m_source.height()+15)/16*16));
     QImage init(padded,QImage::Format_RGB32);init.fill(Qt::white);
     {QPainter p(&init);p.drawImage(0,0,m_source);}
     QImage mask(padded,QImage::Format_RGB32);mask.fill(Qt::black);
-    {QPainter p(&mask);p.drawImage(0,0,m_mask);}
-    const bool ok=m_source.save(dir+"/source.png")&&m_mask.save(dir+"/selection.png")&&
-        init.save(dir+"/init.png")&&mask.save(dir+"/mask.png")&&blendWeights(m_mask,m_feather).save(dir+"/blend.png");
+    QImage selection=m_mask;
+    if(m_scope=="whole"){selection=QImage(m_source.size(),QImage::Format_ARGB32);selection.fill(Qt::white);}
+    {QPainter p(&mask);p.drawImage(0,0,selection);}
+    // Keep the authored local mask separate from the effective whole-image selection.
+    const bool ok=m_source.save(dir+"/source.png")&&selection.save(dir+"/selection.png")&&m_mask.save(dir+"/local-selection.png")&&
+        init.save(dir+"/init.png")&&mask.save(dir+"/mask.png")&&blendWeights(selection,m_scope=="whole"?0:m_feather).save(dir+"/blend.png");
     if(!ok&&error)*error="无法保存局部重绘的原图或遮罩";return ok;
 }

@@ -170,20 +170,30 @@ private slots:
         QString firstId,secondId;QImage firstMask,secondMask;QJsonObject layout;
         {
             Studio s;auto first=s.conversation();firstId=first->id();
-            first->importMedia(QUrl::fromLocalFile(source),"target");first->setTask("edit");QVERIFY(s.prepareConversationEdit());
+            first->importMedia(QUrl::fromLocalFile(source),"target");first->setTask("edit");first->setEditScope("local");QVERIFY(s.prepareConversationEdit());
             s.editDocument()->beginStroke();s.editDocument()->paintLine({30,40},{180,90},32,false);s.editDocument()->endStroke();firstMask=s.editDocument()->mask();
             s.document()->loadTemplate("objects");s.document()->setCanvasSize(512,512);layout=s.document()->json();
             s.newConversation();auto second=s.conversation();secondId=second->id();
-            second->importMedia(QUrl::fromLocalFile(source),"target");second->setTask("edit");QVERIFY(s.prepareConversationEdit());
+            second->importMedia(QUrl::fromLocalFile(source),"target");second->setTask("edit");QCOMPARE(second->editScope(),QString("whole"));QVERIFY(s.prepareConversationEdit());
             s.editDocument()->addRectangle(300,300,80,70);secondMask=s.editDocument()->mask();QVERIFY(firstMask!=secondMask);
             for(int i=0;i<3;++i){
-                s.openConversation(firstId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),firstMask);QCOMPARE(s.document()->json(),layout);
-                s.openConversation(secondId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),secondMask);QVERIFY(s.document()->regions().isEmpty());
+                s.openConversation(firstId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),firstMask);QCOMPARE(s.document()->json(),layout);QCOMPARE(s.editDocument()->m_scope,QString("local"));
+                s.openConversation(secondId);QVERIFY(s.prepareConversationEdit());QCOMPARE(s.editDocument()->mask(),secondMask);QVERIFY(s.document()->regions().isEmpty());QCOMPARE(s.editDocument()->m_scope,QString("whole"));
             }
             s.flushWorkspace();
         }
         Studio restored;restored.openConversation(firstId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.editDocument()->mask(),firstMask);QCOMPARE(restored.document()->json(),layout);
         restored.openConversation(secondId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.editDocument()->mask(),secondMask);
+        QCOMPARE(restored.conversation()->editScope(),QString("whole"));QCOMPARE(restored.editDocument()->m_scope,QString("whole"));
+        restored.openConversation(firstId);QVERIFY(restored.prepareConversationEdit());QCOMPARE(restored.conversation()->editScope(),QString("local"));
+    }
+    void localRepaintRejectsEmptySelection(){
+        QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio studio;
+        const auto source=dir.filePath("source.png");QImage image(64,64,QImage::Format_RGB32);image.fill(Qt::cyan);QVERIFY(image.save(source));
+        auto thread=studio.conversation();thread->importMedia(QUrl::fromLocalFile(source),"target");thread->setTask("edit");thread->setEditScope("local");
+        QVERIFY(studio.prepareConversationEdit());studio.editDocument()->m_prompt="修改局部";
+        studio.generateEdit();QVERIFY(!studio.busy());QVERIFY(studio.error().contains("区域"));QVERIFY(!studio.editDocument()->hasMask());
+        QVERIFY(QDir(dir.path()).entryList({"*-edit-*"},QDir::Dirs).isEmpty());
     }
     void removingAnotherWorkKeepsTheViewedConversation() {
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio s;

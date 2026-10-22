@@ -10,7 +10,7 @@ Version 0.1.0 preview for **Apple Silicon (M1 or later) and macOS 15+**. The app
 
 ## Feature preview
 
-Generate images through conversation, paint over areas to edit, and drag objects to guide composition. Design or clone a voice, animate a portrait, generate sound effects, then combine media and export an MP4.
+Generate images through conversation, transform an existing image with a prompt, paint over selected areas to edit, and drag objects to guide composition. Design or clone a voice, animate a portrait, generate sound effects, then combine media and export an MP4.
 
 | Image generation | Brush inpainting | Layout composition |
 | --- | --- | --- |
@@ -33,6 +33,18 @@ https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
 [Download the original WAV](assets/showcase/garden-wind-sfx.wav)
 
 ## Image editing examples
+
+### Image to Image
+
+In **Edit Image**, choose **Whole Image**, select a source image, and describe the new image without painting a selection. Open **Image to Image** to adjust strength. Choose **Selection** for brush or rectangular inpainting.
+
+The real inference results below use the same source with a prompt for blue-purple crystal lettering: original, strength 0.55, and strength 0.85. Higher strength changes the material and floral decorations more visibly while retaining readable text and the two-row composition in this example.
+
+[![Image to Image: original and two strengths](assets/showcase/image-to-image-comparison-en.png)](assets/showcase/image-to-image-comparison-en.png)
+
+Generated with MOSS Q4_K at 768×768, 24 steps, on an RTX 3090, without feathering or source-pixel compositing. Image to Image redraws the entire image; it does not guarantee unchanged text, identity, or other details. Whole-image and selection scopes are available in the current development build; the published preview may differ.
+
+### Selected-area editing
 
 Replace text or edit selected regions while retaining the surrounding image and lettering style.
 

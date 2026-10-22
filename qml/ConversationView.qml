@@ -50,7 +50,7 @@ Item {
         else {if(!studio.prepareConversationSettings())return;studio.document.prompt=thread.draft}
         toolsTask=thread.task;packExpanded=false;inspectorOpen=true;imageToolsOpen=true
     }
-    function editAsset(id) {root.forceActiveFocus();thread.task="edit";thread.chooseTarget(id);imageToolsOpen=false;openImageTools()}
+    function editAsset(id) {root.forceActiveFocus();thread.task="edit";thread.editScope="local";thread.chooseTarget(id);imageToolsOpen=false;openImageTools()}
     function showPackTools() {root.forceActiveFocus();if(imageToolsOpen)studio.flushWorkspace();imageToolsOpen=false;inspectorOpen=true;packExpanded=true}
     function usePackAsset(id) {thread.task="pack";if(id && !thread.selected.includes(id))thread.toggleSelected(id);showPackTools()}
     Connections {
@@ -231,9 +231,17 @@ Item {
                             }
                             onClicked: root.openPicker("target")
                         }
+                        AppSelect {
+                            objectName: "conversationEditScope"; visible: root.thread.task === "edit"
+                            width: HomeTheme.english ? 128 : 76; height: 30; enabled: !studio.busy
+                            model: [HomeTheme.t("整图"),HomeTheme.t("局部")]
+                            currentIndex: root.thread.editScope === "local" ? 1 : 0
+                            Accessible.name: HomeTheme.t("编辑范围")
+                            onActivated: index => {root.thread.editScope=index === 0 ? "whole" : "local";if(root.imageToolsOpen)studio.prepareConversationEdit()}
+                        }
                         HomeButton { visible: root.thread.task === "avatar"; text: HomeTheme.t("配音"); iconName: "audio"; quiet: true; height: 30; hint: root.audioInput ? HomeTheme.t("更换配音") : HomeTheme.t("导入配音"); onClicked: audioPicker.open() }
                         IconButton { visible: (root.thread.task === "avatar" && !root.audioInput) || root.thread.task === "voice"; width: 28; height: 30; glyph: "volume"; hint: root.voiceName(); onClicked: voicePicker.open() }
-                        HomeButton { visible: root.thread.task === "image" || root.thread.task === "edit"; text: root.thread.task === "image" ? HomeTheme.t("构图") : HomeTheme.t("涂抹"); iconName: root.thread.task === "image" ? "rectangle" : "brush"; quiet: true; active: root.imageToolsOpen; height: 30; enabled: !studio.busy; onClicked: root.openImageTools() }
+                        HomeButton { visible: root.thread.task === "image" || root.thread.task === "edit"; text: root.thread.task === "image" ? HomeTheme.t("构图") : root.thread.editScope === "whole" ? HomeTheme.t("图生图") : HomeTheme.t("涂抹"); iconName: root.thread.task === "image" ? "rectangle" : root.thread.editScope === "whole" ? "image" : "brush"; quiet: true; active: root.imageToolsOpen; height: 30; enabled: !studio.busy; onClicked: root.openImageTools() }
                         HomeButton { visible: root.thread.task === "sfx"; text: root.thread.sfxDuration+HomeTheme.t(" 秒"); quiet: true; height: 30; onClicked: durationMenu.popup(0,-durationMenu.height-4)
                             HomeMenu { id: durationMenu; Repeater { model: [5,10,17,30]; AppMenuItem { required property int modelData; text: modelData+HomeTheme.t(" 秒"); onTriggered: root.thread.sfxDuration=modelData } } }
                         }
@@ -267,7 +275,7 @@ Item {
         onAudioRequested: id => {root.thread.task="avatar";root.thread.chooseAudio(id);draft.forceActiveFocus()}
         onPackRequested: id => root.usePackAsset(id)
         onPickerRequested: root.openPicker("pack")
-        onReuseRequested: entry => {root.thread.task=entry.task;root.thread.draft=entry.text;if(entry.voiceId)root.thread.voiceId=entry.voiceId;if(entry.voiceOptions)root.thread.voiceOptions=entry.voiceOptions;for(const id of entry.refs || []){const a=root.thread.asset(id);if(a.kind === "image")root.thread.chooseTarget(id);else if(a.kind === "audio")root.thread.chooseAudio(id)}draft.forceActiveFocus()}
+        onReuseRequested: entry => {root.thread.task=entry.task;root.thread.draft=entry.text;if(entry.editScope)root.thread.editScope=entry.editScope;if(entry.voiceId)root.thread.voiceId=entry.voiceId;if(entry.voiceOptions)root.thread.voiceOptions=entry.voiceOptions;for(const id of entry.refs || []){const a=root.thread.asset(id);if(a.kind === "image")root.thread.chooseTarget(id);else if(a.kind === "audio")root.thread.chooseAudio(id)}draft.forceActiveFocus()}
     }
     }
     HomeDialog {

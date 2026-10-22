@@ -383,9 +383,10 @@ void Studio::resumeRemoteImage(){
         if(job["kind"]=="edit"){
             const auto error=m_edit.load(directory+"/source.png");
             if(!error.isEmpty()){fail(error);return;}
-            m_edit.restoreMask(directory+"/selection.png");m_edit.m_prompt=job["prompt"].toString();
+            m_edit.restoreMask(directory+(QFileInfo::exists(directory+"/local-selection.png")?"/local-selection.png":"/selection.png"));m_edit.m_prompt=job["prompt"].toString();
             m_edit.m_strength=job["strength"].toDouble();m_edit.m_feather=job["feather"].toInt();
             m_edit.m_blendMode=job["blendMode"].toString()=="direct"?"direct":"feather";
+            m_edit.m_scope=job["scope"].toString()=="whole"?"whole":"local";
             m_repainting=true;
         }
     }
@@ -638,8 +639,9 @@ bool Studio::editComposition(){
 }
 void Studio::generateEdit(){
     if(busy())return;
-    if(!m_edit.ready()||!m_edit.hasMask()){fail("请先导入原图，并涂抹或画框选择修改区域");return;}
-    if(m_edit.m_prompt.trimmed().isEmpty()){fail("请描述重绘后选区中的内容与外观");return;}
+    if(!m_edit.ready()){fail("请先选择需要编辑的图片");return;}
+    if(m_edit.m_scope!="whole"&&!m_edit.hasMask()){fail("请先涂抹或框选需要修改的区域");return;}
+    if(m_edit.m_prompt.trimmed().isEmpty()){fail("请描述修改后的画面");return;}
     if(m_imageDevice=="local"&&!ensureModels({"image"}))return;
     if(m_imageDevice=="remote"&&!imageReady()){fail("请先在模型设置中连接远程 GPU");return;}
     if(m_steps<1||m_steps>100||m_cfg<1||m_cfg>10||
@@ -652,12 +654,13 @@ void Studio::generateEdit(){
     prompt.write(m_edit.m_prompt.toUtf8());prompt.close();
     const int w=std::max(256,(m_edit.imageWidth()+15)/16*16),h=std::max(256,(m_edit.imageHeight()+15)/16*16);
     const auto files=modelFiles(m_imageQuant);
+    const auto blendMode=m_edit.m_scope=="whole"?QString("direct"):m_edit.m_blendMode;
     writeJson(m_jobDir+"/job.json",{{"kind","edit"},{"steps",m_steps},{"seed",m_seed},{"cfg",m_cfg},
-        {"strength",m_edit.m_strength},{"feather",m_edit.m_feather},{"blendMode",m_edit.m_blendMode},{"prompt",m_edit.m_prompt},
+        {"strength",m_edit.m_strength},{"feather",m_edit.m_feather},{"blendMode",blendMode},{"scope",m_edit.m_scope},{"prompt",m_edit.m_prompt},
         {"sourcePath",m_edit.sourcePath()},{"width",m_edit.imageWidth()},{"height",m_edit.imageHeight()},
         {"inferenceWidth",w},{"inferenceHeight",h},{"model","MOSS-Image-SFT-"+m_imageQuant},
         {"modelSha256",files[0].sha},{"textEncoder","Qwen3.5-9B-Q4_K_M"},
-        {"outsideMaskPolicy",m_edit.m_blendMode=="direct"?"model-output":"exact-source-pixels"},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
+        {"outsideMaskPolicy",blendMode=="direct"?"model-output":"exact-source-pixels"},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
     QStringList args={"--diffusion-model",m_models+"/"+files[0].name,"--llm",m_models+"/"+files[1].name,
         "--vae",m_models+"/"+files[2].name,"--tokenizer",m_models+"/"+files[3].name,
         "--init-img",m_jobDir+"/init.png","--mask",m_jobDir+"/mask.png","--strength",QString::number(m_edit.m_strength),
@@ -879,9 +882,10 @@ void Studio::selectHistory(int i){
             EditDocument restored;const auto dir=item["directory"].toString();
             const auto error=restored.load(dir+"/source.png");
             if(!error.isEmpty()){fail(error);return;}
-            restored.restoreMask(dir+"/selection.png");restored.m_prompt=item["prompt"].toString();
+            restored.restoreMask(dir+(QFileInfo::exists(dir+"/local-selection.png")?"/local-selection.png":"/selection.png"));restored.m_prompt=item["prompt"].toString();
             restored.m_strength=item["strength"].toDouble();restored.m_feather=item["feather"].toInt();
             restored.m_blendMode=item["blendMode"].toString()=="direct"?"direct":"feather";
+            restored.m_scope=item["scope"].toString()=="whole"?"whole":"local";
             restored.setResult(local(item["url"].toString()));
             Document blank;
             auto page=makePage(blank.json(),QJsonObject::fromVariantMap(item));

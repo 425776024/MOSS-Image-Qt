@@ -20,6 +20,8 @@ ConversationDocument *Studio::conversationFor(QString id){
     if(page.isEmpty())return nullptr;
     const auto json=QJsonObject::fromVariantMap(page["conversation"].toMap());
     auto thread=new ConversationDocument(id,m_outputRoot,json,this);m_conversations[id]=thread;
+    if(!json.contains("editScope")&&!page["edit"].toMap()["source"].toString().isEmpty())
+        thread->setEditScope(page["edit"].toMap()["scope"]=="whole"?"whole":"local");
     if(json.isEmpty()){
         // Old pages become works with their real results. Their source projects
         // and media are retained, without inventing a historical conversation.
@@ -68,6 +70,7 @@ bool Studio::prepareConversationEdit(){
         const auto error=m_edit.load(path);if(!error.isEmpty()){m_conversation->report(error);return false;}
     }
     m_editConversationTarget=target["id"].toString();
+    m_edit.setProperty("scope",m_conversation->editScope());
     return true;
 }
 void Studio::sendConversation(){
@@ -93,7 +96,6 @@ void Studio::sendConversation(){
         m_doc.setPrompt(thread->draft());generate();
     }else if(task=="edit"){
         if(prepareConversationEdit()){
-            if(!m_edit.hasMask())m_edit.addRectangle(0,0,m_edit.imageWidth(),m_edit.imageHeight());
             m_edit.m_prompt=thread->draft();generateEdit();
         }else fail(thread->error());
     }else{

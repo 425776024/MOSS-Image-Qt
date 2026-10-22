@@ -29,6 +29,7 @@ ConversationDocument::ConversationDocument(QString id,QString root,const QJsonOb
     m_audioId=json["audioId"].toString();m_voiceId=json["voiceId"].toString();
     m_selected=json["selected"].toArray().toVariantList();m_clips=json["clips"].toArray().toVariantList();
     m_manual=json["manual"].toBool();m_sfxDuration=std::clamp(json["sfxDuration"].toInt(5),1,30);
+    m_editScope=json["editScope"].toString()=="local"?"local":"whole";
     setTask(json["task"].toString("image"));
     for(auto &value:m_messages){auto row=value.toMap();if(row["status"]=="running"){
         row["status"]="interrupted";row["text"]="上次任务已中断，文案和素材已保留，可重新发送。";value=row;}}
@@ -45,6 +46,10 @@ void ConversationDocument::setTask(QString task){
     if(title(task).isEmpty()||m_task==task)return;m_task=task;m_error.clear();touch();
 }
 void ConversationDocument::setDraft(QString text){if(draft()==text)return;m_drafts[m_task]=text;touch();}
+void ConversationDocument::setEditScope(QString scope){
+    if((scope!="whole"&&scope!="local")||scope==m_editScope)return;
+    m_editScope=scope;m_error.clear();touch();
+}
 void ConversationDocument::setVoiceOptions(QVariantMap options){options=VoiceStyle::normalize(options);if(m_voiceOptions==options)return;m_voiceOptions=options;touch();}
 void ConversationDocument::setVoiceId(QString id){if(m_voiceId==id)return;m_voiceId=id;touch();}
 void ConversationDocument::setSfxDuration(int seconds){seconds=std::clamp(seconds,1,30);if(seconds==m_sfxDuration)return;m_sfxDuration=seconds;touch();}
@@ -169,7 +174,7 @@ bool ConversationDocument::beginRequest(){
     m_error.clear();m_pending=uid();m_pendingTask=m_task;
     const auto text=m_task=="pack"?QString("打包为视频 · %1 项素材").arg(m_selected.size()):m_task=="avatar"&&!audio().isEmpty()?QString("用所选配音驱动这张图像。"):draft().trimmed();
     const auto requestId=uid();
-    m_messages.append(QVariantMap{{"id",requestId},{"role","user"},{"text",text},{"task",m_task},{"refs",refs},{"voiceId",m_voiceId},{"voiceOptions",m_voiceOptions}});
+    m_messages.append(QVariantMap{{"id",requestId},{"role","user"},{"text",text},{"task",m_task},{"editScope",m_editScope},{"refs",refs},{"voiceId",m_voiceId},{"voiceOptions",m_voiceOptions}});
     m_messages.append(QVariantMap{{"id",m_pending},{"replyTo",requestId},{"role","assistant"},{"task",m_task},{"status","running"},{"assetIds",QStringList{}}});
     emit messagesChanged();emit edited();return true;
 }
@@ -180,7 +185,7 @@ void ConversationDocument::finishRequest(bool success,const QStringList &ids,QSt
     m_pending.clear();m_pendingTask.clear();emit messagesChanged();emit edited();
 }
 QJsonObject ConversationDocument::json() const {
-    return {{"version",2},{"task",m_task},{"drafts",QJsonObject::fromVariantMap(m_drafts)},{"targets",QJsonObject::fromVariantMap(m_targets)},
+    return {{"version",2},{"task",m_task},{"editScope",m_editScope},{"drafts",QJsonObject::fromVariantMap(m_drafts)},{"targets",QJsonObject::fromVariantMap(m_targets)},
         {"audioId",m_audioId},{"voiceId",m_voiceId},{"voiceOptions",QJsonObject::fromVariantMap(m_voiceOptions)},{"sfxDuration",m_sfxDuration},{"selected",QJsonArray::fromVariantList(m_selected)},
         {"clips",QJsonArray::fromVariantList(m_clips)},{"manual",m_manual},{"messages",QJsonArray::fromVariantList(m_messages)},{"assets",QJsonArray::fromVariantList(m_assets)}};
 }

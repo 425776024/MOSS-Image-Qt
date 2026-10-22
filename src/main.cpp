@@ -128,6 +128,14 @@ int main(int argc,char **argv){
         if(args.contains("--voice-id"))thread->setVoiceId(argument("--voice-id",{}));
         thread->setVoiceOptions({{"emotion",argument("--voice-emotion","中性")},{"dialect",argument("--voice-dialect","standard")}});
         thread->setTask(task);thread->setDraft(argument("--prompt",task=="sfx"?"Soft wind blowing through a quiet garden, natural ambient sound.":task=="edit"?"Change the orange hat to a blue hat, keeping the same person and garden.":task=="voice"?"您好，欢迎来到对话创作。":"A blue ceramic cup beside a small orange, clean cream background, soft studio light."));
+        if(task=="edit"){
+            thread->setEditScope(argument("--edit-scope",args.contains("--brush-mask")?"local":"whole"));
+            if(studio.prepareConversationEdit()){
+                studio.editDocument()->setProperty("strength",argument("--strength","0.85").toDouble());
+                studio.editDocument()->setProperty("blendMode",argument("--blend-mode","feather"));
+            }
+        }
+        if(args.contains("--quant"))studio.setImageQuant(argument("--quant","Q4_K"));
         studio.prepareConversationSettings();
         if(args.contains("--layout-template")){
             studio.document()->loadTemplate(argument("--layout-template","objects"));
@@ -187,6 +195,11 @@ int main(int argc,char **argv){
             if(args.contains("--select-work")&&work>=0&&work<studio.creationPages().size())
                 studio.openConversation(studio.creationPages()[work].toMap()["id"].toString());
             if(args.contains("--capture-task"))studio.conversation()->setTask(argument("--capture-task","image"));
+            if(args.contains("--capture-edit-source")){
+                studio.conversation()->setTask("edit");
+                studio.conversation()->importMedia(QUrl::fromLocalFile(argument("--capture-edit-source",{})),"target");
+                studio.conversation()->setEditScope(argument("--edit-scope","whole"));
+            }
             if(args.contains("--capture-portrait")){
                 const auto source=QUrl::fromLocalFile(argument("--capture-portrait",QString()));
                 if(auto library=homeWindow->findChild<QObject *>("homeAvatarLibrary")){
@@ -277,6 +290,18 @@ int main(int argc,char **argv){
                 QMetaObject::invokeMethod(dialog,"open");
             });
             const auto inputName=argument("--check-input",QString());
+            if(args.contains("--check-scope-keyboard"))QTimer::singleShot(1000,&app,[&]{
+                if(app.platformName()!="offscreen"){app.exit(5);return;}
+                auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));
+                auto control=active?active->findChild<QQuickItem *>("conversationEditScope"):nullptr;
+                if(!control){app.exit(5);return;}control->forceActiveFocus(Qt::TabFocusReason);
+                // Standard ComboBox keyboard selection in this app's offscreen window.
+                for(auto key:{Qt::Key_Space,Qt::Key_End,Qt::Key_Return}){
+                    QKeyEvent press(QEvent::KeyPress,key,Qt::NoModifier),release(QEvent::KeyRelease,key,Qt::NoModifier);
+                    QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);
+                }
+                if(studio.conversation()->editScope()!="local"||studio.editDocument()->m_scope!="local")app.exit(5);
+            });
             const auto dialogKey=argument("--dialog-key",QString());
             if(!dialogKey.isEmpty())QTimer::singleShot(1100,&app,[&,dialogKey]{
                 if(app.platformName()!="offscreen"){qWarning()<<"Dialog key probe requires offscreen mode";app.exit(5);return;}

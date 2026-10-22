@@ -4,6 +4,26 @@
 class EditTest: public QObject {
     Q_OBJECT
 private slots:
+    void wholeImageNeedsNoPaintingAndPreservesLocalSelection(){
+        QTemporaryDir dir;QImage source(81,77,QImage::Format_RGB32);source.fill(Qt::cyan);
+        QVERIFY(source.save(dir.filePath("original.png")));EditDocument document;
+        QVERIFY(document.load(dir.filePath("original.png")).isEmpty());QString error;
+        QVERIFY(!document.prepare(dir.path(),&error));
+        document.setProperty("scope","whole");QVERIFY(document.prepare(dir.path(),&error));
+        QVERIFY(!document.hasMask());QVERIFY(!document.canUndo());
+        QCOMPARE(qRed(QImage(dir.filePath("selection.png")).pixel(80,76)),255);
+        QCOMPARE(qRed(QImage(dir.filePath("mask.png")).pixel(150,150)),0);
+        document.addRectangle(10,12,15,18);const auto local=document.mask();
+        QVERIFY(document.prepare(dir.path(),&error));QCOMPARE(document.mask(),local);
+        QCOMPARE(QImage(dir.filePath("local-selection.png")),local);
+        document.setProperty("scope","local");QVERIFY(document.prepare(dir.path(),&error));
+        QCOMPARE(QImage(dir.filePath("selection.png")),local);
+        const auto state=document.snapshot();EditDocument restored;restored.restoreSnapshot(state);
+        QCOMPARE(restored.m_scope,QString("local"));document.setProperty("scope","whole");
+        restored.restoreSnapshot(document.snapshot());QCOMPARE(restored.m_scope,QString("whole"));
+        auto legacy=document.snapshot();legacy.remove("scope");restored.restoreSnapshot(legacy);
+        QCOMPARE(restored.m_scope,QString("local"));
+    }
     void directOutputSkipsSourcePasteAndCropsPadding(){
         QImage source(32,30,QImage::Format_ARGB32),generated(48,48,QImage::Format_ARGB32);
         source.fill(Qt::blue);generated.fill(qRgba(200,30,40,170));

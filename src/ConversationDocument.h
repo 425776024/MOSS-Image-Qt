@@ -14,6 +14,7 @@ class ConversationDocument : public QObject {
     Q_PROPERTY(QVariantList messages READ messages NOTIFY messagesChanged)
     Q_PROPERTY(QVariantList assets READ assets NOTIFY assetsChanged)
     Q_PROPERTY(QString task READ task WRITE setTask NOTIFY changed)
+    Q_PROPERTY(QString editScope READ editScope WRITE setEditScope NOTIFY changed)
     Q_PROPERTY(QString draft READ draft WRITE setDraft NOTIFY changed)
     Q_PROPERTY(QVariantMap target READ target NOTIFY changed)
     Q_PROPERTY(QVariantMap audio READ audio NOTIFY changed)
@@ -32,6 +33,7 @@ public:
     QVariantList messages() const { return m_messages; }
     QVariantList assets() const { return m_assets; }
     QString task() const { return m_task; }
+    QString editScope() const { return m_editScope; }
     QString draft() const { return m_drafts.value(m_task).toString(); }
     QVariantMap target() const;
     QVariantMap audio() const { return asset(m_audioId); }
@@ -46,6 +48,7 @@ public:
     bool pending() const { return !m_pending.isEmpty(); }
     QString error() const { return m_error; }
     void setTask(QString task);
+    void setEditScope(QString scope);
     void setDraft(QString text);
     void setVoiceId(QString id);
     void setSfxDuration(int seconds);
@@ -76,6 +79,7 @@ private:
     void probe(QString id);
     void touch();
     QString m_id,m_root,m_task="image",m_audioId,m_voiceId,m_pending,m_pendingTask,m_error;
+    QString m_editScope="whole";
     QVariantMap m_drafts,m_targets,m_voiceOptions;
     QVariantList m_messages,m_assets,m_selected,m_clips;
     int m_sfxDuration=5;

@@ -7,6 +7,7 @@ CardSurface {
     id: root
     required property var thread
     property bool maskMode: false
+    readonly property bool localEdit: maskMode && thread.editScope === "local"
     property bool embedded: false
     readonly property bool narrow: width < 620
     readonly property var doc: studio.document
@@ -35,24 +36,24 @@ CardSurface {
         const r=Object.assign({},selected);r[key]=value;doc.moveRegion(doc.selected,r.x,r.y,r.width,r.height)
     }
     function textFocused() { const f=root.Window.window.activeFocusItem;return f && (f.hasOwnProperty("cursorPosition") || f.hasOwnProperty("inputMethodComposing")) }
-    Shortcut { sequences: [StandardKey.Undo]; enabled: root.visible && !studio.busy && !root.textFocused(); onActivated: root.maskMode ? root.edit.undo() : root.doc.undo() }
-    Shortcut { sequences: [StandardKey.Redo]; enabled: root.visible && !studio.busy && !root.textFocused(); onActivated: root.maskMode ? root.edit.redo() : root.doc.redo() }
+    Shortcut { sequences: [StandardKey.Undo]; enabled: root.visible && (!root.maskMode || root.localEdit) && !studio.busy && !root.textFocused(); onActivated: root.maskMode ? root.edit.undo() : root.doc.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; enabled: root.visible && (!root.maskMode || root.localEdit) && !studio.busy && !root.textFocused(); onActivated: root.maskMode ? root.edit.redo() : root.doc.redo() }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: root.embedded ? 8 : 10; spacing: 6
         RowLayout {
-            Layout.fillWidth: true; spacing: 4
+            visible: !root.maskMode || root.localEdit; Layout.fillWidth: true; spacing: 4
             Text { visible: !root.embedded; text: root.maskMode ? HomeTheme.t("局部编辑") : HomeTheme.t("构图布局"); font.pixelSize: 13; font.weight: Font.DemiBold; color: HomeTheme.text }
             Item { visible: !root.embedded; Layout.preferredWidth: 6 }
             HomeButton { visible: !root.maskMode; text: root.width < 390 ? "" : HomeTheme.t("选择"); hint: HomeTheme.t("选择"); iconName: "select"; compact: true; quiet: true; active: !layoutCanvas.drawMode; implicitHeight: 28; onClicked: layoutCanvas.drawMode=false }
             HomeButton { visible: !root.maskMode; text: root.width < 390 ? "" : HomeTheme.t("对象"); hint: HomeTheme.t("画出对象区域"); iconName: "rectangle"; compact: true; quiet: true; active: layoutCanvas.drawMode && layoutCanvas.drawType === "object"; implicitHeight: 28; onClicked: {root.forceActiveFocus();root.doc.layout=true;layoutCanvas.drawType="object";layoutCanvas.drawMode=true} }
             HomeButton { visible: !root.maskMode; text: root.width < 390 ? "" : HomeTheme.t("文字"); hint: HomeTheme.t("画出文字区域"); iconName: "text"; compact: true; quiet: true; active: layoutCanvas.drawMode && layoutCanvas.drawType === "text"; implicitHeight: 28; onClicked: {root.forceActiveFocus();root.doc.layout=true;layoutCanvas.drawType="text";layoutCanvas.drawMode=true} }
             Repeater {
-                model: root.maskMode ? [{key:"brush",label:HomeTheme.t("涂抹"),icon:"brush"},{key:"rectangle",label:HomeTheme.t("框选"),icon:"rectangle"},{key:"erase",label:HomeTheme.t("擦除"),icon:"eraser"}] : []
+                model: root.localEdit ? [{key:"brush",label:HomeTheme.t("涂抹"),icon:"brush"},{key:"rectangle",label:HomeTheme.t("框选"),icon:"rectangle"},{key:"erase",label:HomeTheme.t("擦除"),icon:"eraser"}] : []
                 HomeButton { required property var modelData; text: root.width < 390 ? "" : modelData.label; hint: modelData.label; iconName: modelData.icon; compact: true; quiet: true; active: root.maskTool===modelData.key; implicitHeight: 28; onClicked: {root.maskTool=modelData.key;root.showMask=true} }
             }
             Item { Layout.fillWidth: true }
-            IconButton { glyph: "undo"; hint: HomeTheme.t("撤销"); enabled: !studio.busy && (root.maskMode ? root.edit.canUndo : root.doc.canUndo); onClicked: {root.forceActiveFocus();root.maskMode ? root.edit.undo() : root.doc.undo()} }
-            IconButton { glyph: "redo"; hint: HomeTheme.t("重做"); enabled: !studio.busy && (root.maskMode ? root.edit.canRedo : root.doc.canRedo); onClicked: {root.forceActiveFocus();root.maskMode ? root.edit.redo() : root.doc.redo()} }
+            IconButton { visible: !root.maskMode || root.localEdit; glyph: "undo"; hint: HomeTheme.t("撤销"); enabled: !studio.busy && (root.maskMode ? root.edit.canUndo : root.doc.canUndo); onClicked: {root.forceActiveFocus();root.maskMode ? root.edit.undo() : root.doc.undo()} }
+            IconButton { visible: !root.maskMode || root.localEdit; glyph: "redo"; hint: HomeTheme.t("重做"); enabled: !studio.busy && (root.maskMode ? root.edit.canRedo : root.doc.canRedo); onClicked: {root.forceActiveFocus();root.maskMode ? root.edit.redo() : root.doc.redo()} }
             Rectangle { Layout.preferredHeight: 14; width: 1; color: HomeTheme.line; Layout.leftMargin: 3; Layout.rightMargin: 3 }
             IconButton { glyph: "check"; hint: HomeTheme.t("完成编辑"); iconColor: HomeTheme.accent; onClicked: root.finish() }
         }
@@ -64,7 +65,7 @@ CardSurface {
                 Layout.preferredHeight: root.narrow ? root.maskMode ? maximumPreviewHeight : Math.min(maximumPreviewHeight,Math.max(120,(width-16)*root.doc.canvasHeight/root.doc.canvasWidth+16)) : -1
                 color: HomeTheme.preview; radius: 7; clip: true
                 LayoutCanvas { id: layoutCanvas; objectName: "conversationLayoutCanvas"; anchors.fill: parent; visible: !root.maskMode; document: root.doc; canvasPadding: root.embedded ? 8 : 32; compact: root.embedded; enabled: !studio.busy }
-                MaskCanvas { objectName: "conversationMaskCanvas"; anchors.fill: parent; visible: root.maskMode; document: root.edit; tool: root.maskTool; brushSize: brush.value; canvasPadding: root.embedded ? 8 : 24; showMask: root.showMask; showResult: false; enabled: !studio.busy; backgroundColor: HomeTheme.preview; Accessible.name: HomeTheme.t("局部编辑涂抹画布") }
+                MaskCanvas { objectName: "conversationMaskCanvas"; anchors.fill: parent; visible: root.maskMode; document: root.edit; tool: root.maskTool; brushSize: brush.value; canvasPadding: root.embedded ? 8 : 24; showMask: root.localEdit && root.showMask; showResult: false; enabled: !studio.busy && root.localEdit; backgroundColor: HomeTheme.preview; Accessible.name: root.localEdit ? HomeTheme.t("局部编辑涂抹画布") : HomeTheme.t("图生图原图") }
             }
             ScrollView {
                 id: inspectorScroll
@@ -171,14 +172,10 @@ CardSurface {
                     }
                     ColumnLayout {
                         visible: root.maskMode; Layout.fillWidth: true; spacing: 6
+                        AppCheckBox { visible: root.localEdit; Layout.alignment: Qt.AlignRight; text: HomeTheme.t("显示选区"); font.pixelSize: 11; checked: root.showMask; onClicked: root.showMask=checked; Accessible.onToggleAction: root.showMask=!root.showMask }
+                        Text { Layout.fillWidth: true; text: !root.localEdit ? HomeTheme.t("无需涂抹，描述想要的新画面。") : root.edit.blendMode === "direct" ? HomeTheme.t("直接采用模型输出，选区外也可能有细微变化。") : HomeTheme.t("涂抹要修改的区域，其他部分保留原图。"); color: HomeTheme.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
                         RowLayout {
-                            Layout.fillWidth: true; spacing: 6
-                            Text { Layout.fillWidth: true; text: HomeTheme.t("重绘选区"); color: HomeTheme.text; font.pixelSize: 12; font.weight: Font.Medium }
-                            AppCheckBox { text: HomeTheme.t("显示选区"); font.pixelSize: 11; checked: root.showMask; onClicked: root.showMask=checked; Accessible.onToggleAction: root.showMask=!root.showMask }
-                        }
-                        Text { Layout.fillWidth: true; text: root.edit.blendMode === "direct" ? HomeTheme.t("直接采用模型输出，选区外也可能有细微变化。") : HomeTheme.t("涂抹要修改的区域，其他部分保留原图。"); color: HomeTheme.secondary; font.pixelSize: 11; wrapMode: Text.Wrap }
-                        RowLayout {
-                            Layout.fillWidth: true; spacing: 8
+                            visible: root.localEdit; Layout.fillWidth: true; spacing: 8
                             FieldLabel { text: HomeTheme.t("贴合") }
                             InspectorSelect {
                                 objectName: "repaintBlendMode"; Layout.fillWidth: true
@@ -189,7 +186,7 @@ CardSurface {
                             }
                         }
                         RowLayout {
-                            Layout.fillWidth: true; spacing: 8
+                            visible: root.localEdit; Layout.fillWidth: true; spacing: 8
                             FieldLabel { text: HomeTheme.t("笔刷") }
                             AppSlider { id: brush; Layout.fillWidth: true; Layout.minimumWidth: 40; implicitWidth: 80; implicitHeight: 28; from: 4; to: 240; value: 48; Accessible.name: HomeTheme.t("涂抹笔刷大小") }
                             Text { Layout.preferredWidth: 40; text: Math.round(brush.value)+" px"; horizontalAlignment: Text.AlignRight; color: HomeTheme.secondary; font.pixelSize: 11 }
@@ -200,19 +197,20 @@ CardSurface {
                             AppSlider { Layout.fillWidth: true; Layout.minimumWidth: 40; implicitWidth: 80; implicitHeight: 28; from: .1; to: 1; stepSize: .05; value: root.edit.strength; Accessible.name: HomeTheme.t("重绘强度"); onMoved: root.edit.strength=value }
                             Text { Layout.preferredWidth: 40; text: root.edit.strength.toFixed(2); horizontalAlignment: Text.AlignRight; color: HomeTheme.secondary; font.pixelSize: 11 }
                         }
+                        Text { visible: !root.localEdit; Layout.fillWidth: true; text: HomeTheme.t("强度越高，画面变化越大。"); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
                         RowLayout {
-                            Layout.fillWidth: true; spacing: 8
+                            visible: root.localEdit; Layout.fillWidth: true; spacing: 8
                             FieldLabel { text: HomeTheme.t("羽化") }
                             AppSlider { Layout.fillWidth: true; Layout.minimumWidth: 40; implicitWidth: 80; implicitHeight: 28; from: 0; to: 64; stepSize: 1; value: root.edit.feather; enabled: !studio.busy && root.edit.blendMode !== "direct"; Accessible.name: HomeTheme.t("选区羽化"); onMoved: root.edit.feather=value }
                             Text { Layout.preferredWidth: 40; text: root.edit.feather+" px"; horizontalAlignment: Text.AlignRight; color: HomeTheme.secondary; font.pixelSize: 11 }
                         }
                         RowLayout {
-                            Layout.fillWidth: true; spacing: 6
+                            visible: root.localEdit; Layout.fillWidth: true; spacing: 6
                             Item { Layout.fillWidth: true }
                             HomeButton { text: HomeTheme.t("反选"); compact: true; quiet: true; implicitHeight: 26; onClicked: root.edit.invertMask() }
                             HomeButton { text: HomeTheme.t("清空选区"); compact: true; quiet: true; implicitHeight: 26; enabled: root.edit.hasMask; onClicked: root.edit.clearMask() }
                         }
-                        Text { visible: !root.edit.hasMask; Layout.fillWidth: true; text: HomeTheme.t("尚未选择区域；直接发送将编辑整张图像。"); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+                        Text { visible: root.localEdit && !root.edit.hasMask; Layout.fillWidth: true; text: HomeTheme.t("请涂抹或框选需要修改的区域。"); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
                     }
                     Rectangle { Layout.fillWidth: true; height: 1; color: HomeTheme.line }
                     AbstractButton {

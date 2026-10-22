@@ -2,6 +2,15 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "图生图": "Image to Image",
+    "整图": "Whole Image",
+    "局部": "Selection",
+    "编辑范围": "Edit Scope",
+    "范围": "Scope",
+    "图生图原图": "Image-to-image source",
+    "无需涂抹，描述想要的新画面。": "Describe a new image; no painting needed.",
+    "强度越高，画面变化越大。": "Higher strength changes more of the image.",
+    "请涂抹或框选需要修改的区域。": "Paint or select the area to change.",
     "准备创作资源": "Prepare to create",
     "创作资源": "Creative Resources",
     "语音与音色": "Speech & Voices",

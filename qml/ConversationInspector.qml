@@ -30,7 +30,7 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true; Layout.preferredHeight: 44; Layout.leftMargin: 8; Layout.rightMargin: 8; spacing: 6
             IconButton { visible: root.editing || root.packing; glyph: "arrow"; rotation: 180; hint: HomeTheme.t("返回素材详情"); onClicked: root.previewRequested() }
-            Text { objectName: "inspectorHeading"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.editing ? root.maskMode ? HomeTheme.t("局部编辑") : HomeTheme.t("构图布局") : root.packing ? HomeTheme.t("打包视频") : HomeTheme.t("详情")+(root.detailType ? " · "+root.detailType : ""); font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text; elide: Text.ElideRight }
+            Text { objectName: "inspectorHeading"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.editing ? root.maskMode ? root.thread.editScope === "whole" ? HomeTheme.t("图生图") : HomeTheme.t("局部编辑") : HomeTheme.t("构图布局") : root.packing ? HomeTheme.t("打包视频") : HomeTheme.t("详情")+(root.detailType ? " · "+root.detailType : ""); font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text; elide: Text.ElideRight }
             IconButton { visible: !root.editing && !root.packing && !!root.asset.id; glyph: "export"; hint: HomeTheme.t("导出素材"); onClicked: root.exportRequested(root.asset) }
             IconButton { glyph: "close"; hint: HomeTheme.t("收起详情面板"); onClicked: root.closeRequested() }
         }

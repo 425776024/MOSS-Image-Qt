@@ -22,6 +22,7 @@ class EditDocument : public QObject {
     Q_PROPERTY(double strength MEMBER m_strength NOTIFY changed)
     Q_PROPERTY(int feather MEMBER m_feather NOTIFY changed)
     Q_PROPERTY(QString blendMode MEMBER m_blendMode NOTIFY changed)
+    Q_PROPERTY(QString scope MEMBER m_scope NOTIFY changed)
 public:
     explicit EditDocument(QObject *parent=nullptr):QObject(parent){}
     bool ready()const{return !m_source.isNull();}
@@ -57,6 +58,7 @@ public:
     double m_strength=.85;
     int m_feather=12;
     QString m_blendMode="feather";
+    QString m_scope="local";
 signals:
     void changed();
 private:
