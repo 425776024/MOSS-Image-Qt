@@ -35,7 +35,40 @@ class WindowsDistributionTest(unittest.TestCase):
             source, output = root / 'source', root / 'build'
             (source / 'nested').mkdir(parents=True)
             overlay = (ROOT / 'config/windows-manifest.cmake').as_posix()
-            (source / 'main.cpp').write_text('int main() { return 0; }\n')
+            (source / 'main.cpp').write_text('''#ifdef _WIN32
+#ifdef WIN32_LEAN_AND_MEAN
+#error The pinned image CLI requires full Windows Shell API declarations
+#endif
+#ifndef _CPPUNWIND
+#error CMake MSVC exception handling defaults must be preserved
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+struct UnwindProbe {
+    bool &destroyed;
+    ~UnwindProbe() { destroyed = true; }
+};
+int main() {
+    bool destroyed = false;
+    try {
+        UnwindProbe probe{destroyed};
+        throw 42;
+    } catch (int value) {
+        if (value != 42 || !destroyed) return 2;
+    }
+#ifdef _WIN32
+    int count = 0;
+    auto arguments = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (!arguments) return 3;
+    LocalFree(arguments);
+    if (count < 1) return 4;
+#endif
+    return 0;
+}
+''')
             (source / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(ManifestProbe LANGUAGES C CXX)
 if(NOT MSVC)
@@ -62,6 +95,8 @@ add_executable(nested_probe ../main.cpp)
                 self.assertEqual(sum(Path(p).name == 'windows.manifest' for p in files), 1)
             self.assertNotIn('windows.manifest', (output / 'library-sources.txt').read_text())
             subprocess.run(['cmake', '--build', str(output)], check=True, capture_output=True, text=True)
+            executable = output / ('manifest_probe.exe' if os.name == 'nt' else 'manifest_probe')
+            subprocess.run([str(executable)], check=True, capture_output=True, text=True)
             if os.name == 'nt':
                 manifest = root / 'embedded.manifest'
                 subprocess.run(['mt.exe', '-nologo',

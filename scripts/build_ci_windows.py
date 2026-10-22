@@ -76,8 +76,12 @@ def unzip(archive, destination, prefix):
 def cmake(source, build, *options):
     manifest_overlay = (ROOT / 'config/windows-manifest.cmake').as_posix()
     run('cmake', '-S', source, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
-        '-DCMAKE_C_FLAGS=/utf-8 /DWIN32_LEAN_AND_MEAN /DNOMINMAX',
-        '-DCMAKE_CXX_FLAGS=/utf-8 /bigobj /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_USE_MATH_DEFINES',
+        # Preserve CMake's MSVC defaults, including /EHsc. The pinned image
+        # CLI also needs the Shell API declarations in the full windows.h.
+        # Clear the old overrides when reusing a pre-fix build directory.
+        '-UCMAKE_C_FLAGS', '-UCMAKE_CXX_FLAGS',
+        '-DCMAKE_C_FLAGS_INIT=/utf-8 /DNOMINMAX',
+        '-DCMAKE_CXX_FLAGS_INIT=/utf-8 /bigobj /DNOMINMAX /D_USE_MATH_DEFINES',
         f'-DCMAKE_PROJECT_INCLUDE={manifest_overlay}',
         '-DBUILD_SHARED_LIBS=OFF', '-DGGML_NATIVE=OFF', '-DGGML_AVX=OFF',
         '-DGGML_AVX2=OFF', '-DGGML_FMA=OFF', '-DGGML_F16C=OFF',
