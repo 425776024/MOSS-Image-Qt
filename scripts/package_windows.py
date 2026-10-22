@@ -47,7 +47,8 @@ def check_worker_startup(binary, env):
     result = subprocess.run([str(binary)], env=env, timeout=30,
         capture_output=True, text=True, encoding='utf-8', errors='replace')
     if result.returncode != 1 or 'usage:' not in (result.stdout + result.stderr):
-        raise ValueError(f'Native worker failed to load: {binary.name}: {result.returncode}')
+        detail = (result.stdout + result.stderr)[-2000:]
+        raise ValueError(f'Native worker failed to load: {binary.name}: {result.returncode}: {detail}')
 
 
 def package(qt, prefix, native, image_build, sfx_build, build):
@@ -136,6 +137,10 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         # usage and return 1, just like our voice and Ditto workers.
         for worker in ('sa3-generate.exe', 'moss-voice.exe', 'moss-ditto.exe'):
             check_worker_startup(destination / worker, env)
+        runtime = json.loads(subprocess.check_output(
+            [str(destination / 'moss-ditto.exe'), 'runtime-check'], env=env, timeout=30, text=True))
+        if not runtime.get('tensorCheck') or 'DmlExecutionProvider' not in runtime.get('providers', []):
+            raise ValueError(f'Ditto runtime or DirectML provider missing: {runtime}')
     finally:
         os.environ.clear()
         os.environ.update(saved)

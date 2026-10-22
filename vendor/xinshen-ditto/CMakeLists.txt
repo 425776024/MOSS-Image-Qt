@@ -32,6 +32,7 @@ set_source_files_properties(liveportrait/coreml.mm PROPERTIES COMPILE_FLAGS "-fo
 set_source_files_properties(page_face.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 set_target_properties(moss-ditto PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/workers")
 set_target_properties(moss-ditto PROPERTIES CXX_STANDARD 17 OBJCXX_STANDARD 17)
+add_test(NAME ditto_runtime COMMAND moss-ditto runtime-check)
 add_executable(ditto_mouth_reference_tests tests/mouth_reference_test.cpp)
 target_include_directories(ditto_mouth_reference_tests PRIVATE ${JSON_INCLUDE})
 set_target_properties(ditto_mouth_reference_tests PROPERTIES CXX_STANDARD 17)

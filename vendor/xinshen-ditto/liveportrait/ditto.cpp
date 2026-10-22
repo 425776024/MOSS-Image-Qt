@@ -187,9 +187,17 @@ void joinPriorityOrtThread(OrtCustomThreadHandle handle) noexcept {
   delete worker;
 }
 #endif
-Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "xinshen-ditto");
-Ort::MemoryInfo memory =
-    Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+Ort::Env &runtimeEnvironment() {
+  // ORT 1.23 initializes its API pointer dynamically. Calling it from another
+  // global initializer can dereference a null pointer on MSVC before main().
+  static Ort::Env environment(ORT_LOGGING_LEVEL_WARNING, "xinshen-ditto");
+  return environment;
+}
+Ort::MemoryInfo &runtimeMemory() {
+  (void)runtimeEnvironment();
+  static auto memory = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  return memory;
+}
 V flatten(const J &j) {
   V v;
   if (j.is_array())
@@ -285,6 +293,7 @@ struct Net {
         require(found, "GPU graph missing");
       }
     }
+    auto &environment = runtimeEnvironment();
     auto options = avatar::onnxOptions(selected, "ditto-v1", !gpu);
     // These large CPU models benefit from more workers; small landmark and
     // stitching models retain the shared runtime's four-thread policy.
@@ -306,7 +315,7 @@ struct Net {
       options.SetCustomJoinThreadFn(joinPriorityOrtThread);
     }
 #endif
-    session = Ort::Session(env, selected.c_str(), options);
+    session = Ort::Session(environment, selected.c_str(), options);
     Ort::AllocatorWithDefaultOptions a;
     for (size_t i = 0; i < session.GetInputCount(); ++i)
       inputs.emplace_back(session.GetInputNameAllocated(i, a).get());
@@ -358,10 +367,10 @@ struct Net {
       ins.push_back(inputs[i].c_str());
       if (inputs[i] == "time_cond")
         xs.push_back(Ort::Value::CreateTensor<int64_t>(
-            memory, &step, 1, shapes[i].data(), shapes[i].size()));
+            runtimeMemory(), &step, 1, shapes[i].data(), shapes[i].size()));
       else
         xs.push_back(Ort::Value::CreateTensor<float>(
-            memory, const_cast<float *>(data[i]->data()), n, shapes[i].data(),
+            runtimeMemory(), const_cast<float *>(data[i]->data()), n, shapes[i].data(),
             shapes[i].size()));
     }
     for (auto &s : outputs)
@@ -1575,6 +1584,16 @@ J build(const fs::path &root, const fs::path &dir, const fs::path &planPath,
           {"timingsSeconds", timings}};
 }
 } // namespace
+J runtimeCheck() {
+  (void)runtimeEnvironment();
+  float value = 42;
+  const int64_t shape[] = {1};
+  auto tensor = Ort::Value::CreateTensor<float>(runtimeMemory(), &value, 1, shape, 1);
+  require(tensor.IsTensor() && tensor.GetTensorData<float>()[0] == value, "runtime tensor check");
+  return {{"runtime", OrtGetApiBase()->GetVersionString()},
+          {"providers", Ort::GetAvailableProviders()}, {"tensorCheck", true},
+          {"gpuInferenceValidated", false}};
+}
 J capabilities(const fs::path &models) {
   auto m = verify(models);
   const auto condition = conditionPackage(models);

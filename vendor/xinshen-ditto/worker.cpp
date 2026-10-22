@@ -9,6 +9,9 @@ namespace fs=std::filesystem;
 int main(int argc,char **argv){
     try{
         avatar::installCancellation();
+        if(argc==2&&std::string(argv[1])=="runtime-check"){
+            std::cout<<ditto::runtimeCheck().dump()<<std::endl;return 0;
+        }
         if(argc==3&&std::string(argv[1])=="capabilities"){
             std::cout<<ditto::capabilities(argv[2]).dump()<<std::endl;return 0;
         }
