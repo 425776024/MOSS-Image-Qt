@@ -37,9 +37,9 @@ ComboBox {
     Component.onCompleted: measurePopup()
     onModelChanged: measurePopup()
     onCountChanged: measurePopup()
-    // The closed field is sized for the longest option plus the popup row inset,
-    // so the popup can keep exactly the field width without eliding labels.
-    implicitWidth: Math.max(96, Math.ceil(measuredPopupWidth))
+    onFontChanged: measurePopup()
+    // Long names and wide parent layouts must not create oversized menus.
+    implicitWidth: Math.max(96, Math.min(maximumPopupWidth, Math.ceil(measuredPopupWidth)))
     implicitHeight: VideoCutTheme.inputHeight
     leftPadding: 10
     rightPadding: 20
@@ -100,8 +100,9 @@ ComboBox {
     popup: Popup {
         id: choicePopup
         y: input.height + 4
-        // Popup width equals the trigger width; both edges stay aligned.
-        width: Math.min(input.width, Overlay.overlay ? Math.max(0, Overlay.overlay.width - 12) : input.width)
+        width: Math.min(input.maximumPopupWidth,
+            Math.max(input.minimumPopupWidth, input.width, input.measuredPopupWidth),
+            Overlay.overlay ? Math.max(0, Overlay.overlay.width - 12) : input.maximumPopupWidth)
         onAboutToShow: { input.measurePopup(); input.popupOpening(); }
         onClosed: input.popupClosed()
         padding: 4

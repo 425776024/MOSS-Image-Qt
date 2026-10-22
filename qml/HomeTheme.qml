@@ -27,6 +27,7 @@ QtObject {
     readonly property color dialogInset: dark ? "#222224" : "#e5e5e7"
     readonly property color dialogBorder: dark ? "#32ffffff" : "#22000000"
     readonly property var translations: ({
+        "微信扫码关注公众号":"Scan with WeChat to follow our official account", "新身数字人公众号二维码":"新身数字人 WeChat official account QR code",
         "嘴形校准缓存":"Mouth calibration cache", "清理缓存":"Clear cache", "缓存已清理，下次生成将重新校准":"Cache cleared. The next generation will recalibrate.", "缓存正在使用或无法清理，请稍后重试":"Cache is in use or could not be cleared. Try again later.", "生成期间无法清理缓存，请稍后重试":"Cache cannot be cleared during generation. Try again when it finishes.",
         "我的作品":"My projects", "我的形象":"My avatars", "我的声音":"My voices", "制作数字人":"Create avatar", "图像创作":"Image studio",
         "使用帮助":"Help", "联系我们":"Contact us", "设置":"Settings", "关于":"About", "创作工作台":"Creative workspace",

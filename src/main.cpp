@@ -309,8 +309,9 @@ int main(int argc,char **argv){
         }
         mainWindow->setProperty("page",argument("--capture-page","0").toInt());
         mainWindow->setProperty("navCollapsed",!args.contains("--expanded-navigation"));
-        if(args.contains("--compact-window"))mainWindow->resize(1180,740);
-        if(args.contains("--minimum-window"))mainWindow->resize(1080,720);
+        if(args.contains("--compact-window"))mainWindow->resize(1080,720);
+        if(args.contains("--minimum-window"))mainWindow->resize(mainWindow->minimumSize());
+        if(args.contains("--store-screenshot"))mainWindow->resize(1440,900);
         const auto captureName=argument("--capture-name","layout-ui");
         const auto captureDialog=argument("--capture-dialog",QString());
         QTimer::singleShot(1800,&app,[&,captureName,captureDialog]{

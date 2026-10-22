@@ -21,9 +21,12 @@ Rectangle {
             ColumnLayout {
                 Layout.preferredWidth: HomeTheme.english ? 182 : 144; Layout.minimumWidth: Layout.preferredWidth; Layout.maximumWidth: Layout.preferredWidth; Layout.fillHeight: true; spacing: 4
                 Repeater {
-                    model: [{title:HomeTheme.t("通用设置"),icon:"settings",section:0},{title:HomeTheme.t("模型与计算"),icon:"model",section:1},{title:HomeTheme.t("关于"),icon:"info",section:5},{title:HomeTheme.t("版权声明"),icon:"document",section:2},{title:HomeTheme.t("第三方模型与数据"),icon:"layers",section:3},{title:HomeTheme.t("用户协议"),icon:"document",section:4}]
+                    model: [{title:HomeTheme.t("通用设置"),icon:"settings",section:0},{title:HomeTheme.t("模型与计算"),icon:"model",section:1},{title:HomeTheme.t("关于"),icon:"info",section:5},{title:HomeTheme.t("联系我们"),icon:"contact",section:6},{title:HomeTheme.t("版权声明"),icon:"document",section:2},{title:HomeTheme.t("第三方模型与数据"),icon:"layers",section:3},{title:HomeTheme.t("用户协议"),icon:"document",section:4}]
                     AbstractButton {
                         id: nav; required property var modelData
+                        objectName: "settingsSection-"+modelData.section
+                        focusPolicy: Qt.StrongFocus
+                        activeFocusOnTab: true
                         Layout.fillWidth: true; implicitHeight: 34; padding: 9; hoverEnabled: true
                         Layout.topMargin: modelData.section===2 ? 14 : 0
                         Accessible.name: HomeTheme.t(modelData.title); Accessible.selected: root.section===modelData.section
@@ -43,7 +46,7 @@ Rectangle {
                     id: general; contentWidth: availableWidth; clip: true
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ColumnLayout {
-                        width: Math.min(840,general.availableWidth); spacing: 14
+                        width: Math.min(840,general.availableWidth); x: (general.availableWidth-width)/2; spacing: 14
                         HomeSection {
                             Layout.fillWidth: true; title: HomeTheme.t("外观"); iconName: "monitor"
                             RowLayout { Layout.fillWidth: true; spacing: 10
@@ -103,25 +106,25 @@ Rectangle {
                 HomeModels { onOpenEditor: root.openEditor() }
                 ScrollView {
                     id: copyrightView; contentWidth: availableWidth; clip: true
-                    LegalPage { width: Math.min(840,copyrightView.availableWidth); title: HomeTheme.t("版权声明"); bodyText: HomeTheme.english
+                    LegalPage { width: Math.min(840,copyrightView.availableWidth); x: (copyrightView.availableWidth-width)/2; title: HomeTheme.t("版权声明"); bodyText: HomeTheme.english
                         ? "Imported portraits, images, recordings and text remain the property of their respective rights holders. Obtain the necessary permissions before importing, cloning or distributing content.\n\nOpen-source components, models and built-in voice recordings retain their own notices and licenses. See Third-party notices for the local component inventory."
                         : HomeTheme.t("用户自行导入的人像、图片、声音、文字及由此制作的作品，权利仍归原权利人。导入、克隆、生成、导出及传播前，请取得所需的著作权、肖像权、声音及个人信息处理授权。\n\n应用使用的开源组件、模型与内置参考音色分别遵循其原有声明和许可。具体组件来源见「第三方模型与数据」。") }
                 }
                 ScrollView {
                     id: noticeView; contentWidth: availableWidth; clip: true
-                    HomeSection { width: Math.min(840,noticeView.availableWidth)
+                    HomeSection { width: Math.min(840,noticeView.availableWidth); x: (noticeView.availableWidth-width)/2
                         Text { Layout.fillWidth: true; text: workspace.noticesHtml(HomeTheme.accent); wrapMode: Text.Wrap; textFormat: Text.RichText; color: HomeTheme.text; linkColor: HomeTheme.accent; onLinkActivated: link=>Qt.openUrlExternally(link); font.pixelSize: 12 }
                     }
                 }
                 ScrollView {
                     id: agreementView; contentWidth: availableWidth; clip: true
-                    LegalPage { width: Math.min(840,agreementView.availableWidth); title: HomeTheme.t("用户协议"); bodyText: (HomeTheme.english
+                    LegalPage { width: Math.min(840,agreementView.availableWidth); x: (agreementView.availableWidth-width)/2; title: HomeTheme.t("用户协议"); bodyText: (HomeTheme.english
                         ? "Use content you own or have permission to use. Do not impersonate others, clone voices without consent or distribute misleading content. Review generated results before publishing.\n\nLocal generation stores material on this Mac. The public edition supports local processing only.\n\nModel preparation may require downloads. Generated output quality depends on the models and input material."
                         : HomeTheme.t("请使用拥有合法权利或已获授权的素材。不得冒用他人身份、未经同意克隆他人声音或传播误导性内容。发布前请核查作品的真实性、准确性、权利来源及所需标识。\n\n本地生成时，素材和作品保存在本机。公开版仅支持本地运行。\n\n首次准备模型可能需要下载。生成质量取决于模型、输入素材与参数，请在导出和发布前检查结果。")) + "\n\n" + studio.models.modelTerms(HomeTheme.english) }
                 }
                 ScrollView {
                     id: aboutView; contentWidth: availableWidth; clip: true
-                    HomeSection { width: Math.min(640,aboutView.availableWidth); padding: 24
+                    HomeSection { width: Math.min(640,aboutView.availableWidth); x: (aboutView.availableWidth-width)/2; padding: 24
                         RowLayout { Layout.fillWidth: true; spacing: 16
                             Rectangle { width: 64; height: 64; radius: 16; color: HomeTheme.accent
                                 StudioIcon { anchors.centerIn: parent; width: 36; height: 36; name: "spark"; ink: HomeTheme.accentInk }
@@ -143,6 +146,7 @@ Rectangle {
                         HomeButton { text: HomeTheme.t("查看第三方声明"); iconName: "document"; quiet: true; onClicked: root.section=3 }
                     }
                 }
+                HomeContact { embedded: true }
             }
         }
     }

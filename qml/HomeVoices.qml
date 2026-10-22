@@ -64,10 +64,7 @@ Rectangle {
             Item { Layout.fillWidth: true }
             HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索音色"); Accessible.name: placeholderText }
         }
-        HomeSection {
-            Layout.fillWidth: true; padding: 12
-            VoiceStyleControls { Layout.fillWidth: true; options: studio.sound.settings; onOptionEdited: (key,value)=>studio.sound.set(key,value) }
-        }
+        VoiceStyleControls { Layout.fillWidth: true; options: studio.sound.settings; onOptionEdited: (key,value)=>studio.sound.set(key,value) }
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout { visible: root.entries.length===0; anchors.centerIn: parent; spacing: 16

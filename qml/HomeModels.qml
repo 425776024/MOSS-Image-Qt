@@ -63,7 +63,7 @@ Item {
         id: view; anchors.fill: parent; contentWidth: availableWidth; clip: true
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         ColumnLayout {
-            width: Math.min(760,view.availableWidth); spacing: 12
+            width: Math.min(760,view.availableWidth); x: (view.availableWidth-width)/2; spacing: 12
             RowLayout {
                 Layout.fillWidth: true; spacing: 8
                 Text { text: HomeTheme.t("创作资源"); color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.DemiBold }

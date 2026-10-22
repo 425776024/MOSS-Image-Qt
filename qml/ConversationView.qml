@@ -98,13 +98,15 @@ Item {
             exportNotice.open()
         }
     }
-    MessageDialog { id: saveNotice; title: HomeTheme.t("保存作品工程"); buttons: MessageDialog.Ok }
+    HomeNoticeDialog { id: saveNotice; objectName: "conversationSaveNotice" }
     Connections {
         target: studio
         enabled: root.visible
         function onConversationSaveFinished(success, detail) {
-            saveNotice.text=HomeTheme.t(success ? "文件已保存" : "导出失败")
-            saveNotice.informativeText=detail
+            saveNotice.message=HomeTheme.t(success ? "文件已保存" : "导出失败")
+            saveNotice.severity=success ? "success" : "error"
+            saveNotice.filePath=success ? detail : ""
+            saveNotice.detail=success ? "" : detail
             saveNotice.open()
         }
     }

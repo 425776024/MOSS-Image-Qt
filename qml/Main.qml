@@ -7,7 +7,7 @@ ApplicationWindow {
     ModelDownloadDialog {}
     id: home
     objectName: "homeWindow"
-    width: 1440; height: 900; minimumWidth: 1080; minimumHeight: 720
+    width: 1080; height: 720; minimumWidth: 960; minimumHeight: 640
     visible: false; topPadding: 0
     title: workspace.appName + (HomeTheme.english ? " · Creative studio" : HomeTheme.t(" · 对话创作")); color: HomeTheme.surface
     font.family: ".AppleSystemUIFont"; font.pixelSize: 14
@@ -62,19 +62,21 @@ ApplicationWindow {
     Connections { target: studio; function onConversationChanged(){home.showConversation()} }
     onDestinationChanged: if(activeView)activeView.visible=destination === "chat"
     Component.onCompleted: showConversation()
-    Component { id: threadComponent; ConversationView { anchors.fill: parent; visible: false; minimumChatWidth: home.width*.5; preferredInspectorWidth: home.inspectorWidth; maximumInspectorWidth: home.width*.34; onInspectorWidthAdjusted: width => home.inspectorWidth=width } }
+    Component { id: threadComponent; ConversationView { anchors.fill: parent; visible: false; minimumChatWidth: Math.min(home.width*.5, Math.max(400, threadHost.width-261)); preferredInspectorWidth: home.inspectorWidth; maximumInspectorWidth: home.width*.34; onInspectorWidthAdjusted: width => home.inspectorWidth=width } }
     component RailButton: AbstractButton {
         id: button
         property string glyph: "document"
         property bool active: false
-        implicitWidth: 44; implicitHeight: 50; hoverEnabled: true
+        focusPolicy: Qt.StrongFocus
+        activeFocusOnTab: true
+        Layout.fillWidth: true
+        implicitWidth: 36; implicitHeight: 40; hoverEnabled: true
+        opacity: enabled ? 1 : .4
         Accessible.name: text; Accessible.selected: active
         ToolTip.visible: hovered; ToolTip.text: text; ToolTip.delay: 700
         background: Rectangle { radius: 9; color: button.active ? Qt.alpha(HomeTheme.text,HomeTheme.dark ? .10 : .065) : button.hovered ? HomeTheme.hover : "transparent"; border.color: button.visualFocus ? HomeTheme.accent : "transparent" }
-        contentItem: Column {
-            spacing: 4; topPadding: 7
-            StudioIcon { anchors.horizontalCenter: parent.horizontalCenter; width: 20; height: 20; name: button.glyph; ink: button.active ? HomeTheme.text : HomeTheme.secondary }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: button.text; color: button.active ? HomeTheme.text : HomeTheme.secondary; font.pixelSize: 10; font.weight: button.active ? Font.Medium : Font.Normal }
+        contentItem: Item {
+            StudioIcon { anchors.centerIn: parent; width: 20; height: 20; name: button.glyph; ink: button.active ? HomeTheme.text : HomeTheme.secondary }
         }
     }
     FileDialog { id: openDialog; title: HomeTheme.t("导入作品工程"); nameFilters: [HomeTheme.t("Moss 工程 (*.json)")]; onAccepted: {studio.loadProject(selectedFile);home.showEditor("")} }
@@ -99,27 +101,22 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 0
             Rectangle {
-                objectName: "navigationRail"; Layout.preferredWidth: 60; Layout.fillHeight: true; color: HomeTheme.sidebar
+                objectName: "navigationRail"; Layout.preferredWidth: 52; Layout.fillHeight: true; color: HomeTheme.sidebar
                 Rectangle { anchors.right: parent.right; width: VideoCutTheme.hairline; height: parent.height; color: HomeTheme.line }
                 ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 8; spacing: 6
+                    anchors.fill: parent; anchors.margins: 8; spacing: 4
                     RailButton { text: HomeTheme.t("作品"); glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
-                    RailButton { text: HomeTheme.t("形象"); glyph: "person"; active: ["avatars","createAvatar"].includes(home.destination); onClicked: home.destination="avatars" }
+                    RailButton { text: HomeTheme.t("形象"); glyph: "person"; active: home.destination === "avatars"; onClicked: home.destination="avatars" }
                     RailButton { text: HomeTheme.t("声音"); glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
+                    RailButton { objectName: "homeImport"; text: HomeTheme.t("导入工程"); glyph: "document"; enabled: !studio.busy; onClicked: openDialog.open() }
+                    RailButton { objectName: "homeCreateAvatar"; text: HomeTheme.t("制作数字人"); glyph: "spark"; active: home.destination === "createAvatar"; onClicked: home.destination="createAvatar" }
+                    RailButton { objectName: "homeTemplates"; text: HomeTheme.t("构图模板"); glyph: "grid"; active: home.destination === "templates"; onClicked: home.destination="templates" }
+                    RailButton { objectName: "homeModelsButton"; text: HomeTheme.t("模型资源"); glyph: "model"; active: home.destination === "settings" && settings.section===1; onClicked: {settings.section=1;home.destination="settings"} }
+                    RailButton { objectName: "homeAbout"; text: HomeTheme.t("关于"); glyph: "info"; active: home.destination === "about" || (home.destination === "settings" && settings.section===5); onClicked: {settings.section=5;home.destination="settings"} }
+                    RailButton { objectName: "homeContact"; text: HomeTheme.t("联系我们"); glyph: "contact"; active: home.destination === "contact" || (home.destination === "settings" && settings.section===6); onClicked: home.destination="contact" }
+                    RailButton { objectName: "homeRestore"; text: HomeTheme.t("恢复上次移除"); glyph: "undo"; enabled: studio.canRestorePage && !studio.busy; onClicked: studio.restoreDeletedPage() }
+                    RailButton { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" && ![1,5,6].includes(settings.section); onClicked: {settings.section=0;home.destination="settings"} }
                     Item { Layout.fillHeight: true }
-                    RailButton { objectName: "homeMoreTrigger"; text: HomeTheme.t("更多"); glyph: "more"; active: ["templates","contact"].includes(home.destination) || appMenu.opened; onClicked: appMenu.popup(width+4,height-appMenu.height)
-                        HomeMenu { id: appMenu; objectName: "homeMoreMenu"
-                            AppMenuItem { text: HomeTheme.t("导入工程"); enabled: !studio.busy; onTriggered: openDialog.open() }
-                            AppMenuItem { text: HomeTheme.t("制作数字人"); onTriggered: home.destination="createAvatar" }
-                            AppMenuItem { text: HomeTheme.t("构图模板"); onTriggered: home.destination="templates" }
-                            AppMenuItem { text: HomeTheme.t("模型资源"); onTriggered: {settings.section=1;home.destination="settings"} }
-                            MenuSeparator { }
-                            AppMenuItem { text: HomeTheme.t("关于"); onTriggered: {settings.section=5;home.destination="settings"} }
-                            AppMenuItem { text: HomeTheme.t("联系我们"); onTriggered: home.destination="contact" }
-                            AppMenuItem { text: HomeTheme.t("恢复上次移除"); enabled: studio.canRestorePage && !studio.busy; onTriggered: studio.restoreDeletedPage() }
-                        }
-                    }
-                    RailButton { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" || home.destination === "about"; onClicked: {settings.section=0;home.destination="settings"} }
                 }
             }
             SplitView {
@@ -134,7 +131,7 @@ ApplicationWindow {
                 id: worksPane; objectName: "worksPane"
                 visible: home.destination === "chat"
                 SplitView.minimumWidth: 160
-                SplitView.maximumWidth: Math.min(300,home.width*.22,home.width*.5-322)
+                SplitView.maximumWidth: Math.max(160,Math.min(300,home.width*.22,home.width*.5-322))
                 SplitView.preferredWidth: home.worksWidth; color: HomeTheme.sidebar
                 ColumnLayout {
                     anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.topMargin: 12; anchors.bottomMargin: 10; spacing: 10
@@ -198,7 +195,7 @@ ApplicationWindow {
             }
             Item {
                 id: rightPane; objectName: "conversationPane"; SplitView.fillWidth: true
-                SplitView.minimumWidth: home.destination === "chat" ? home.width*.5+(home.activeView && home.activeView.inspectorOpen ? 261 : 0) : 0
+                SplitView.minimumWidth: home.destination === "chat" ? Math.min(home.width*.5+(home.activeView && home.activeView.inspectorOpen ? 261 : 0),workspaceSplit.width-161) : 0
                 Item { id: threadHost; anchors.fill: parent; visible: home.destination === "chat" }
                 StackLayout {
                     anchors.fill: parent; visible: home.destination !== "chat"
