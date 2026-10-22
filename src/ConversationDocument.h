@@ -18,6 +18,7 @@ class ConversationDocument : public QObject {
     Q_PROPERTY(QVariantMap target READ target NOTIFY changed)
     Q_PROPERTY(QVariantMap audio READ audio NOTIFY changed)
     Q_PROPERTY(QString voiceId READ voiceId WRITE setVoiceId NOTIFY changed)
+    Q_PROPERTY(QVariantMap voiceOptions READ voiceOptions WRITE setVoiceOptions NOTIFY changed)
     Q_PROPERTY(int sfxDuration READ sfxDuration WRITE setSfxDuration NOTIFY changed)
     Q_PROPERTY(QVariantList selected READ selected NOTIFY clipsChanged)
     Q_PROPERTY(QVariantList clips READ clips NOTIFY clipsChanged)
@@ -35,6 +36,8 @@ public:
     QVariantMap target() const;
     QVariantMap audio() const { return asset(m_audioId); }
     QString voiceId() const { return m_voiceId; }
+    QVariantMap voiceOptions()const{return m_voiceOptions;}
+    void setVoiceOptions(QVariantMap options);
     int sfxDuration() const { return m_sfxDuration; }
     QVariantList selected() const { return m_selected; }
     QVariantList clips() const { return m_clips; }
@@ -73,7 +76,7 @@ private:
     void probe(QString id);
     void touch();
     QString m_id,m_root,m_task="image",m_audioId,m_voiceId,m_pending,m_pendingTask,m_error;
-    QVariantMap m_drafts,m_targets;
+    QVariantMap m_drafts,m_targets,m_voiceOptions;
     QVariantList m_messages,m_assets,m_selected,m_clips;
     int m_sfxDuration=5;
     bool m_manual=false;

@@ -28,8 +28,8 @@ Item {
             anchors.centerIn: parent; width: parent.width-12; spacing: root.compact ? 6 : 12
             visible: root.imageSource==="" && (!document.layout || document.regions.length===0)
             Text { anchors.horizontalCenter: parent.horizontalCenter; text: document.layout ? "▧" : "✦"; font.pixelSize: 40; color: StudioTheme.muted }
-            Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; text: document.layout ? "在画布上画出你的构想" : "让想象成为画面"; color: StudioTheme.secondary; font.pixelSize: root.compact ? 13 : 17 }
-            Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; text: document.layout ? "选择画框工具，拖动添加对象或文字区域" : "填写下方描述，开始生成"; color: StudioTheme.muted; font.pixelSize: root.compact ? 10 : 12 }
+            Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; text: document.layout ? HomeTheme.t("在画布上画出你的构想") : HomeTheme.t("让想象成为画面"); color: StudioTheme.secondary; font.pixelSize: root.compact ? 13 : 17 }
+            Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; text: document.layout ? HomeTheme.t("选择画框工具，拖动添加对象或文字区域") : HomeTheme.t("填写下方描述，开始生成"); color: StudioTheme.muted; font.pixelSize: root.compact ? 10 : 12 }
         }
         MouseArea {
             id: drawing

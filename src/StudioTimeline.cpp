@@ -73,7 +73,7 @@ void Studio::syncTimelineSources() {
 
 void Studio::soundSettingEdited(QString key) {
     if(m_loadingPage)return;
-    if(key=="voiceSource"||key=="voiceId"||key=="speechText"||key=="mouthReference"){
+    if(key=="voiceSource"||key=="voiceId"||key=="speechText"||key=="emotion"||key=="dialect"||key=="mouthReference"){
         m_pageVideo.clear();m_narrationRoute.clear();
     }
     syncTimelineSources();

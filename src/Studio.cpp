@@ -1,4 +1,5 @@
 #include "Studio.h"
+#include "UserSelectedFileExport.h"
 #include "ConversationMediaStore.h"
 #include "../vendor/xinshen-ditto/liveportrait/mouth_cache_store.h"
 #include <QCoreApplication>
@@ -33,6 +34,18 @@ bool writeJson(QString path,QJsonObject data){
 }
 QJsonObject readJson(QString path){QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return QJsonDocument::fromJson(f.readAll()).object();}
 QString local(QString s){return s.startsWith("file:")?QUrl(s).toLocalFile():s;}
+QString ownedWorkerInput(QString s){
+    const auto source=local(s);
+#ifdef MOSS_APP_STORE
+    // PowerBox access belongs to the UI process; give workers container-owned bytes.
+    const auto dir=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/imports";
+    if(!QDir().mkpath(dir))return {};
+    const auto destination=dir+"/"+QUuid::createUuid().toString(QUuid::WithoutBraces)+"-"+QFileInfo(source).fileName();
+    return QFile::copy(source,destination)?destination:QString();
+#else
+    return source;
+#endif
+}
 QString digest(QString path){
     QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};
     QCryptographicHash h(QCryptographicHash::Sha256);if(!h.addData(&f))return {};return h.result().toHex();
@@ -41,6 +54,9 @@ QString digest(QString path){
 Studio::Studio(QObject *p):QObject(p),m_doc(this),m_edit(this),m_layers(this),m_sound(this),m_timeline(this) {
     QSettings settings;
     m_outputRoot=qEnvironmentVariable("MOSS_OUTPUT_ROOT",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/works");
+#ifdef MOSS_APP_STORE
+    m_outputRoot=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/works";
+#endif
     m_models=m_modelManager.root();m_imageQuant=m_modelManager.imageQuant();
     connect(&m_modelManager,&ModelManager::changed,this,[this]{
         m_models=m_modelManager.root();m_imageQuant=m_modelManager.imageQuant();
@@ -320,8 +336,8 @@ void Studio::setImageQuant(QString quant){if(!busy())m_modelManager.setImageQuan
 bool Studio::dittoReady()const{return !engine("moss-ditto").isEmpty()&&m_modelManager.ready("ditto");}
 bool Studio::voiceReady()const{return !engine("moss-voice").isEmpty()&&m_modelManager.ready("voice");}
 bool Studio::sfxReady()const{return !engine("sa3-generate").isEmpty()&&m_modelManager.ready("sfx");}
-void Studio::setPortrait(QString s){m_portrait=local(s);emit changed();}
-void Studio::setAudio(QString s){m_audio=local(s);emit changed();}
+void Studio::setPortrait(QString s){m_portrait=ownedWorkerInput(s);if(m_portrait.isEmpty())m_error="无法导入人像，请重新选择文件";emit changed();}
+void Studio::setAudio(QString s){m_audio=ownedWorkerInput(s);if(m_audio.isEmpty())m_error="无法导入音频，请重新选择文件";emit changed();}
 void Studio::fail(QString s){m_error=s;m_status="操作未完成";if(!m_busy)m_audioPipeline=false;emit changed();}
 void Studio::start(QString exe,QStringList args,QString kind){
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
@@ -382,28 +398,39 @@ void Studio::resumeRemoteImage(){
     }
     emit changed();
 }
-void Studio::generate(){
+void Studio::generate(){generateImage(m_doc,"image",m_steps);}
+void Studio::generateAvatarImage(QString description){
     if(busy())return;
-    auto error=m_doc.validationError();if(!error.isEmpty()){fail(error);return;}
+    m_avatarDesignImage.clear();m_avatarDesignRecipe.clear();emit changed();
+    description=description.trimmed();
+    if(description.isEmpty()||description.size()>4000){fail("请填写人物形象描述（最多四千字）");return;}
+    m_audioPipeline=false;m_trackGeneration.clear();
+    Document portrait;portrait.setPrompt(description);portrait.setCanvasSize(768,1024);
+    generateImage(portrait,"avatar-image",16);
+}
+void Studio::generateImage(const Document &document,QString kind,int steps){
+    if(busy())return;
+    auto error=document.validationError();if(!error.isEmpty()){fail(error);return;}
     if(m_imageDevice=="local"&&!ensureModels({"image"}))return;
     if(m_imageDevice=="remote"&&!imageReady()){fail("请先在模型设置中连接远程 GPU");return;}
-    if(m_steps<1||m_steps>100||!std::isfinite(m_cfg)||m_cfg<1||m_cfg>10||
+    if(steps<1||steps>100||!std::isfinite(m_cfg)||m_cfg<1||m_cfg>10||
        !std::isfinite(m_flowShift)||m_flowShift<1||m_flowShift>10||m_seed<0){fail("采样参数超出有效范围");return;}
     m_jobDir=(m_imageDevice=="remote"?m_remote.archiveRoot():m_outputRoot)+"/"+QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss")+"-"+QUuid::createUuid().toString(QUuid::Id128).left(6);
     QDir().mkpath(m_jobDir);
-    QFile prompt(m_jobDir+"/prompt.txt");if(!prompt.open(QIODevice::WriteOnly)){fail("无法创建任务文件");return;}prompt.write(m_doc.compiledPrompt().toUtf8());prompt.close();
-    auto project=m_doc.json();project["generation"]=recipe();writeJson(m_jobDir+"/project.json",project);
+    QFile prompt(m_jobDir+"/prompt.txt");if(!prompt.open(QIODevice::WriteOnly)){fail("无法创建任务文件");return;}prompt.write(document.compiledPrompt().toUtf8());prompt.close();
+    auto project=document.json();project["generation"]=recipe();auto generation=project["generation"].toObject();generation["steps"]=steps;project["generation"]=generation;writeJson(m_jobDir+"/project.json",project);
     const auto files=modelFiles(m_imageQuant);
-    writeJson(m_jobDir+"/job.json",{{"kind","image"},{"steps",m_steps},{"seed",m_seed},{"cfg",m_cfg},{"flowShift",m_flowShift},{"negativePrompt",m_doc.negativePrompt()},{"model","MOSS-Image-SFT-"+m_imageQuant},{"modelSha256",files[0].sha},{"textEncoder","Qwen3.5-9B-Q4_K_M"},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
+    writeJson(m_jobDir+"/job.json",{{"kind",kind},{"steps",steps},{"seed",m_seed},{"cfg",m_cfg},{"flowShift",m_flowShift},{"negativePrompt",document.negativePrompt()},{"model","MOSS-Image-SFT-"+m_imageQuant},{"modelSha256",files[0].sha},{"textEncoder","Qwen3.5-9B-Q4_K_M"},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
+    if(kind=="avatar-image")m_avatarDesignRecipe={{"engine","MOSS-Image"},{"prompt",document.prompt()},{"model","MOSS-Image-SFT-"+m_imageQuant},{"modelSha256",files[0].sha},{"steps",steps},{"seed",m_seed},{"width",document.canvasWidth()},{"height",document.canvasHeight()}};
     QStringList args={"--diffusion-model",m_models+"/"+files[0].name,"--llm",m_models+"/"+files[1].name,
         "--vae",m_models+"/"+files[2].name,"--tokenizer",m_models+"/"+files[3].name,
-        "--prompt-file",m_jobDir+"/prompt.txt","-W",QString::number(m_doc.canvasWidth()),"-H",QString::number(m_doc.canvasHeight()),
-        "--steps",QString::number(m_steps),"--cfg-scale",QString::number(m_cfg),"--seed",QString::number(m_seed),
+        "--prompt-file",m_jobDir+"/prompt.txt","-W",QString::number(document.canvasWidth()),"-H",QString::number(document.canvasHeight()),
+        "--steps",QString::number(steps),"--cfg-scale",QString::number(m_cfg),"--seed",QString::number(m_seed),
         "--sampling-method","euler","--scheduler","discrete","--flow-shift",QString::number(m_flowShift),
         "--offload-to-cpu","--vae-tiling","--rng","cpu","--output",m_jobDir+"/image.png","-v"};
-    if(!m_doc.negativePrompt().isEmpty())args<< "--negative-prompt" <<m_doc.negativePrompt();
+    if(!document.negativePrompt().isEmpty())args<< "--negative-prompt" <<document.negativePrompt();
     auto job=readJson(m_jobDir+"/job.json");job["executionDevice"]=m_imageDevice;writeJson(m_jobDir+"/job.json",job);
-    if(m_imageDevice=="remote")startRemote(args,"image");else start(engine("sd-cli"),args,"image");
+    if(m_imageDevice=="remote")startRemote(args,kind);else start(engine("sd-cli"),args,kind);
 }
 void Studio::generateAvatar(double limit){
     if(busy())return;
@@ -500,6 +527,27 @@ bool Studio::validateSound(){
     if(!error.isEmpty()){fail(error);return false;}
     return true;
 }
+void Studio::generateVoiceDesign(QString description,QString text){
+    if(busy())return;
+    m_voiceDesignAudio.clear();emit changed();
+    description=description.trimmed();text=text.trimmed();
+    if(description.isEmpty()||description.size()>1000||text.isEmpty()||text.size()>120){fail("请填写声音描述（最多一千字）和试听文案（最多一百二十字）");return;}
+    if(!ensureModels({"voice"}))return;
+    m_voiceDesignAudio.clear();m_voiceDesignText=text;m_voiceDesignDescription=description;
+    m_audioPipeline=false;m_trackGeneration.clear();
+    m_jobDir=m_outputRoot+"/"+QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss")+"-voice-design-"+QUuid::createUuid().toString(QUuid::Id128).left(6);
+    if(!QDir().mkpath(m_jobDir)||!writeJson(m_jobDir+"/request.json",{{"mode","design"},{"models",m_models+"/voice"},{"description",description},{"text",text},{"language","zh"},{"output",m_jobDir+"/voice.wav"}})){
+        fail("无法保存语音设计任务");return;
+    }
+    writeJson(m_jobDir+"/job.json",{{"kind","voice-design"},{"engine","ming-3.0-q8"},{"description",description},{"text",text}});
+    start(engine("moss-voice"),{m_jobDir+"/request.json"},"voice-design");
+}
+QString Studio::saveDesignedVoice(QString name){
+    if(busy())return "请等待生成结束";
+    if(m_voiceDesignAudio.isEmpty())return "请先生成并试听设计音色";
+    return m_sound.createVoice(name,QUrl(m_voiceDesignAudio),m_voiceDesignText,
+        {{"engine","ming-3.0-q8"},{"description",m_voiceDesignDescription},{"text",m_voiceDesignText},{"seed",1895}});
+}
 void Studio::advanceAudioPipeline(){
     if(!m_audioPipeline||m_busy)return;
     const auto settings=m_sound.settings();
@@ -518,10 +566,10 @@ void Studio::advanceAudioPipeline(){
             if(!ensureModels({"voice"}))return;
             if(!newJob("voice")){fail("无法创建语音任务目录");return;}
             if(!writeJson(m_jobDir+"/request.json",{{"models",m_models+"/voice"},{"reference",voice["reference"].toString()},
-                {"referenceText",voice["transcript"].toString()},{"text",settings["speechText"].toString()},{"output",m_jobDir+"/voice.wav"}})){
+                {"referenceText",voice["transcript"].toString()},{"emotion",settings["emotion"].toString()},{"dialect",settings["dialect"].toString()},{"language",voice["language"].toString().section('-',0,0).isEmpty()?"zh":voice["language"].toString().section('-',0,0)},{"text",settings["speechText"].toString()},{"output",m_jobDir+"/voice.wav"}})){
                 fail("无法保存语音任务");return;
             }
-            writeJson(m_jobDir+"/job.json",{{"kind","voice"},{"voiceId",settings["voiceId"].toString()},{"text",settings["speechText"].toString()}});
+            writeJson(m_jobDir+"/job.json",{{"kind","voice"},{"engine","ming-3.0-q8"},{"modelRevision","2eb8d37c7f10672e69c8aa33091baa04c461b66c"},{"emotion",settings["emotion"].toString()},{"dialect",settings["dialect"].toString()},{"voiceId",settings["voiceId"].toString()},{"text",settings["speechText"].toString()}});
             start(worker,{m_jobDir+"/request.json"},"voice");return;
         }
     }
@@ -650,8 +698,9 @@ void Studio::consumeOutput(QByteArray bytes){
         if(j["event"]=="progress"){
             QString stage=j["stage"].toString();auto total=j["total"].toDouble();
             if(total>0)m_progress=j["done"].toDouble()/total;
+            if(stage.startsWith("voice"))m_backend="CPU · Ming-3.0 Q8";
             if(stage=="timeline-video")m_backend="VideoToolbox · 时间轴合成";
-            m_status=stage=="timeline-video"?"正在导出时间轴视频…":stage.startsWith("voice")?"正在合成配音文案…":stage=="page-video"?"正在合成图像配音视频…":stage=="render"?"正在生成数字人画面…":stage=="ditto-mouth-calibration"?"正在校准人物嘴形（首次使用）…":stage=="ditto-audio"?"正在提取语音特征…":stage=="ditto-motion"?"正在生成表情动作…":"正在加载数字人模型…";
+            m_status=stage=="timeline-video"?"正在导出时间轴视频…":stage.startsWith("voice")?(m_kind=="voice-design"?"正在设计语音…":"正在合成配音文案…"):stage=="page-video"?"正在合成图像配音视频…":stage=="render"?"正在生成数字人画面…":stage=="ditto-mouth-calibration"?"正在校准人物嘴形（首次使用）…":stage=="ditto-audio"?"正在提取语音特征…":stage=="ditto-motion"?"正在生成表情动作…":"正在加载数字人模型…";
         }
     }
     if(m_pending.size()>20000)m_pending=m_pending.right(20000);
@@ -661,7 +710,10 @@ void Studio::finished(int code,QProcess::ExitStatus state){
     if(!m_remoteJob)readOutput();m_jobLog.close();m_busy=false;
     bool success=!m_cancelled&&code==0&&state==QProcess::NormalExit;
     QString output;
-    if(m_kind=="voice"||m_kind=="sfx"){
+    if(m_kind=="voice-design"){
+        output=m_jobDir+"/voice.wav";success=success&&QFileInfo(output).size()>44;
+        if(success)m_voiceDesignAudio=QUrl::fromLocalFile(output).toString();
+    }else if(m_kind=="voice"||m_kind=="sfx"){
         output=m_jobDir+(m_kind=="voice"?"/voice.wav":"/sfx.wav");
         success=success&&QFileInfo(output).size()>44;
         if(success){m_sound.setResult(m_kind=="voice"?"speechResult":"sfxResult",output);syncTimelineSources();}
@@ -680,6 +732,10 @@ void Studio::finished(int code,QProcess::ExitStatus state){
             if(m_currentPage>=0){auto page=m_pages[m_currentPage].toMap();page["editSourceJob"]=m_jobDir;m_pages[m_currentPage]=page;}
             savePages();emit pagesChanged();
         }
+    }else if(m_kind=="avatar-image"){
+        output=m_jobDir+"/image.png";if(!QFileInfo::exists(output))output=m_jobDir+"/image_1.png";
+        success=success&&QImageReader(output).canRead();
+        if(success)m_avatarDesignImage=QUrl::fromLocalFile(output).toString();
     }else if(m_kind=="image"){
         output=m_jobDir+"/image.png";
         if(!QFileInfo::exists(output))output=m_jobDir+"/image_1.png";
@@ -773,10 +829,12 @@ void Studio::exportEditResult(QUrl url){exportFile(local(m_edit.resultUrl()),url
 void Studio::exportFile(QString src,QUrl url){
     QString dest=url.toLocalFile();if(src.isEmpty()||dest.isEmpty())return;
     if(QFileInfo(src).absoluteFilePath()==QFileInfo(dest).absoluteFilePath())return;
-    QFile input(src);QSaveFile output(dest);
-    if(!input.open(QIODevice::ReadOnly)||!output.open(QIODevice::WriteOnly)){fail("无法导出文件");return;}
-    while(!input.atEnd()){auto data=input.read(1024*1024);if(data.isEmpty()||output.write(data)!=data.size()){fail("导出写入失败");return;}}
-    if(!output.commit())fail("导出失败");else{m_status="已导出 "+QFileInfo(dest).fileName();emit changed();}
+    QString error;
+    if(!copyToUserSelectedFile(src,dest,&error)){
+        fail("无法导出文件："+error);emit fileExportFinished(false,error);return;
+    }
+    m_error.clear();m_status="已导出 "+QFileInfo(dest).fileName();emit changed();
+    emit fileExportFinished(true,dest);
 }
 void Studio::refreshHistory(){
     m_history.clear();

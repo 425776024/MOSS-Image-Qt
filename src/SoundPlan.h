@@ -22,7 +22,7 @@ public:
     QVariantMap selectedVoice()const;
     void setResult(QString key,QString value);
     Q_INVOKABLE void set(QString key,QVariant value);
-    Q_INVOKABLE QString createVoice(QString name,QUrl audio,QString transcript);
+    Q_INVOKABLE QString createVoice(QString name,QUrl audio,QString transcript,QVariantMap designRecipe={});
     Q_INVOKABLE QString updateVoice(QString id,QString name,QString transcript);
     Q_INVOKABLE QString removeVoice(QString id);
     Q_INVOKABLE QString restoreVoice();

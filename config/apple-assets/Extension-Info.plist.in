@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>XinshenAssets</string>
+	<key>CFBundleIdentifier</key>
+	<string>ai.ffclip.studio.assets</string>
+	<key>CFBundleName</key>
+	<string>XinshenAssets</string>
+	<key>CFBundleDisplayName</key>
+	<string>XAvatar Model Downloads</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${PROJECT_VERSION}</string>
+	<key>CFBundleVersion</key>
+	<string>${MOSS_BUILD_NUMBER}</string>
+	<key>EXAppExtensionAttributes</key>
+	<dict>
+		<key>EXExtensionPointIdentifier</key>
+		<string>com.apple.background-asset-downloader-extension</string>
+	</dict>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+</dict>
+</plist>

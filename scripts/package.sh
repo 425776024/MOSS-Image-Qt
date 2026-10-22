@@ -35,16 +35,26 @@ fi
 python3 scripts/public_release.py app "$build_dir/MossStudio.app"
 cp -R "$build_dir/MossStudio.app" "$app"
 mkdir -p "$app/Contents/Helpers" "$app/Contents/Resources/licenses"
+cp LICENSE "$app/Contents/Resources/licenses/Xinshen-MIT.txt"
+cp docs/model-terms.md "$app/Contents/Resources/licenses/Sound-Model-Terms.md"
 cp .local/build-engine/bin/sd-cli "$build_dir/workers/moss-ditto" \
     "$build_dir/workers/moss-voice" "${MOSS_SFX_PATH:-.local/build-audio/bin/sa3-generate}" "$app/Contents/Helpers/"
 mkdir -p "$app/Contents/Resources/assets"
 cp -R assets/voices "$app/Contents/Resources/assets/"
 cp -R vendor/videocut-voice/licenses "$app/Contents/Resources/licenses/audio"
+ming_root="${MOSS_MING_ROOT:-$(sed -n 's/^MOSS_MING_ROOT:PATH=//p' "$build_dir/CMakeCache.txt")}"
+cp -R "$ming_root/licenses" "$app/Contents/Resources/licenses/audio/ming-runtime"
 cp vendor/videocut-voice/PROVENANCE.md "$app/Contents/Resources/licenses/audio/"
 cp .local/deps/stable-diffusion.cpp/LICENSE "$app/Contents/Resources/licenses/stable-diffusion.cpp.txt"
 cp vendor/xinshen-ditto/LICENSE.upstream "$app/Contents/Resources/licenses/Ditto.txt"
 cp vendor/xinshen-ditto/LICENSE.mediapipe "$app/Contents/Resources/licenses/MediaPipe.txt"
+cp vendor/xinshen-ditto/LICENSE.YuNet "$app/Contents/Resources/licenses/YuNet.txt"
+cp vendor/xinshen-ditto/LICENSE.LivePortrait "$app/Contents/Resources/licenses/LivePortrait.txt"
 cp THIRD_PARTY.md "$app/Contents/Resources/licenses/"
+qt_notices="${MOSS_QT_NOTICES_DIR:-$PWD/.local/appstore/qt-sources/complete-notices}"
+if [ -d "$qt_notices" ]; then
+    cp -R "$qt_notices" "$app/Contents/Resources/licenses/qt"
+fi
 if [ -n "${MOSS_CI_NATIVE_ROOT:-}" ]; then
     cp -R "$MOSS_CI_NATIVE_ROOT/licenses" "$app/Contents/Resources/licenses/ci-dependencies"
     cp config/macos-dependencies.json "$app/Contents/Resources/licenses/ci-dependencies/"

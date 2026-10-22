@@ -16,6 +16,28 @@ private:
         file.write(QJsonDocument(value).toJson());
     }
 private slots:
+    void missingAvatarImageModelsDoNotChangeEditor(){
+        QTemporaryDir work,models;const auto previousRoot=qgetenv("MOSS_MODEL_ROOT");
+        qputenv("MOSS_OUTPUT_ROOT",work.path().toUtf8());qputenv("MOSS_MODEL_ROOT",models.path().toUtf8());
+        Studio s;s.document()->setPrompt("Keep this work");const auto before=s.document()->json();
+        QSignalSpy request(s.models(),&ModelManager::downloadRequested);s.generateAvatarImage("A new person");
+        QCOMPARE(request.size(),1);QVERIFY(!s.busy());QVERIFY(s.avatarDesignImage().isEmpty());QCOMPARE(s.document()->json(),before);
+        if(previousRoot.isNull())qunsetenv("MOSS_MODEL_ROOT");else qputenv("MOSS_MODEL_ROOT",previousRoot);
+    }
+    void conversationVoiceStylesPersistWithoutLeakingAcrossWorks(){
+        QTemporaryDir root;
+        ConversationDocument one("one",root.path(),{}),two("two",root.path(),{});
+        one.setVoiceOptions({{"emotion","高兴"},{"dialect","standard"}});
+        one.setTask("voice");one.setDraft("保存这段文案");QVERIFY(one.beginRequest());
+        QCOMPARE(one.messages().first().toMap()["voiceOptions"].toMap()["emotion"].toString(),QString("高兴"));
+        one.finishRequest(false,{},"test");
+        ConversationDocument restored("one",root.path(),one.json());
+        QCOMPARE(restored.voiceOptions()["emotion"].toString(),QString("高兴"));
+        QCOMPARE(two.voiceOptions()["emotion"].toString(),QString("中性"));
+        restored.setVoiceOptions({{"emotion","高兴"},{"dialect","chuanyu"}});
+        QCOMPARE(restored.voiceOptions()["emotion"].toString(),QString("中性"));
+        QCOMPARE(one.voiceOptions()["dialect"].toString(),QString("standard"));
+    }
     void publicBuildRejectsRemoteExecution() {
         qputenv("MOSS_IMAGE_DEVICE","remote");
         Studio studio;
@@ -184,7 +206,11 @@ private slots:
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio s;
         const auto count=s.creationPages().size();s.useLayoutTemplate("poster");QCOMPARE(s.creationPages().size(),count+1);
         const auto draft=s.conversation()->draft();QVERIFY(!draft.isEmpty());
+        QSignalSpy saved(&s,&Studio::conversationSaveFinished);
+        s.saveConversation(QUrl::fromLocalFile(dir.filePath("missing/export.moss.json")));
+        QCOMPARE(saved.count(),1);QVERIFY(!saved.last()[0].toBool());QVERIFY(!saved.last()[1].toString().isEmpty());
         const auto path=dir.filePath("export.moss.json");s.saveConversation(QUrl::fromLocalFile(path));
+        QCOMPARE(saved.count(),2);QVERIFY(saved.last()[0].toBool());QCOMPARE(saved.last()[1].toString(),path);
         QFile f(path);QVERIFY(f.open(QIODevice::ReadOnly));auto json=QJsonDocument::fromJson(f.readAll()).object();QVERIFY(json["conversation"].isObject());QVERIFY(json["layout"].toBool());
         s.loadProject(QUrl::fromLocalFile(path));QCOMPARE(s.conversation()->draft(),draft);
         QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);

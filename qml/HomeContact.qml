@@ -6,7 +6,7 @@ Rectangle {
     color: HomeTheme.sidebar
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 20
-        HomeHeader { Layout.fillWidth: true; title: "联系我们" }
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("联系我们") }
         HomeSection { Layout.preferredWidth: Math.min(600,parent.width); padding: 22
             RowLayout { Layout.fillWidth: true; spacing: 22
                 Rectangle { width: 176; height: 176; color: "white"; radius: 8

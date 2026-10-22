@@ -1,5 +1,6 @@
 #include "Studio.h"
 #include "ConversationMediaStore.h"
+#include "UserSelectedFileExport.h"
 #include <QDateTime>
 #include <QDir>
 #include <QImageReader>
@@ -29,7 +30,7 @@ ConversationDocument *Studio::conversationFor(QString id){
         const auto video=thread->addAsset(page["video"].toString(),"video","原作品视频",visual,voice);if(!video.isEmpty())ids<<video;
         const auto sfx=thread->addAsset(settings["sfxResult"].toString(),"audio","原作品音效");if(!sfx.isEmpty())ids<<sfx;
         ids.removeAll(QString());if(!ids.isEmpty())thread->addResults(ids,"import","原作品素材");
-        thread->setDraft(page["document"].toMap()["prompt"].toString());thread->setVoiceId(settings["voiceId"].toString());
+        thread->setDraft(page["document"].toMap()["prompt"].toString());thread->setVoiceId(settings["voiceId"].toString());thread->setVoiceOptions({{"emotion",settings["emotion"]},{"dialect",settings["dialect"]}});
     }
     if(thread->voiceId().isEmpty())thread->setVoiceId(m_sound.settings()["voiceId"].toString());
     auto saveTimer=new QTimer(thread);saveTimer->setInterval(400);saveTimer->setSingleShot(true);
@@ -107,6 +108,7 @@ void Studio::sendConversation(){
             }
             if(task=="avatar"&&!thread->audio().isEmpty())setPageAudio(thread->audio()["url"].toString());
             else{
+                m_sound.set("emotion",thread->voiceOptions()["emotion"]);m_sound.set("dialect",thread->voiceOptions()["dialect"]);
                 m_sound.set("voiceSource","tts");m_sound.set("speechText",thread->draft());
                 if(!thread->voiceId().isEmpty())m_sound.set("voiceId",thread->voiceId());
                 m_sound.setResult("speechResult",{});
@@ -165,7 +167,15 @@ void Studio::packageConversation(){
 void Studio::exportConversationAsset(QString id,QUrl destination){if(m_conversation)exportFile(disk(m_conversation->asset(id)["url"].toString()),destination);}
 void Studio::saveConversation(QUrl destination){
     if(!m_conversation)return;capturePage();QJsonObject project;for(const auto &value:m_pages){const auto row=value.toMap();if(row["id"]==m_conversation->id()){project=QJsonObject::fromVariantMap(row["document"].toMap());for(auto it=row.begin();it!=row.end();++it)if(it.key()!="document")project[it.key()]=QJsonValue::fromVariant(it.value());break;}}
-    project["conversation"]=m_conversation->json();if(!ConversationMediaStore::pin(project.toVariantMap())){fail("无法保留工程引用的素材");return;}if(!write(destination.toLocalFile(),project))fail("保存作品工程失败");
+    project["conversation"]=m_conversation->json();
+    QString error;
+    if(!ConversationMediaStore::pin(project.toVariantMap())) error="无法保留工程引用的素材";
+    else if(!destination.isLocalFile()) error="请选择本机文件";
+    else if(writeToUserSelectedFile(QJsonDocument(project).toJson(),destination.toLocalFile(),&error)) {
+        emit conversationSaveFinished(true,destination.toLocalFile());return;
+    }
+    fail("保存作品工程失败："+error);
+    emit conversationSaveFinished(false,error);
 }
 QVariantList Studio::layoutTemplates() const {
     QVariantList rows;

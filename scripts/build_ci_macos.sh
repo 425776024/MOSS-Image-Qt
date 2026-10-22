@@ -15,7 +15,7 @@ python3 scripts/prepare_ci_macos.py
     -DMOSS_AUDIO_DEPS="$MOSS_CI_NATIVE_ROOT/audio-deps" \
     -DONNXRUNTIME_ROOT="$MOSS_CI_NATIVE_ROOT/audio-deps/onnxruntime" \
     -DMOSS_MEDIAPIPE_ROOT="$MOSS_CI_NATIVE_ROOT/mediapipe" \
-    -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+    -DOPENSSL_ROOT_DIR="$MOSS_CI_NATIVE_ROOT/openssl" \
     -DJSON_INCLUDE="$(brew --prefix nlohmann-json)/include" \
     -DVOICE_JSON_INCLUDE="$(brew --prefix nlohmann-json)/include"
 ./scripts/package.sh

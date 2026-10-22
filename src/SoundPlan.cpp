@@ -1,4 +1,5 @@
 #include "SoundPlan.h"
+#include "VoiceStyle.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -15,10 +16,12 @@ QJsonObject read(QString path){QFile f(path);if(!f.open(QIODevice::ReadOnly))ret
 void SoundPlan::initialize(QString root){m_outputRoot=root;loadVoices();}
 void SoundPlan::restore(QJsonObject value){
     m_settings={{"voiceSource","none"},{"voiceId",""},{"speechText",""},{"sfxEnabled",false},
-        {"sfxPrompt",""},{"sfxDuration",5},{"sfxGain",.35},{"speechResult",""},{"sfxResult",""},{"mouthReference","auto"}};
+        {"sfxPrompt",""},{"sfxDuration",5},{"sfxGain",.35},{"speechResult",""},{"sfxResult",""},{"mouthReference","auto"},{"emotion","中性"},{"dialect","standard"}};
     for(auto it=value.begin();it!=value.end();++it)if(m_settings.contains(it.key()))m_settings[it.key()]=it.value().toVariant();
     if(!QStringList{"none","import","tts"}.contains(m_settings["voiceSource"].toString()))m_settings["voiceSource"]="none";
     if(!QStringList{"auto","source"}.contains(m_settings["mouthReference"].toString()))m_settings["mouthReference"]="auto";
+    const auto style=VoiceStyle::normalize(m_settings);
+    m_settings["emotion"]=style["emotion"];m_settings["dialect"]=style["dialect"];
     m_settings["sfxDuration"]=std::clamp(m_settings["sfxDuration"].toInt(),1,30);
     m_settings["sfxGain"]=std::clamp(m_settings["sfxGain"].toDouble(),0.,1.);
     if(selectedVoice().isEmpty()&&!m_voices.isEmpty())m_settings["voiceId"]=m_voices.first().toMap()["id"];
@@ -28,11 +31,15 @@ void SoundPlan::set(QString key,QVariant value){
     if(!m_settings.contains(key)||key.endsWith("Result"))return;
     if(key=="voiceSource"&&!QStringList{"none","import","tts"}.contains(value.toString()))return;
     if(key=="mouthReference"&&!QStringList{"auto","source"}.contains(value.toString()))return;
+    if(key=="emotion"&&!VoiceStyle::emotions().contains(value.toString()))return;
+    if(key=="dialect"&&!VoiceStyle::dialects().contains(value.toString()))return;
     if(key=="sfxDuration")value=std::clamp(value.toInt(),1,30);
     if(key=="sfxGain")value=std::clamp(value.toDouble(),0.,1.);
     if(m_settings[key]==value)return;
     m_settings[key]=value;
-    if(key=="speechText"||key=="voiceId")m_settings["speechResult"]="";
+    if(key=="emotion"&&value!="中性")m_settings["dialect"]="standard";
+    if(key=="dialect"&&value!="standard")m_settings["emotion"]="中性";
+    if(key=="speechText"||key=="voiceId"||key=="emotion"||key=="dialect")m_settings["speechResult"]="";
     if(key=="sfxPrompt"||key=="sfxDuration")m_settings["sfxResult"]="";
     emit edited();emit settingEdited(key);emit changed();
 }
@@ -59,7 +66,7 @@ void SoundPlan::loadVoices(){
     if(selectedVoice().isEmpty()&&!m_voices.isEmpty())m_settings["voiceId"]=m_voices.first().toMap()["id"];
     emit voicesChanged();emit changed();
 }
-QString SoundPlan::createVoice(QString name,QUrl url,QString transcript){
+QString SoundPlan::createVoice(QString name,QUrl url,QString transcript,QVariantMap designRecipe){
     if(name.trimmed().isEmpty()||transcript.trimmed().isEmpty())return "请填写音色名称和录音对应文字";
     QFile input(url.toLocalFile());if(!input.open(QIODevice::ReadOnly)||input.size()>20*1024*1024)return "请选择 20 MB 以内的 WAV 参考录音";
     const auto header=input.read(12);
@@ -78,7 +85,9 @@ QString SoundPlan::createVoice(QString name,QUrl url,QString transcript){
     const auto directory=m_outputRoot+"/voices";const auto file=directory+"/"+id+".wav";
     if(!QDir().mkpath(directory)||!QFile::copy(url.toLocalFile(),file))return "无法保存参考音色";
     auto list=read(directory+"/catalog.json")["voices"].toArray();
-    list.append(QJsonObject{{"id",id},{"name",name.trimmed()},{"reference",file},{"transcript",transcript.trimmed()},{"builtin",false}});
+    QJsonObject row{{"id",id},{"name",name.trimmed()},{"reference",file},{"transcript",transcript.trimmed()},{"builtin",false}};
+    if(!designRecipe.isEmpty()){row["origin"]="ming-voice-design";row["designRecipe"]=QJsonObject::fromVariantMap(designRecipe);row["synthetic"]=true;}
+    list.append(row);
     QSaveFile save(directory+"/catalog.json");
     auto catalog=read(directory+"/catalog.json");catalog["voices"]=list;
     const auto bytes=QJsonDocument(catalog).toJson();

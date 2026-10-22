@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import "Translations.js" as Strings
 
 QtObject {
     readonly property bool english: workspace.language === "en"
@@ -21,6 +22,10 @@ QtObject {
     readonly property color muted: VideoCutTheme.muted
     readonly property color elevated: VideoCutTheme.elevated
     readonly property color chrome: VideoCutTheme.chrome
+    // Neutral sheet surfaces; content and the primary action carry the emphasis.
+    readonly property color dialogSurface: dark ? "#29292b" : "#f2f2f2"
+    readonly property color dialogInset: dark ? "#222224" : "#e5e5e7"
+    readonly property color dialogBorder: dark ? "#32ffffff" : "#22000000"
     readonly property var translations: ({
         "嘴形校准缓存":"Mouth calibration cache", "清理缓存":"Clear cache", "缓存已清理，下次生成将重新校准":"Cache cleared. The next generation will recalibrate.", "缓存正在使用或无法清理，请稍后重试":"Cache is in use or could not be cleared. Try again later.", "生成期间无法清理缓存，请稍后重试":"Cache cannot be cleared during generation. Try again when it finishes.",
         "我的作品":"My projects", "我的形象":"My avatars", "我的声音":"My voices", "制作数字人":"Create avatar", "图像创作":"Image studio",
@@ -38,7 +43,12 @@ QtObject {
         "外观":"Appearance", "显示模式":"Display mode", "跟随系统或选择浅色、深色":"Follow the system or choose a light or dark appearance", "跟随系统":"System", "浅色":"Light", "深色":"Dark", "工作台主题":"Workspace theme", "主页配色立即生效":"Applies immediately to the home window", "深空":"Deep space", "石墨":"Graphite", "青绿":"Teal", "蓝色":"Blue", "语言":"Language", "界面语言":"Home language", "更改后立即生效":"Changes apply immediately", "本地存储":"Local storage", "作品目录":"Project folder", "模型目录":"Model folder", "形象目录":"Avatar folder", "打开目录":"Open folder", "选择目录":"Choose folder", "自动保存":"Autosave", "创作内容自动保存在本机":"Your work is automatically saved on this Mac",
         "获取使用帮助，交流产品建议。":"Get help and share product feedback.", "微信":"WeChat", "微信扫一扫":"Scan with WeChat", "扫码添加微信":"Add us on WeChat", "欢迎咨询使用问题或反馈建议。":"Questions and suggestions are welcome.", "B站主页":"Bilibili", "本地 AI 图像与数字人创作":"Local AI image and avatar creation", "版本":"Version", "查看第三方声明":"Third-party notices", "返回主页":"Back to home", "正在制作":"Creating", "查看创作窗口":"Open image studio", "没有匹配的音色":"No matching voices", "没有匹配的形象":"No matching avatars"
     })
-    function t(value) { return english ? (translations[value] || value) : value }
+    function t(value) {
+        if (!english || typeof value !== "string") return value
+        if (Object.prototype.hasOwnProperty.call(Strings.english, value)) return Strings.english[value]
+        return Object.prototype.hasOwnProperty.call(translations, value) ? translations[value] : value
+    }
     function count(value, noun) { return english ? value + " " + ({"作品":"projects","形象":"avatars","音色":"voices"}[noun] || noun) : value + " 个" + noun }
+    function taskLabel(task) { return t(({image:"生成图像",edit:"编辑图像",avatar:"让画面说话",voice:"语音合成",sfx:"音效生成",pack:"打包视频"})[task] || "") }
     function projectName(row) { return row.name || (row.document && row.document.prompt ? row.document.prompt.replace(/\n/g, " ").slice(0, 42) : t("未命名作品")) }
 }

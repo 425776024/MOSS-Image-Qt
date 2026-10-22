@@ -45,7 +45,7 @@ def code_items(app):
             with path.open('rb') as stream:
                 if stream.read(4) in MAGIC:
                     files.append(path)
-        elif path.is_dir() and path.suffix in ('.app', '.framework', '.xpc', '.bundle'):
+        elif path.is_dir() and path.suffix in ('.app', '.framework', '.xpc', '.bundle', '.appex'):
             bundles.append(path)
     return sorted(files, key=lambda p: len(p.parts), reverse=True) + sorted(
         bundles, key=lambda p: len(p.parts), reverse=True) + [app]

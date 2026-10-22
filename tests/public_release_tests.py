@@ -11,6 +11,19 @@ release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
 
 class ReleaseTest(unittest.TestCase):
+    def test_only_exact_hash_pinned_demo_videos_can_enter_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); media = root / 'assets/showcase/avatar-demo-01.mp4'
+            media.parent.mkdir(parents=True); media.write_bytes(b'approved demonstration')
+            allowed = {media.relative_to(root).as_posix(): release.digest(media)}
+            with patch.object(release, 'ROOT', root), patch.object(release, 'SOURCE_DOCS', ()), patch.object(release, 'SOURCE_DIRS', ('assets',)), patch.object(release, 'PUBLIC_DEMO_MEDIA', allowed):
+                self.assertEqual(release.source_files(), [media.relative_to(root)])
+                media.write_bytes(b'unapproved replacement')
+                with self.assertRaises(ValueError): release.source_files()
+                media.write_bytes(b'approved demonstration')
+                renamed = media.with_name('local-export.mp4'); media.rename(renamed)
+                with self.assertRaises(ValueError): release.source_files()
+
     def test_signing_secrets_cannot_enter_source_export(self):
         for suffix in ('.p12', '.p8', '.key', '.pem', '.keychain-db'):
             with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as tmp:

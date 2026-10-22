@@ -19,12 +19,12 @@ FrostedPanel {
         RowLayout {
             Layout.fillWidth: true; Layout.preferredHeight: 44
             Layout.leftMargin: 12; Layout.rightMargin: 8
-            Text { text: "页面"; color: StudioTheme.text; font.pixelSize: 12; font.weight: Font.DemiBold }
+            Text { text: HomeTheme.t("页面"); color: StudioTheme.text; font.pixelSize: 12; font.weight: Font.DemiBold }
             Text { text: studio.creationPages.length; color: StudioTheme.muted; font.pixelSize: 10 }
             Item { Layout.fillWidth: true }
             StudioButton {
                 objectName: "newCreationPage"; iconName: "plus"; quiet: true
-                hint: "新建空白创作页"; enabled: !studio.busy
+                hint: HomeTheme.t("新建空白创作页"); enabled: !studio.busy
                 onClicked: { root.commitFocus(); studio.newPage(); root.selected() }
             }
         }
@@ -56,7 +56,7 @@ FrostedPanel {
                     objectName: "creationPage" + card.index
                     width: parent.width; height: width; hoverEnabled: true
                     enabled: !studio.busy
-                    Accessible.name: "创作页 " + (card.index + 1) + "，" + (card.document.prompt || (card.preview ? "导入画面" : "空白画布"))
+                    Accessible.name: HomeTheme.t("创作页 ") + (card.index + 1) + "，" + (card.document.prompt || (card.preview ? HomeTheme.t("导入画面") : HomeTheme.t("空白画布")))
                     background: Rectangle {
                         radius: 9; color: card.selected ? StudioTheme.selection : StudioTheme.background
                         border.color: card.selected ? StudioTheme.accent : pageButton.hovered ? StudioTheme.muted : StudioTheme.line
@@ -86,7 +86,7 @@ FrostedPanel {
                         StudioButton {
                             anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 4
                             visible: pageButton.hovered || hovered || pageMenu.opened
-                            iconName: "more"; implicitWidth: 30; implicitHeight: 26; hint: "页面操作"
+                            iconName: "more"; implicitWidth: 30; implicitHeight: 26; hint: HomeTheme.t("页面操作")
                             onClicked: pageMenu.popup()
                         }
                     }
@@ -94,15 +94,15 @@ FrostedPanel {
                     MouseArea { anchors.fill: parent; acceptedButtons: Qt.RightButton; onClicked: pageMenu.popup() }
                     Menu {
                         id: pageMenu
-                        MenuItem { text: "复制此页"; onTriggered: root.copyPage(card.index) }
-                        MenuItem { text: "删除此页"; onTriggered: root.removePage(card.index) }
+                        MenuItem { text: HomeTheme.t("复制此页"); onTriggered: root.copyPage(card.index) }
+                        MenuItem { text: HomeTheme.t("删除此页"); onTriggered: root.removePage(card.index) }
                     }
                 }
                 RowLayout {
                     width: parent.width; spacing: 7
                     Text { text: String(card.index + 1).padStart(2, "0"); color: card.selected ? StudioTheme.accent : StudioTheme.faint; font.pixelSize: 10; font.family: "Menlo" }
                     Text {
-                        Layout.fillWidth: true; text: card.document.prompt ? card.document.prompt.replace(/\s+/g, " ") : card.modelData.edit && card.modelData.edit.prompt ? card.modelData.edit.prompt : card.preview ? "导入画面" : "空白画布"
+                        Layout.fillWidth: true; text: card.document.prompt ? card.document.prompt.replace(/\s+/g, " ") : card.modelData.edit && card.modelData.edit.prompt ? card.modelData.edit.prompt : card.preview ? HomeTheme.t("导入画面") : HomeTheme.t("空白画布")
                         elide: Text.ElideRight; color: card.selected ? StudioTheme.text : StudioTheme.secondary; font.pixelSize: 11
                     }
                 }
@@ -110,12 +110,12 @@ FrostedPanel {
         }
         StudioButton {
             visible: studio.canRestorePage; Layout.fillWidth: true; Layout.leftMargin: 10; Layout.rightMargin: 10; Layout.bottomMargin: 10
-            text: "撤销删除"; iconName: "undo"; enabled: !studio.busy
+            text: HomeTheme.t("撤销删除"); iconName: "undo"; enabled: !studio.busy
             onClicked: { root.commitFocus(); studio.restoreDeletedPage(); root.selected() }
         }
         Text {
             Layout.alignment: Qt.AlignHCenter; Layout.bottomMargin: 10; Layout.topMargin: 6
-            text: "第 " + (studio.currentPage + 1) + " / " + studio.creationPages.length + " 页"; color: StudioTheme.faint; font.pixelSize: 10
+            text: HomeTheme.t("第 ") + (studio.currentPage + 1) + " / " + studio.creationPages.length + HomeTheme.t(" 页"); color: StudioTheme.faint; font.pixelSize: 10
         }
     }
 }

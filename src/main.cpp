@@ -41,7 +41,7 @@ int main(int argc,char **argv){
     for(int i=1;i<argc;++i)startupArguments.append(QString::fromLocal8Bit(argv[i]));
     const QStringList automatedModes={"--home-smoke","--smoke-ui","--window-test",
         "--download-model-test","--conversation-test","--timeline-test","--generate-test","--edit-test",
-        "--avatar-test","--page-video-test","--voice-only-test"};
+        "--avatar-test","--page-video-test","--voice-only-test","--voice-design-test","--avatar-design-test"};
     bool backgroundTest=startupArguments.contains("--headless");
     if(!startupArguments.contains("--interactive-test"))
         for(const auto &mode:automatedModes)backgroundTest|=startupArguments.contains(mode);
@@ -50,8 +50,13 @@ int main(int argc,char **argv){
         qputenv("QT_QUICK_BACKEND","software");
     }
     QGuiApplication app(argc,argv);
+#ifdef MOSS_APP_STORE
+    qputenv("MOSS_DISABLE_DEV_PATHS","1");
+    qunsetenv("MOSS_SETTINGS_ROOT");
+#endif
     if(backgroundTest)qInfo("Moss background test: offscreen rendering; no desktop window or input automation.");
     app.setOrganizationName("MossStudio");app.setApplicationName("MossStudio");app.setApplicationVersion("0.1.0");
+    app.setApplicationDisplayName(QString::fromUtf8("新身数字人"));
     if(qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,qEnvironmentVariable("MOSS_SETTINGS_ROOT"));
@@ -67,7 +72,11 @@ int main(int argc,char **argv){
     if(QFileInfo::exists(QCoreApplication::applicationDirPath()+"/../Resources/assets/voices/catalog.json"))
         qputenv("MOSS_DISABLE_DEV_PATHS","1");
     Studio studio;WorkspaceLibrary workspace(studio.outputRoot());QQmlApplicationEngine engine;
+    app.setApplicationDisplayName(workspace.appName());
+    QObject::connect(&workspace,&WorkspaceLibrary::preferencesChanged,&app,[&]{app.setApplicationDisplayName(workspace.appName());});
     const auto args=app.arguments();
+    const int languageAt=args.indexOf("--ui-language");
+    if(languageAt>=0&&languageAt+1<args.size())workspace.setSessionLanguage(args[languageAt+1]);
     const int themeAt=args.indexOf("--ui-theme");
     if(themeAt>=0&&themeAt+1<args.size())workspace.setAppearanceMode(args[themeAt+1]);
     engine.rootContext()->setContextProperty("studio",&studio);
@@ -116,6 +125,8 @@ int main(int argc,char **argv){
         const auto task=argument("--task","image");studio.newConversation();auto thread=studio.conversation();
         if(task=="edit"||task=="avatar")thread->importMedia(QUrl::fromLocalFile(argument("--source",QString(MOSS_SOURCE_ROOT)+"/.local/test-inputs/portrait.png")),"target");
         if(task=="avatar")thread->importMedia(QUrl::fromLocalFile(argument("--audio",QString(MOSS_SOURCE_ROOT)+"/.local/test-inputs/audio.wav")),"audio");
+        if(args.contains("--voice-id"))thread->setVoiceId(argument("--voice-id",{}));
+        thread->setVoiceOptions({{"emotion",argument("--voice-emotion","中性")},{"dialect",argument("--voice-dialect","standard")}});
         thread->setTask(task);thread->setDraft(argument("--prompt",task=="sfx"?"Soft wind blowing through a quiet garden, natural ambient sound.":task=="edit"?"Change the orange hat to a blue hat, keeping the same person and garden.":task=="voice"?"您好，欢迎来到对话创作。":"A blue ceramic cup beside a small orange, clean cream background, soft studio light."));
         studio.prepareConversationSettings();
         if(args.contains("--layout-template")){
@@ -178,10 +189,21 @@ int main(int argc,char **argv){
             if(args.contains("--capture-task"))studio.conversation()->setTask(argument("--capture-task","image"));
             if(args.contains("--capture-portrait")){
                 const auto source=QUrl::fromLocalFile(argument("--capture-portrait",QString()));
-                if(auto picker=homeWindow->findChild<QObject *>("homeAvatarSourceDialog"))picker->setProperty("selectedFile",source);
-                if(auto field=homeWindow->findChild<QObject *>("homeAvatarImportName"))field->setProperty("text",QString::fromUtf8("预览人像"));
+                if(auto library=homeWindow->findChild<QObject *>("homeAvatarLibrary")){
+                    library->setProperty("pendingAvatarSource",source);
+                    if(argument("--home-page",{})=="avatars"||argument("--capture-dialog",{})=="homeAvatarImportDialog")
+                        QMetaObject::invokeMethod(library,"previewAvatar",Q_ARG(QVariant,QVariant(source)));
+                }
                 if(auto creator=homeWindow->findChild<QObject *>("homeAvatarCreator"))creator->setProperty("sourceUrl",source.toString());
             }
+            if(args.contains("--capture-export"))QTimer::singleShot(400,&app,[&,argument]{
+                const auto dir=qEnvironmentVariable("MOSS_EVIDENCE_ROOT",QString(MOSS_SOURCE_ROOT)+"/.local/evidence");
+                QDir().mkpath(dir);
+                const auto source=QUrl::fromLocalFile(argument("--capture-export",{}));
+                studio.conversation()->importMedia(source,"target");
+                const auto assets=studio.conversation()->assets();
+                if(!assets.isEmpty())studio.exportConversationAsset(assets.last().toMap()["id"].toString(),QUrl::fromLocalFile(dir+"/dialog-export.png"));
+            });
             if(args.contains("--capture-voice-edit")){
                 if(auto voices=homeWindow->findChild<QObject *>("homeVoiceLibrary"))
                     for(const auto &voice:studio.sound()->voices())if(!voice.toMap()["builtin"].toBool()){
@@ -227,6 +249,16 @@ int main(int argc,char **argv){
                 auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));
                 auto control=active?active->findChild<QObject *>(controlName):nullptr;
                 if(!control)control=homeWindow->findChild<QObject *>(controlName);
+                if(!control){
+                    // Repeater delegates can be visually parented without a
+                    // corresponding QObject parent chain.
+                    std::function<QObject *(QQuickItem *)> findControl=[&](QQuickItem *item)->QObject *{
+                        if(item->objectName()==controlName)return item;
+                        for(auto child:item->childItems())if(auto found=findControl(child))return found;
+                        return nullptr;
+                    };
+                    control=findControl(homeWindow->contentItem());
+                }
                 if(!control||!QMetaObject::invokeMethod(control,"clicked")){qWarning()<<"Capture control not found:"<<controlName;app.exit(4);}
             });
             const bool packPicker=args.contains("--capture-pack-picker");
@@ -245,6 +277,14 @@ int main(int argc,char **argv){
                 QMetaObject::invokeMethod(dialog,"open");
             });
             const auto inputName=argument("--check-input",QString());
+            const auto dialogKey=argument("--dialog-key",QString());
+            if(!dialogKey.isEmpty())QTimer::singleShot(1100,&app,[&,dialogKey]{
+                if(app.platformName()!="offscreen"){qWarning()<<"Dialog key probe requires offscreen mode";app.exit(5);return;}
+                const int key=dialogKey=="return" ? Qt::Key_Return : dialogKey=="cancel" ? Qt::Key_Period : Qt::Key_Escape;
+                const auto modifiers=dialogKey=="cancel" ? Qt::MetaModifier : Qt::NoModifier;
+                QKeyEvent press(QEvent::KeyPress,key,modifiers),release(QEvent::KeyRelease,key,modifiers);
+                QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);
+            });
             if(!inputName.isEmpty())QTimer::singleShot(1100,&app,[&,inputName]{
                 // Dispatch directly to our offscreen window, never to the OS.
                 if(app.platformName()!="offscreen"){qWarning()<<"Input probe requires offscreen mode";app.exit(5);return;}
@@ -292,6 +332,13 @@ int main(int argc,char **argv){
                     for(auto child:item->childItems())visit(child);
                 };visit(history);
             }
+            QJsonArray visibleUiText;
+            std::function<void(QQuickItem *)> collectUiText=[&](QQuickItem *item){
+                if(!item->isVisible() || item->opacity()<=0)return;
+                const auto value=item->property("text");
+                if(value.metaType().id()==QMetaType::QString && !value.toString().isEmpty())visibleUiText.append(value.toString());
+                for(auto child:item->childItems())collectUiText(child);
+            };collectUiText(win->contentItem());
             QJsonArray truncatedButtons;
             std::function<void(QQuickItem *)> inspectButtons=[&](QQuickItem *item){
                 if(item->isVisible()&&item->objectName()=="appButtonLabel"&&item->property("truncated").toBool())truncatedButtons.append(item->property("text").toString());
@@ -304,12 +351,25 @@ int main(int argc,char **argv){
                 if(item){const auto p=item->mapToScene(QPointF());panels[name]=QJsonObject{{"x",p.x()},{"y",p.y()},{"width",item->width()},{"height",item->height()},{"visible",item->isVisible()}};}
             }
             QJsonObject popup;
+            QJsonObject portraitPreview;
+            if(auto preview=homeWindow->findChild<QObject *>("homeAvatarImportPreview")){
+                portraitPreview["ready"]=preview->property("ready").toBool();
+                portraitPreview["source"]=preview->property("source").toUrl().toString();
+                if(auto image=preview->findChild<QQuickItem *>("avatarImportPreviewImage")){
+                    portraitPreview["width"]=image->width();portraitPreview["height"]=image->height();
+                    const auto size=image->property("sourceSize").toSize();
+                    portraitPreview["sourceWidth"]=size.width();portraitPreview["sourceHeight"]=size.height();
+                }
+                if(auto save=homeWindow->findChild<QObject *>("homeAvatarImportSave"))portraitPreview["saveEnabled"]=save->property("enabled").toBool();
+                if(args.contains("--capture-portrait")&&!args.contains("--allow-image-error"))
+                    ok=ok&&portraitPreview["ready"].toBool()&&portraitPreview["width"].toDouble()>0&&portraitPreview["height"].toDouble()>0;
+            }
             if(!captureDialog.isEmpty()){
                 auto dialog=active?active->findChild<QObject *>(captureDialog):nullptr;
                 if(!dialog)dialog=homeWindow->findChild<QObject *>(captureDialog);
-                if(dialog)for(const auto key:{"x","y","width","height","visible"})popup[key]=QJsonValue::fromVariant(dialog->property(key));
+                if(dialog)for(const auto key:{"x","y","width","height","visible","modal","activeFocus"})popup[key]=QJsonValue::fromVariant(dialog->property(key));
             }
-            if(geometry.open(QIODevice::WriteOnly))geometry.write(QJsonDocument(QJsonObject{{"platform",app.platformName()},{"backgroundTest",backgroundTest},{"windowWidth",win->width()},{"windowHeight",win->height()},{"popup",popup},{"cards",cards},{"requests",requests},{"waveforms",waveforms},{"panels",panels},{"truncatedButtons",truncatedButtons}}).toJson());
+            if(geometry.open(QIODevice::WriteOnly))geometry.write(QJsonDocument(QJsonObject{{"platform",app.platformName()},{"language",workspace.language()},{"visibleUiText",visibleUiText},{"backgroundTest",backgroundTest},{"windowWidth",win->width()},{"windowHeight",win->height()},{"portraitPreview",portraitPreview},{"popup",popup},{"cards",cards},{"requests",requests},{"waveforms",waveforms},{"panels",panels},{"truncatedButtons",truncatedButtons}}).toJson());
             app.exit(ok?0:3);
         });
     }
@@ -403,6 +463,63 @@ int main(int argc,char **argv){
         });
         const double seconds=argument("--duration","3.2").toDouble();
         QTimer::singleShot(500,&studio,[&studio,seconds]{studio.generatePageVideo(seconds);});
+    }
+    if(args.contains("--avatar-design-test")){
+        auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
+        homeWindow->setProperty("destination","avatars");studio.setImageQuant(argument("--quant","Q8_0"));
+        const auto description=argument("--prompt","A photorealistic studio head and shoulders portrait of a friendly woman in her early thirties, looking directly at the camera, natural face, dark shoulder-length hair, a simple blue blouse, calm gentle smile, soft even lighting, plain warm gray background, one person, face and shoulders fully visible, no text, no watermark.");
+        const auto name=argument("--avatar-name","MOSS 设计形象");
+        studio.document()->setPrompt("Existing editor document must be preserved.");const auto originalDocument=studio.document()->json();
+        QObject::connect(&studio,&Studio::jobFinished,&app,[&,description,name,originalDocument](bool success){
+            QTimer::singleShot(800,&app,[&,success,description,name,originalDocument]()mutable{
+                const auto dir=qEnvironmentVariable("MOSS_EVIDENCE_ROOT",QString(MOSS_SOURCE_ROOT)+"/.local/evidence");QDir().mkpath(dir);homeWindow->grabWindow().save(dir+"/avatar-design-preview.png");
+                auto save=homeWindow->findChild<QObject*>("avatarDesignSave");
+                if(success&&save)success=QMetaObject::invokeMethod(save,"clicked");else success=false;
+                const auto avatar=workspace.avatars().isEmpty()?QVariantMap():workspace.avatars().first().toMap();
+                WorkspaceLibrary reopened(studio.outputRoot());
+                const bool preserved=studio.document()->json()==originalDocument;
+                success=success&&preserved&&avatar["name"]==name&&avatar["synthetic"].toBool()&&avatar["generationRecipe"].toMap()["prompt"]==description&&QFileInfo::exists(QUrl(avatar["url"].toString()).toLocalFile())&&!reopened.avatars().isEmpty()&&reopened.avatars().first().toMap()["id"]==avatar["id"];
+                QFile report(dir+"/avatar-design.json");if(report.open(QIODevice::WriteOnly))report.write(QJsonDocument(QJsonObject{{"success",success},{"editorDocumentUnchanged",preserved},{"avatar",QJsonObject::fromVariantMap(avatar)},{"error",studio.error()}}).toJson());
+                QTimer::singleShot(500,&app,[&,success,dir]{homeWindow->grabWindow().save(dir+"/avatar-design-saved.png");app.exit(success?0:16);});
+            });
+        });
+        QTimer::singleShot(500,&app,[&,description,name]{
+            auto library=homeWindow->findChild<QObject*>("homeAvatarLibrary");if(!library||!QMetaObject::invokeMethod(library,"designAvatar")){app.exit(16);return;}
+            auto nameField=homeWindow->findChild<QObject*>("avatarDesignName");auto prompt=homeWindow->findChild<QObject*>("avatarDesignDescription");auto generate=homeWindow->findChild<QObject*>("avatarDesignGenerate");
+            if(!nameField||!prompt||!generate){app.exit(16);return;}nameField->setProperty("text",name);prompt->setProperty("value",description);
+            if(!QMetaObject::invokeMethod(generate,"clicked"))app.exit(16);
+        });
+        QTimer::singleShot(600000,&app,[&]{studio.cancel();app.exit(16);});
+    }
+    if(args.contains("--voice-design-test")){
+        auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
+        homeWindow->setProperty("destination","voices");
+        const auto description=argument("--description","温暖沉稳的成年女声，吐字清晰，语速舒缓，适合讲述故事。");
+        const auto text=argument("--voice-text","你好，很高兴与你见面。让我们用声音记录生活，把每一个故事讲给你听。");
+        const auto name=argument("--voice-name","Ming 设计声音");
+        QObject::connect(&studio,&Studio::jobFinished,&app,[&,description,text,name](bool success){
+            QTimer::singleShot(800,&app,[&,description,text,name,success]()mutable{
+            const auto dir=qEnvironmentVariable("MOSS_EVIDENCE_ROOT",QString(MOSS_SOURCE_ROOT)+"/.local/evidence");QDir().mkpath(dir);
+            homeWindow->grabWindow().save(dir+"/voice-design-preview.png");
+            auto save=homeWindow->findChild<QObject*>("voiceDesignSave");
+            if(success&&save)success=QMetaObject::invokeMethod(save,"clicked");else success=false;
+            const auto selected=studio.sound()->selectedVoice();
+            success=success&&selected["origin"]=="ming-voice-design"&&selected["name"]==name&&QFileInfo::exists(selected["reference"].toString());
+            SoundPlan reopened;reopened.initialize(studio.outputRoot());reopened.set("voiceId",selected["id"]);
+            success=success&&reopened.selectedVoice()["designRecipe"].toMap()["description"]==description;
+            QFile report(dir+"/voice-design.json");if(report.open(QIODevice::WriteOnly))report.write(QJsonDocument(QJsonObject{{"success",success},{"voice",QJsonObject::fromVariantMap(selected)},{"error",studio.error()}}).toJson());
+            QTimer::singleShot(500,&app,[&,success,dir]{homeWindow->grabWindow().save(dir+"/voice-design-saved.png");app.exit(success?0:15);});
+            });
+        });
+        QTimer::singleShot(500,&app,[&,description,text,name]{
+            auto library=homeWindow->findChild<QObject*>("homeVoiceLibrary");
+            if(!library||!QMetaObject::invokeMethod(library,"designVoice")){app.exit(15);return;}
+            const auto set=[&](const char *object,const char *property,const QString &value){auto field=homeWindow->findChild<QObject*>(object);return field&&field->setProperty(property,value);};
+            if(!set("voiceDesignName","text",name)||!set("voiceDesignDescription","value",description)||!set("voiceDesignText","value",text)){app.exit(15);return;}
+            auto generate=homeWindow->findChild<QObject*>("voiceDesignGenerate");
+            if(!generate||!QMetaObject::invokeMethod(generate,"clicked"))app.exit(15);
+        });
+        QTimer::singleShot(180000,&app,[&]{studio.cancel();app.exit(15);});
     }
     if(args.contains("--voice-only-test")){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};

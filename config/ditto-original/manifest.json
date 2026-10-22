@@ -1,7 +1,7 @@
 {
   "version": 1,
   "engine": "ditto-native-v1",
-  "pipelineId": "b463568cb5adb284e023733730633abc7075678ebf82209f0c382231ad7a5323",
+  "pipelineId": "f2cec7b04c0cf3e71fc6e9aaa164fed4ce5a241763a5e877745abb9ee10b7626",
   "upstreamCommit": "c3e47eee2e626500017a0556b470d6d4182f85e8",
   "audioModel": {
     "name": "ditto-original",
@@ -11,14 +11,6 @@
     "hubert.onnx": {
       "bytes": 1460740880,
       "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697"
-    },
-    "detector.onnx": {
-      "bytes": 16923827,
-      "sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91"
-    },
-    "landmark106.onnx": {
-      "bytes": 5030888,
-      "sha256": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf"
     },
     "landmark203.onnx": {
       "bytes": 114666491,
@@ -55,6 +47,20 @@
     "schedule.json": {
       "bytes": 3267,
       "sha256": "21dd3bcca09b695391c9a8a05e48cd9d2355ca612ec52c0c3d8f5e03d7722e03"
+    },
+    "face_detection_yunet_2023mar.onnx": {
+      "bytes": 232589,
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
     }
+  },
+  "preparation": {
+    "profile": "yunet-203-v1",
+    "detectorInputSize": 640,
+    "scoreThreshold": 0.9,
+    "nmsThreshold": 0.3,
+    "landmarkCropScale": 1.5,
+    "landmarkCropShiftY": -0.1,
+    "sourceCropScale": 2.3,
+    "sourceCropShiftY": -0.125
   }
 }

@@ -1,0 +1,3 @@
+# Preserve original upstream license formatting.
+vendor/videocut-voice/licenses/sfx/Stability-Community-License.txt whitespace=-blank-at-eol
+vendor/xinshen-ditto/LICENSE.LivePortrait whitespace=-blank-at-eol

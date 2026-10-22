@@ -19,12 +19,12 @@
     {
       "id": "ditto",
       "title": "Ditto · 公开原版",
-      "description": "原始音频动作权重及 ONNX 渲染组件"
+      "description": "原始音频动作权重、YuNet 人脸检测及 ONNX 渲染组件"
     },
     {
       "id": "voice",
-      "title": "Hojo 语音与音色克隆",
-      "description": "原生 ONNX 模型、分词器和中文文本规则"
+      "title": "Ming-3.0 · Q8 语音与音色克隆",
+      "description": "本地原生语音克隆，44.1 kHz 输出"
     },
     {
       "id": "sfx",
@@ -86,24 +86,6 @@
       "file": "ditto_pytorch/aux_models/hubert_streaming_fix_kv.onnx",
       "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697",
       "bytes": 1460740880
-    },
-    {
-      "group": "ditto",
-      "path": "ditto-original/detector.onnx",
-      "repo": "digital-avatar/ditto-talkinghead",
-      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
-      "file": "ditto_pytorch/aux_models/det_10g.onnx",
-      "sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
-      "bytes": 16923827
-    },
-    {
-      "group": "ditto",
-      "path": "ditto-original/landmark106.onnx",
-      "repo": "digital-avatar/ditto-talkinghead",
-      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
-      "file": "ditto_pytorch/aux_models/2d106det.onnx",
-      "sha256": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
-      "bytes": 5030888
     },
     {
       "group": "ditto",
@@ -170,75 +152,12 @@
     },
     {
       "group": "voice",
-      "path": "voice/encoder.onnx",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "Hojo-TTS-Light-encoder.onnx",
-      "sha256": "c3c95e0e7e09684ab4924736f8dacbd77c907a9d2192ed06a749e266f2e78160",
-      "bytes": 42570241
-    },
-    {
-      "group": "voice",
-      "path": "voice/decoder.onnx",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "Hojo-TTS-Light-decoder.onnx",
-      "sha256": "e9a82d419eb3bd37b163907fefc4ee8d6ed8e74f4e098b20e6401e8f97369031",
-      "bytes": 113072515
-    },
-    {
-      "group": "voice",
-      "path": "voice/language-model.onnx",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "Hojo-TTS-Light-llm.onnx",
-      "sha256": "7960fe7ea07f0d9f259789cd848d824e7fcb98d5157fc981d4d45a4774043e34",
-      "bytes": 188487041
-    },
-    {
-      "group": "voice",
-      "path": "voice/config.json",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "config.json",
-      "sha256": "8d055f7f9eb79776a2e8e46ffce87f4231c85227f9178b7e72744eec8cc7afbb",
-      "bytes": 1221
-    },
-    {
-      "group": "voice",
-      "path": "voice/tokenizer.json",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "tokenizer.json",
-      "sha256": "395daae9cd5a4e166f1892d22e01c28a22421cfc92bc97aeb5d2b0fc6eaac499",
-      "bytes": 2071007
-    },
-    {
-      "group": "voice",
-      "path": "voice/tokenizer_config.json",
-      "repo": "HojoAI/Hojo-TTS-Light",
-      "revision": "5973d74eaefa2e425ed2c3beb0fefe9871958ca6",
-      "file": "tokenizer_config.json",
-      "sha256": "14476be0ed729810c2a382dea664b491d645576e6fccec709a49052b672a6aa2",
-      "bytes": 1634641
-    },
-    {
-      "group": "voice",
-      "path": "voice/zh_tn_tagger.fst",
-      "repo": "M5Stack/MeloTTS-Chinese-ax630c",
-      "revision": "8e75341a5c7591188f6af95bbe00834288252630",
-      "file": "zh_tn_tagger.fst",
-      "sha256": "bc87c97977560ef392c0b566b8d0de5a4b48ab6f5491c5947db2a3067318ddc0",
-      "bytes": 3479454
-    },
-    {
-      "group": "voice",
-      "path": "voice/zh_tn_verbalizer.fst",
-      "repo": "M5Stack/MeloTTS-Chinese-ax630c",
-      "revision": "8e75341a5c7591188f6af95bbe00834288252630",
-      "file": "zh_tn_verbalizer.fst",
-      "sha256": "5686678dec3b6220d1a030ba4e00c729786b91c4863b3d37d0f9ea69df0985c1",
-      "bytes": 558366
+      "path": "voice/ming-3.0-tts-0.5b-q8_0.gguf",
+      "repo": "audio-cpp/Ming-3.0-TTS-0.5B-GGUF",
+      "revision": "2eb8d37c7f10672e69c8aa33091baa04c461b66c",
+      "file": "ming-3.0-tts-0.5b-q8_0.gguf",
+      "sha256": "fcf2aa25e8e9cf2065a936e506581735c64d6255fb7869f09fbb61a2dde09aa1",
+      "bytes": 1742280896
     },
     {
       "group": "sfx",
@@ -303,8 +222,17 @@
       "group": "ditto",
       "path": "ditto-original/manifest.json",
       "resource": ":/models/config/ditto-original/manifest.json",
-      "bytes": 1938,
-      "sha256": "be8a16168fb972685fbb23f774e4b5e405ab1030f9fcb54ab47fbdfad7106b85"
+      "bytes": 2074,
+      "sha256": "8611084a85818ae46438c5635c451c6d991793382d17f8eb1e4907328cf86f17"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/face_detection_yunet_2023mar.onnx",
+      "repo": "opencv/opencv_zoo",
+      "revision": "d4938dfc9d4ec5d098bfa33e98b3f3345a236586",
+      "file": "models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
+      "bytes": 232589,
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
     }
   ]
 }

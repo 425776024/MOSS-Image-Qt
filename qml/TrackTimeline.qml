@@ -32,7 +32,7 @@ Rectangle {
     implicitHeight: collapsed ? toolbarHeight : 120
     color: StudioTheme.panel
     clip: true
-    Accessible.name: "音频范围"
+    Accessible.name: HomeTheme.t("音频范围")
 
     function track(key) {
         for (let i = 0; i < tracks.length; ++i) if (tracks[i].key === key) return tracks[i]
@@ -75,16 +75,16 @@ Rectangle {
         StudioButton {
             objectName: "timelinePlay"; implicitWidth: 28; implicitHeight: 26; quiet: true
             iconName: root.playing ? "" : "play"; text: root.playing ? "Ⅱ" : ""
-            hint: root.playing ? "暂停预览 · 空格" : "播放预览 · 空格"
+            hint: root.playing ? HomeTheme.t("暂停预览 · 空格") : HomeTheme.t("播放预览 · 空格")
             onClicked: root.togglePlayback()
         }
         Text { objectName: "timelineTime"; text: root.stamp(root.timeline ? root.timeline.playhead : 0) + " / " + root.stamp(root.duration); color: StudioTheme.secondary; font.pixelSize: 11; font.family: "Menlo" }
         Item { Layout.fillWidth: true }
-        Text { visible: root.width > 540; text: "按最长音频自动适配"; color: StudioTheme.muted; font.pixelSize: 10 }
+        Text { visible: root.width > 540; text: HomeTheme.t("按最长音频自动适配"); color: StudioTheme.muted; font.pixelSize: 10 }
         StudioButton {
             objectName: "collapseAudioRanges"; implicitWidth: 26; implicitHeight: 26; quiet: true; iconName: "chevron"
             rotation: root.collapsed ? 180 : 0
-            hint: root.collapsed ? "展开音频范围" : "收起音频范围"
+            hint: root.collapsed ? HomeTheme.t("展开音频范围") : HomeTheme.t("收起音频范围")
             onClicked: root.collapsed = !root.collapsed
         }
     }
@@ -100,18 +100,18 @@ Rectangle {
                 readonly property var item: root.track(modelData)
                 readonly property bool background: modelData === "background"
                 readonly property bool hasSource: !!item.source
-                readonly property string label: modelData === "speech" ? "配音 / 数字人" : modelData === "sfx" ? "音效" : "背景"
+                readonly property string label: modelData === "speech" ? HomeTheme.t("配音 / 数字人") : modelData === "sfx" ? HomeTheme.t("音效") : HomeTheme.t("背景")
                 readonly property color tint: modelData === "speech" ? StudioTheme.accent : modelData === "sfx" ? StudioTheme.warning : StudioTheme.secondary
                 x: 0; y: index * root.rowHeight; width: ranges.width; height: background ? 20 : root.rowHeight
                 StudioButton {
                     objectName: "editTrack-" + row.modelData; x: 19; y: 0; width: root.labelWidth - 19; height: row.height
                     text: row.label; quiet: true; active: !!root.timeline && root.timeline.selectedTrack === row.modelData
-                    hint: "编辑" + row.label; onClicked: root.requestEdit(row.modelData)
+                    hint: HomeTheme.t("编辑") + row.label; onClicked: root.requestEdit(row.modelData)
                 }
                 Item {
                     id: muteControl
                     objectName: "toggleTrack-" + row.modelData; width: 18; height: row.height
-                    readonly property string hint: (row.item.enabled ? row.background ? "隐藏" : "静音" : row.background ? "显示" : "启用") + row.label
+                    readonly property string hint: (row.item.enabled ? row.background ? HomeTheme.t("隐藏") : HomeTheme.t("静音") : row.background ? HomeTheme.t("显示") : HomeTheme.t("启用")) + row.label
                     Accessible.role: Accessible.Button; Accessible.name: hint; activeFocusOnTab: root.editingEnabled
                     Accessible.onPressAction: root.toggleTrack(row.modelData)
                     Keys.onReturnPressed: root.toggleTrack(row.modelData)
@@ -139,14 +139,14 @@ Rectangle {
                         clip: true
                         Text {
                             anchors.fill: parent; anchors.leftMargin: 9; anchors.rightMargin: 9; visible: !row.background
-                            text: (row.item.kind === "video" ? "数字人视频" : row.modelData === "speech" ? "配音" : "音效") + " · " + root.durationFor(row.item).toFixed(1) + "s"
+                            text: (row.item.kind === "video" ? HomeTheme.t("数字人视频") : row.modelData === "speech" ? HomeTheme.t("配音") : HomeTheme.t("音效")) + " · " + root.durationFor(row.item).toFixed(1) + "s"
                             color: StudioTheme.text; font.pixelSize: 10
                             horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
                         }
                         Rectangle { visible: !row.background; x: 2; y: 3; width: 4; height: parent.height - 6; radius: 1; color: row.tint }
                         Rectangle { visible: !row.background; anchors.right: parent.right; anchors.rightMargin: 2; y: 3; width: 4; height: parent.height - 6; radius: 1; color: row.tint }
                     }
-                    Text { anchors.centerIn: parent; visible: !row.hasSource && !row.background; text: row.modelData === "speech" ? "+ 添加配音 / 数字人" : "+ 添加音效"; color: StudioTheme.muted; font.pixelSize: 10 }
+                    Text { anchors.centerIn: parent; visible: !row.hasSource && !row.background; text: row.modelData === "speech" ? HomeTheme.t("+ 添加配音 / 数字人") : HomeTheme.t("+ 添加音效"); color: StudioTheme.muted; font.pixelSize: 10 }
                     MouseArea {
                         id: rangePointer
                         objectName: "rangeGesture-" + row.modelData
@@ -179,13 +179,13 @@ Rectangle {
                         onReleased: mouse => { if (root.dragKey === row.modelData && !root.dragChanged) seek(mouse.x); root.finishDrag(true); seeking = false }
                         onCanceled: { root.finishDrag(false); seeking = false }
                         ToolTip.visible: containsMouse && !pressed && row.hasSource && !row.background
-                        ToolTip.text: "拖动移动 · 两端调整时长 · Alt + 方向键微调"; ToolTip.delay: 800
+                        ToolTip.text: HomeTheme.t("拖动移动 · 两端调整时长 · Alt + 方向键微调"); ToolTip.delay: 800
                     }
                 }
                 StudioButton {
                     objectName: "exportTrack-" + row.modelData; x: root.labelWidth + root.laneWidth + 6; y: 0; width: 26; height: row.height
                     quiet: true; iconName: "export"; enabled: row.hasSource && root.editingEnabled
-                    hint: "导出" + row.label; onClicked: root.exportRequested(row.modelData)
+                    hint: HomeTheme.t("导出") + row.label; onClicked: root.exportRequested(row.modelData)
                 }
             }
         }

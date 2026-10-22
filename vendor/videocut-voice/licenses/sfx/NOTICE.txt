@@ -1,0 +1,9 @@
+Powered by Stability AI
+
+This Stability AI Model is licensed under the Stability AI Community License, Copyright © Stability AI Ltd. All Rights Reserved
+
+Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms
+
+The Stable Audio 3 Small SFX and T5Gemma files are GGUF format conversions published by thepatch. This application redistributes the pinned files without modifying their contents. Source revisions and SHA-256 hashes are recorded in config/models.json and each asset pack source.json.
+
+Use of Stable Audio is subject to https://stability.ai/use-policy . Use of T5Gemma must comply with Section 3.2 of the included Gemma Terms, including https://ai.google.dev/gemma/prohibited_use_policy and applicable law.

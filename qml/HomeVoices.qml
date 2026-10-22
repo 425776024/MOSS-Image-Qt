@@ -16,6 +16,8 @@ Rectangle {
     signal useVoice(string id)
     function stopPreview() { player.stop(); playingId = "" }
     function preview(row) { if(playingId === row.id)stopPreview(); else { player.stop(); playingId = row.id; player.source = "file://" + row.reference; player.play() } }
+    function designVoice() { designDialog.open() }
+    VoiceDesignDialog { id: designDialog; onVoiceSaved: { root.builtin=false;root.notice="" } }
     function importVoice() { editDialog.voiceId = ""; voiceName.text = ""; root.audioUrl = ""; transcript.text = ""; notice = ""; editDialog.open() }
     function editVoice(row) { editDialog.voiceId = row.id; voiceName.text = row.name; root.audioUrl = "file://" + row.reference; transcript.text = row.transcript; notice = ""; editDialog.open() }
     function saveVoice() {
@@ -28,7 +30,7 @@ Rectangle {
          onMediaStatusChanged: if(mediaStatus === MediaPlayer.EndOfMedia)root.playingId = ""; onErrorOccurred: { root.notice = errorString; root.playingId = "" } }
     FileDialog { id: audioDialog; title: HomeTheme.t("选择录音"); nameFilters: ["WAV audio (*.wav)"]; onAccepted: root.audioUrl = selectedFile.toString() }
     HomeDialog {
-        id: editDialog; objectName: "homeVoiceImportDialog"; property string voiceId: ""; title: HomeTheme.t(voiceId ? "音色名称与参考文字" : "导入音色")
+        id: editDialog; objectName: "homeVoiceImportDialog"; property string voiceId: ""; title: HomeTheme.t(voiceId ? HomeTheme.t("音色名称与参考文字") : HomeTheme.t("导入音色"))
         width: Math.min(500,Overlay.overlay.width-40); height: Math.min(460,Overlay.overlay.height-48)
         onClosed: root.stopPreview()
         ColumnLayout { anchors.fill: parent; spacing: 12
@@ -38,12 +40,12 @@ Rectangle {
                 RowLayout { Layout.fillWidth: true; spacing: 8
                     StudioIcon { name: "audio"; Layout.preferredWidth: 20; Layout.preferredHeight: 20; ink: HomeTheme.accent }
                     Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.audioUrl ? decodeURIComponent(root.audioUrl.split("/").pop()) : HomeTheme.t("3–30 秒 WAV 录音"); color: HomeTheme.secondary; font.pixelSize: 12; elide: Text.ElideMiddle }
-                    HomeButton { visible: !editDialog.voiceId; text: root.audioUrl ? "更换" : HomeTheme.t("选择录音"); compact: true; onClicked: audioDialog.open() }
+                    HomeButton { visible: !editDialog.voiceId; text: root.audioUrl ? HomeTheme.t("更换") : HomeTheme.t("选择录音"); compact: true; onClicked: audioDialog.open() }
                 }
                 ConversationAudio { visible: !!root.audioUrl; Layout.fillWidth: true; source: root.audioUrl; active: editDialog.opened; compact: true; onInteracted: root.stopPreview() }
             }
             Text { text: HomeTheme.t("参考录音中的完整原文"); color: HomeTheme.secondary; font.pixelSize: 12 }
-            InputArea { id: transcript; objectName: "homeVoiceTranscript"; Layout.fillWidth: true; Layout.fillHeight: true; label: HomeTheme.t("参考录音中的完整原文"); placeholder: "填写录音中实际说出的完整文案"; property alias text: transcript.value; onEdited: editedText=>value=editedText; radius: 8 }
+            InputArea { id: transcript; objectName: "homeVoiceTranscript"; Layout.fillWidth: true; Layout.fillHeight: true; label: HomeTheme.t("参考录音中的完整原文"); placeholder: HomeTheme.t("填写录音中实际说出的完整文案"); property alias text: transcript.value; onEdited: editedText=>value=editedText; radius: 8 }
             Text { visible: !!root.notice; Layout.fillWidth: true; text: root.notice; color: HomeTheme.danger; wrapMode: Text.Wrap; font.pixelSize: 12 }
             RowLayout { Layout.alignment: Qt.AlignRight; spacing: 8
                 HomeButton { text: HomeTheme.t("取消"); quiet: true; onClicked: editDialog.close() }
@@ -53,20 +55,26 @@ Rectangle {
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
-        HomeHeader { Layout.fillWidth: true; title: "我的声音"; detail: String(root.entries.length)
-            HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; primary: true; enabled: !studio.busy; onClicked: root.importVoice() }
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("我的声音"); detail: String(root.entries.length)
+            HomeButton { text: HomeTheme.t("语音设计"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
+            HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importVoice() }
         }
         RowLayout { Layout.fillWidth: true; spacing: 12
-            HomeTabs { labels: ["我的音色","内置音色"]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.stopPreview();root.builtin=index===1} }
+            HomeTabs { labels: [HomeTheme.t("我的音色"),HomeTheme.t("内置音色")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.stopPreview();root.builtin=index===1} }
             Item { Layout.fillWidth: true }
             HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索音色"); Accessible.name: placeholderText }
+        }
+        HomeSection {
+            Layout.fillWidth: true; padding: 12
+            VoiceStyleControls { Layout.fillWidth: true; options: studio.sound.settings; onOptionEdited: (key,value)=>studio.sound.set(key,value) }
         }
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout { visible: root.entries.length===0; anchors.centerIn: parent; spacing: 16
-                HomeEmpty { title: search.text ? "没有匹配的音色" : "还没有音色"; description: search.text ? "" : "导入一段清晰人声，制作自己的参考音色。"; iconName: "audio" }
+                HomeEmpty { title: search.text ? HomeTheme.t("没有匹配的音色") : HomeTheme.t("还没有音色"); description: search.text ? "" : HomeTheme.t("导入录音或用文字设计一个新声音。"); iconName: "audio" }
                 RowLayout { visible: !search.text; Layout.alignment: Qt.AlignHCenter
                     HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; onClicked: root.importVoice() }
+                    HomeButton { text: HomeTheme.t("语音设计"); onClicked: root.designVoice() }
                     HomeButton { visible: !root.builtin; text: HomeTheme.t("内置音色"); quiet: true; onClicked: root.builtin=true }
                 }
             }

@@ -9,7 +9,7 @@ ApplicationWindow {
     objectName: "homeWindow"
     width: 1440; height: 900; minimumWidth: 1080; minimumHeight: 720
     visible: false; topPadding: 0
-    title: "Moss Studio · 对话创作"; color: HomeTheme.surface
+    title: workspace.appName + (HomeTheme.english ? " · Creative studio" : HomeTheme.t(" · 对话创作")); color: HomeTheme.surface
     font.family: ".AppleSystemUIFont"; font.pixelSize: 14
     property string destination: "chat"
     property int page: 0
@@ -27,7 +27,7 @@ ApplicationWindow {
     palette.windowText: HomeTheme.text; palette.button: HomeTheme.field; palette.buttonText: HomeTheme.text
     palette.highlight: HomeTheme.selection; palette.highlightedText: HomeTheme.accent; palette.mid: HomeTheme.outline
     palette.light: HomeTheme.hover; palette.dark: HomeTheme.sidebar; palette.placeholderText: HomeTheme.faint
-    function titleFor(id) { const row=studio.creationPages.find(p=>p.id===id);return row ? HomeTheme.projectName(row) : "未命名作品" }
+    function titleFor(id) { const row=studio.creationPages.find(p=>p.id===id);return row ? HomeTheme.projectName(row) : HomeTheme.t("未命名作品") }
     function currentIndex() { return studio.creationPages.findIndex(p=>p.id===studio.conversation.id) }
     function showConversation() {
         const thread=studio.conversation;if(!thread)return
@@ -77,14 +77,14 @@ ApplicationWindow {
             Text { anchors.horizontalCenter: parent.horizontalCenter; text: button.text; color: button.active ? HomeTheme.text : HomeTheme.secondary; font.pixelSize: 10; font.weight: button.active ? Font.Medium : Font.Normal }
         }
     }
-    FileDialog { id: openDialog; title: "导入作品工程"; nameFilters: ["Moss 工程 (*.json)"]; onAccepted: {studio.loadProject(selectedFile);home.showEditor("")} }
+    FileDialog { id: openDialog; title: HomeTheme.t("导入作品工程"); nameFilters: [HomeTheme.t("Moss 工程 (*.json)")]; onAccepted: {studio.loadProject(selectedFile);home.showEditor("")} }
     HomeDialog {
-        id: renameDialog; objectName: "homeProjectRenameDialog"; property int targetIndex: -1; title: "重命名作品"; modal: true; width: 380; anchors.centerIn: Overlay.overlay
+        id: renameDialog; objectName: "homeProjectRenameDialog"; property int targetIndex: -1; title: HomeTheme.t("重命名作品"); modal: true; width: 380; anchors.centerIn: Overlay.overlay
         ColumnLayout { width: parent.width; spacing: 14
-            HomeField { id: projectName; Layout.fillWidth: true; maximumLength: 120; Accessible.name: "作品名称" }
+            HomeField { id: projectName; Layout.fillWidth: true; maximumLength: 120; Accessible.name: HomeTheme.t("作品名称") }
             RowLayout { Layout.alignment: Qt.AlignRight
-                HomeButton { text: "取消"; quiet: true; onClicked: renameDialog.close() }
-                HomeButton { text: "保存"; primary: true; enabled: !!projectName.text.trim(); onClicked: {studio.renamePage(renameDialog.targetIndex,projectName.text);renameDialog.close()} }
+                HomeButton { text: HomeTheme.t("取消"); quiet: true; onClicked: renameDialog.close() }
+                HomeButton { text: HomeTheme.t("保存"); primary: true; enabled: !!projectName.text.trim(); onClicked: {studio.renamePage(renameDialog.targetIndex,projectName.text);renameDialog.close()} }
             }
         }
     }
@@ -93,7 +93,7 @@ ApplicationWindow {
         Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 32; color: HomeTheme.sidebar
             MouseArea { anchors.fill: parent; onPressed: home.startSystemMove(); onDoubleClicked: home.visibility === Window.Maximized ? home.showNormal() : home.showMaximized() }
-            Text { anchors.centerIn: parent; text: "Moss Studio"; color: HomeTheme.secondary; font.pixelSize: 12; font.weight: Font.Medium }
+            Text { anchors.centerIn: parent; text: workspace.appName; color: HomeTheme.secondary; font.pixelSize: 12; font.weight: Font.Medium }
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: VideoCutTheme.hairline; color: HomeTheme.line }
         }
         RowLayout {
@@ -103,23 +103,23 @@ ApplicationWindow {
                 Rectangle { anchors.right: parent.right; width: VideoCutTheme.hairline; height: parent.height; color: HomeTheme.line }
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 8; spacing: 6
-                    RailButton { text: "作品"; glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
-                    RailButton { text: "形象"; glyph: "person"; active: ["avatars","createAvatar"].includes(home.destination); onClicked: home.destination="avatars" }
-                    RailButton { text: "声音"; glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
+                    RailButton { text: HomeTheme.t("作品"); glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
+                    RailButton { text: HomeTheme.t("形象"); glyph: "person"; active: ["avatars","createAvatar"].includes(home.destination); onClicked: home.destination="avatars" }
+                    RailButton { text: HomeTheme.t("声音"); glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
                     Item { Layout.fillHeight: true }
-                    RailButton { objectName: "homeMoreTrigger"; text: "更多"; glyph: "more"; active: ["templates","contact"].includes(home.destination) || appMenu.opened; onClicked: appMenu.popup(width+4,height-appMenu.height)
+                    RailButton { objectName: "homeMoreTrigger"; text: HomeTheme.t("更多"); glyph: "more"; active: ["templates","contact"].includes(home.destination) || appMenu.opened; onClicked: appMenu.popup(width+4,height-appMenu.height)
                         HomeMenu { id: appMenu; objectName: "homeMoreMenu"
-                            AppMenuItem { text: "导入工程"; enabled: !studio.busy; onTriggered: openDialog.open() }
-                            AppMenuItem { text: "制作数字人"; onTriggered: home.destination="createAvatar" }
-                            AppMenuItem { text: "构图模板"; onTriggered: home.destination="templates" }
-                            AppMenuItem { text: "模型资源"; onTriggered: {settings.section=1;home.destination="settings"} }
+                            AppMenuItem { text: HomeTheme.t("导入工程"); enabled: !studio.busy; onTriggered: openDialog.open() }
+                            AppMenuItem { text: HomeTheme.t("制作数字人"); onTriggered: home.destination="createAvatar" }
+                            AppMenuItem { text: HomeTheme.t("构图模板"); onTriggered: home.destination="templates" }
+                            AppMenuItem { text: HomeTheme.t("模型资源"); onTriggered: {settings.section=1;home.destination="settings"} }
                             MenuSeparator { }
-                            AppMenuItem { text: "关于"; onTriggered: {settings.section=5;home.destination="settings"} }
-                            AppMenuItem { text: "联系我们"; onTriggered: home.destination="contact" }
-                            AppMenuItem { text: "恢复上次移除"; enabled: studio.canRestorePage && !studio.busy; onTriggered: studio.restoreDeletedPage() }
+                            AppMenuItem { text: HomeTheme.t("关于"); onTriggered: {settings.section=5;home.destination="settings"} }
+                            AppMenuItem { text: HomeTheme.t("联系我们"); onTriggered: home.destination="contact" }
+                            AppMenuItem { text: HomeTheme.t("恢复上次移除"); enabled: studio.canRestorePage && !studio.busy; onTriggered: studio.restoreDeletedPage() }
                         }
                     }
-                    RailButton { text: "设置"; glyph: "gear"; active: home.destination === "settings" || home.destination === "about"; onClicked: {settings.section=0;home.destination="settings"} }
+                    RailButton { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" || home.destination === "about"; onClicked: {settings.section=0;home.destination="settings"} }
                 }
             }
             SplitView {
@@ -139,10 +139,10 @@ ApplicationWindow {
                 ColumnLayout {
                     anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.topMargin: 12; anchors.bottomMargin: 10; spacing: 10
                     RowLayout { Layout.fillWidth: true; spacing: 10
-                        Text { Layout.fillWidth: true; text: "我的作品"; color: HomeTheme.text; font.pixelSize: 14; font.weight: Font.Medium }
-                        IconButton { objectName: "homeCreateProject"; glyph: "plus"; hint: "新建作品"; implicitHeight: 30; implicitWidth: 30; onClicked: {home.contentItem.forceActiveFocus();studio.newConversation();home.showEditor("")} }
+                        Text { Layout.fillWidth: true; text: HomeTheme.t("我的作品"); color: HomeTheme.text; font.pixelSize: 14; font.weight: Font.Medium }
+                        IconButton { objectName: "homeCreateProject"; glyph: "plus"; hint: HomeTheme.t("新建作品"); implicitHeight: 30; implicitWidth: 30; onClicked: {home.contentItem.forceActiveFocus();studio.newConversation();home.showEditor("")} }
                     }
-                    HomeField { id: search; objectName: "homeWorkSearch"; Layout.fillWidth: true; implicitHeight: 30; search: true; placeholderText: "搜索作品"; Accessible.name: "搜索作品"; font.pixelSize: 13 }
+                    HomeField { id: search; objectName: "homeWorkSearch"; Layout.fillWidth: true; implicitHeight: 30; search: true; placeholderText: HomeTheme.t("搜索作品"); Accessible.name: HomeTheme.t("搜索作品"); font.pixelSize: 13 }
                     ListView {
                         id: works; objectName: "conversationWorkList"; Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 4
                         model: studio.creationPages.map((p,i)=>({row:p,index:i})).filter(p=>HomeTheme.projectName(p.row).toLowerCase().includes(search.text.toLowerCase()))
@@ -157,17 +157,17 @@ ApplicationWindow {
                             }
                             readonly property var messages: modelData.row.conversation ? modelData.row.conversation.messages || [] : []
                             readonly property string lastText: {
-                                if(!messages.length)return "开始新创作"
+                                if(!messages.length)return HomeTheme.t("开始新创作")
                                 const last=messages[messages.length-1]
-                                if(last.status === "running")return "正在创作…"
-                                if(last.status === "failed" || last.status === "interrupted")return "创作未完成 · 可继续"
-                                if(last.role === "user")return last.text || "新的要求"
-                                return ({image:"图像已生成",edit:"图像已编辑",avatar:"说话视频已生成",voice:"语音已合成",sfx:"音效已生成",pack:"视频已打包","import":"素材已导入"})[last.task] || "创作已保存"
+                                if(last.status === "running")return HomeTheme.t("正在创作…")
+                                if(last.status === "failed" || last.status === "interrupted")return HomeTheme.t("创作未完成 · 可继续")
+                                if(last.role === "user")return last.text || HomeTheme.t("新的要求")
+                                return ({image:HomeTheme.t("图像已生成"),edit:HomeTheme.t("图像已编辑"),avatar:HomeTheme.t("说话视频已生成"),voice:HomeTheme.t("语音已合成"),sfx:HomeTheme.t("音效已生成"),pack:HomeTheme.t("视频已打包"),"import":HomeTheme.t("素材已导入")})[last.task] || HomeTheme.t("创作已保存")
                             }
                             ToolTip.visible: hovered && workTitle.truncated
                             ToolTip.text: HomeTheme.projectName(modelData.row)
                             ToolTip.delay: 700
-                            Accessible.name: "打开作品："+HomeTheme.projectName(modelData.row); Accessible.selected: selected
+                            Accessible.name: HomeTheme.t("打开作品：")+HomeTheme.projectName(modelData.row); Accessible.selected: selected
                             background: Rectangle { radius: 8; color: work.selected ? Qt.alpha(HomeTheme.text, HomeTheme.dark ? .08 : .055) : work.hovered ? HomeTheme.hover : "transparent"; border.color: work.visualFocus ? HomeTheme.accent : "transparent" }
                             contentItem: RowLayout {
                                 spacing: 8
@@ -183,11 +183,11 @@ ApplicationWindow {
                                     }
                                 }
                             }
-                                HomeButton { id: workActions; anchors.right: parent.right; anchors.rightMargin: 3; y: 5; opacity: work.hovered || hovered || activeFocus || projectMenu.opened ? 1 : 0; iconName: "more"; hint: "作品操作"; width: 25; height: 22; quiet: true; onClicked: projectMenu.popup(width-projectMenu.width,height+4)
+                                HomeButton { id: workActions; anchors.right: parent.right; anchors.rightMargin: 3; y: 5; opacity: work.hovered || hovered || activeFocus || projectMenu.opened ? 1 : 0; iconName: "more"; hint: HomeTheme.t("作品操作"); width: 25; height: 22; quiet: true; onClicked: projectMenu.popup(width-projectMenu.width,height+4)
                                     HomeMenu { id: projectMenu
-                                        AppMenuItem { text: "重命名"; enabled: !studio.busy; onTriggered: {renameDialog.targetIndex=work.modelData.index;projectName.text=HomeTheme.projectName(work.modelData.row);renameDialog.open()} }
-                                        AppMenuItem { text: "复制作品"; enabled: !studio.busy; onTriggered: {studio.duplicatePage(work.modelData.index);home.showEditor("")} }
-                                        AppMenuItem { text: "移除作品"; destructive: true; enabled: !studio.busy; onTriggered: studio.deletePage(work.modelData.index) }
+                                        AppMenuItem { text: HomeTheme.t("重命名"); enabled: !studio.busy; onTriggered: {renameDialog.targetIndex=work.modelData.index;projectName.text=HomeTheme.projectName(work.modelData.row);renameDialog.open()} }
+                                        AppMenuItem { text: HomeTheme.t("复制作品"); enabled: !studio.busy; onTriggered: {studio.duplicatePage(work.modelData.index);home.showEditor("")} }
+                                        AppMenuItem { text: HomeTheme.t("移除作品"); destructive: true; enabled: !studio.busy; onTriggered: studio.deletePage(work.modelData.index) }
                                     }
                                 }
                             onClicked: home.openWork(modelData.row.id)
@@ -204,7 +204,7 @@ ApplicationWindow {
                     anchors.fill: parent; visible: home.destination !== "chat"
                     currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5})[home.destination] || 0
                     HomeAvatars { onUseAvatar: url=>home.openAvatar(url); onCreateAvatar: home.destination="createAvatar" }
-                    HomeVoices { onUseVoice: id=>{studio.conversation.voiceId=id;home.showEditor("voice")} }
+                    HomeVoices { onUseVoice: id=>{studio.conversation.voiceId=id;studio.conversation.voiceOptions={emotion:studio.sound.settings.emotion,dialect:studio.sound.settings.dialect};home.showEditor("voice")} }
                     HomeAvatarCreator { onOpenLibrary: home.destination="avatars"; onCreateVideo: (source,audio,tts,text,voiceId)=>home.createAvatarVideo(source,audio,tts,text,voiceId) }
                     HomeContact { }
                     HomeSettings { id: settings; objectName: "homeSettings"; onOpenEditor: home.showEditor("") }

@@ -13,12 +13,23 @@ ROOT = Path(__file__).resolve().parents[1]
 MODEL_SUFFIXES = {'.npz', '.engine', '.onnx', '.pth', '.pt', '.ckpt', '.gguf', '.safetensors', '.mlmodel', '.task', '.fst', '.bin', '.dylib', '.a', '.so', '.mp4', '.mov'}
 MODEL_SUFFIXES |= {'.p12', '.p8', '.pem', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile'}
 SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets', '.github')
-SOURCE_DOCS = ('README.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', 'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md', 'docs/macos-release.md')
+SOURCE_DOCS = ('LICENSE', 'README.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', '.gitattributes',
+               'AGENTS.md', 'DESIGN.md', '.cursor/rules/macos-design.mdc', 'docs/macos-design-skills.md',
+               'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md',
+               'docs/macos-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md')
+
+# Exact, hash-pinned showcase exceptions. Local exports remain forbidden.
+PUBLIC_DEMO_MEDIA = {
+    'assets/showcase/avatar-demo-01.mp4': '19f00fc12efed60f4869010394d7da2c39fe536214a45ceb681575d1ff2c5137',
+    'assets/showcase/avatar-demo-02.mp4': 'a5d3649fe6b6cf4e6f1e8750bb27fc826d6e66340a51dcecbbf112cdbc02f705',
+}
 
 PUBLIC_SCRIPTS = {
     "audit_bundle.py", "build.sh", "build_media_dependencies.sh", "bundle_native.py",
     "package.sh", "prepare_audio.sh", "public_release.py", "run-local.sh", "run_background_test.sh",
-    "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",
+    "prepare_ming.py", "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",
+    "apple_model_assets.py", "upload_apple_assets.py", "package_appstore.py",
+    "configure_appstore_upload.py", "appstore_keychain_service.swift",
 }
 
 PRIVATE_SERVER_FILES = {
@@ -96,7 +107,9 @@ def source_files():
             raise ValueError("Unapproved release script: " + str(relative))
         safe(ROOT, str(relative))
         if path.suffix.lower() in MODEL_SUFFIXES or '.mlpackage' in str(relative):
-            raise ValueError('Payload in public source tree: ' + str(relative))
+            expected = PUBLIC_DEMO_MEDIA.get(relative.as_posix())
+            if not expected or digest(path) != expected:
+                raise ValueError('Payload in public source tree: ' + str(relative))
         if not path.is_file():
             raise ValueError('Missing source: ' + str(relative))
         allowed.append(relative)
@@ -124,7 +137,7 @@ def main():
                 dst = safe(destination, str(relative));dst.parent.mkdir(parents=True, exist_ok=True);shutil.copy2(ROOT / relative, dst)
         # Git add is intentionally never performed by this script.
         tracked = subprocess.check_output(['git','ls-files','-z'], cwd=ROOT).decode().split('\0')
-        forbidden = [p for p in tracked if p and (p in PRIVATE_SERVER_FILES or p.startswith(('.local/', 'runs/', 'dist/', 'build')) or Path(p).suffix.lower() in MODEL_SUFFIXES)]
+        forbidden = [p for p in tracked if p and (p in PRIVATE_SERVER_FILES or p.startswith(('.local/', 'runs/', 'dist/', 'build')) or (Path(p).suffix.lower() in MODEL_SUFFIXES and p not in PUBLIC_DEMO_MEDIA))]
         if forbidden:
             raise ValueError('Private/generated payload already tracked: ' + ', '.join(forbidden))
     print(json.dumps({'action': args.command, 'files': count, 'privateModelsIncluded': False}))

@@ -12,7 +12,7 @@ Rectangle {
     radius: 10
     FolderDialog {
         id: archiveDialog
-        title: "选择远程图片和日志的回收目录"
+        title: HomeTheme.t("选择远程图片和日志的回收目录")
         onAccepted: studio.remoteGpu.chooseArchive(selectedFolder)
     }
     ColumnLayout {
@@ -21,13 +21,13 @@ Rectangle {
         spacing: 12
         RowLayout {
             Layout.fillWidth: true
-            Text { text: "生图运行位置"; font.pixelSize: 17; font.weight: Font.DemiBold; color: StudioTheme.text }
+            Text { text: HomeTheme.t("生图运行位置"); font.pixelSize: 17; font.weight: Font.DemiBold; color: StudioTheme.text }
             Item { Layout.fillWidth: true }
             StudioCombo {
                 objectName: "settingsImageDevice"
-                Accessible.name: "生图运行位置"
+                Accessible.name: HomeTheme.t("生图运行位置")
                 Layout.preferredWidth: 220
-                model: studio.remoteGpu.available ? ["本机 · Apple GPU", "远程 GPU"] : ["本机 · Apple GPU"]
+                model: studio.remoteGpu.available ? [HomeTheme.t("本机 · Apple GPU"), HomeTheme.t("远程 GPU")] : [HomeTheme.t("本机 · Apple GPU")]
                 currentIndex: studio.imageDevice === "remote" ? 1 : 0
                 enabled: !studio.busy && !studio.remoteGpu.busy
                 onActivated: studio.imageDevice = currentIndex === 1 ? "remote" : "local"
@@ -36,7 +36,7 @@ Rectangle {
         Text {
             visible: studio.imageDevice === "local"
             Layout.fillWidth: true; wrapMode: Text.Wrap
-            text: "使用本机模型生成图像。文生图、Layout 和局部重绘共用此选择。"
+            text: HomeTheme.t("使用本机模型生成图像。文生图、Layout 和局部重绘共用此选择。")
             color: StudioTheme.muted; font.pixelSize: 12
         }
         ColumnLayout {
@@ -44,26 +44,26 @@ Rectangle {
             Layout.fillWidth: true; spacing: 10
             Text {
                 Layout.fillWidth: true; wrapMode: Text.Wrap
-                text: "使用 Ubuntu 显卡生成，完成后自动回收图片与日志，并显示到当前画布。"
+                text: HomeTheme.t("使用 Ubuntu 显卡生成，完成后自动回收图片与日志，并显示到当前画布。")
                 color: StudioTheme.secondary; font.pixelSize: 12
             }
             RowLayout {
                 Layout.fillWidth: true; enabled: !studio.busy && !studio.remoteGpu.busy
-                StudioField { id: host; objectName: "remoteHost"; Accessible.name: "服务器地址"; Layout.fillWidth: true; text: studio.remoteGpu.host; placeholderText: "服务器地址" }
-                StudioField { id: user; objectName: "remoteUser"; Accessible.name: "SSH 用户名"; Layout.preferredWidth: 130; text: studio.remoteGpu.user; placeholderText: "用户名" }
-                StudioField { id: port; objectName: "remotePort"; Accessible.name: "SSH 端口"; Layout.preferredWidth: 85; text: String(studio.remoteGpu.port); validator: IntValidator { bottom: 1; top: 65535 } }
+                StudioField { id: host; objectName: "remoteHost"; Accessible.name: HomeTheme.t("服务器地址"); Layout.fillWidth: true; text: studio.remoteGpu.host; placeholderText: HomeTheme.t("服务器地址") }
+                StudioField { id: user; objectName: "remoteUser"; Accessible.name: HomeTheme.t("SSH 用户名"); Layout.preferredWidth: 130; text: studio.remoteGpu.user; placeholderText: HomeTheme.t("用户名") }
+                StudioField { id: port; objectName: "remotePort"; Accessible.name: HomeTheme.t("SSH 端口"); Layout.preferredWidth: 85; text: String(studio.remoteGpu.port); validator: IntValidator { bottom: 1; top: 65535 } }
             }
             RowLayout {
                 Layout.fillWidth: true
                 StudioField {
-                    id: password; objectName: "remotePassword"; Accessible.name: "SSH 连接密码"
+                    id: password; objectName: "remotePassword"; Accessible.name: HomeTheme.t("SSH 连接密码")
                     Layout.fillWidth: true; echoMode: TextInput.Password
-                    placeholderText: "连接密码（仅本次认证；已有 SSH 密钥可留空）"
+                    placeholderText: HomeTheme.t("连接密码（仅本次认证；已有 SSH 密钥可留空）")
                     enabled: !studio.remoteGpu.busy
                     onAccepted: connectButton.clicked()
                 }
                 StudioButton {
-                    id: connectButton; objectName: "remoteConnect"; text: studio.remoteGpu.busy ? "连接中…" : "连接 / 检查"
+                    id: connectButton; objectName: "remoteConnect"; text: studio.remoteGpu.busy ? HomeTheme.t("连接中…") : HomeTheme.t("连接 / 检查")
                     enabled: !studio.remoteGpu.busy
                     onClicked: {
                         if (studio.busy || studio.remoteGpu.configure(host.text.trim(), user.text.trim(), Number(port.text))) {
@@ -79,16 +79,16 @@ Rectangle {
                 text: studio.remoteGpu.error || studio.remoteGpu.status
                 color: studio.remoteGpu.error ? "#e6a092" : studio.remoteGpu.ready ? StudioTheme.accent : StudioTheme.muted
             }
-            Text { text: "图片与日志回收目录"; font.pixelSize: 12; color: StudioTheme.secondary }
+            Text { text: HomeTheme.t("图片与日志回收目录"); font.pixelSize: 12; color: StudioTheme.secondary }
             RowLayout {
                 Layout.fillWidth: true
                 Text { Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; text: studio.remoteGpu.archiveRoot; color: StudioTheme.muted; font.pixelSize: 11 }
-                StudioButton { text: "选择目录"; enabled: !studio.busy && !studio.remoteGpu.busy; onClicked: archiveDialog.open() }
-                StudioButton { text: "打开"; onClicked: studio.remoteGpu.openArchive() }
+                StudioButton { text: HomeTheme.t("选择目录"); enabled: !studio.busy && !studio.remoteGpu.busy; onClicked: archiveDialog.open() }
+                StudioButton { text: HomeTheme.t("打开"); onClicked: studio.remoteGpu.openArchive() }
             }
             StudioButton {
                 objectName: "recoverRemoteImage"; visible: studio.remoteGpu.pendingCount > 0
-                text: "恢复并回收远程任务（" + studio.remoteGpu.pendingCount + "）"
+                text: HomeTheme.t("恢复并回收远程任务（") + studio.remoteGpu.pendingCount + "）"
                 enabled: !studio.busy && !studio.remoteGpu.busy && studio.remoteGpu.ready
                 onClicked: { studio.resumeRemoteImage(); root.resumeRequested() }
             }

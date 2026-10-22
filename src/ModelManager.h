@@ -19,9 +19,14 @@ struct ModelAsset {
 class ModelManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString root READ root NOTIFY changed)
+    Q_PROPERTY(bool rootSelectable READ rootSelectable CONSTANT)
     Q_PROPERTY(QString endpoint READ endpoint WRITE setEndpoint NOTIFY changed)
+    Q_PROPERTY(QStringList sourceNames READ sourceNames CONSTANT)
+    Q_PROPERTY(QStringList sourceValues READ sourceValues CONSTANT)
     Q_PROPERTY(QString imageQuant READ imageQuant WRITE setImageQuant NOTIFY changed)
     Q_PROPERTY(QVariantList groups READ groups NOTIFY changed)
+    Q_PROPERTY(bool sfxTermsAccepted READ sfxTermsAccepted NOTIFY changed)
+    Q_PROPERTY(bool sfxTermsRequired READ sfxTermsRequired NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
     Q_PROPERTY(bool locked READ locked NOTIFY changed)
     Q_PROPERTY(QString status READ status NOTIFY changed)
@@ -29,13 +34,23 @@ class ModelManager : public QObject {
     Q_PROPERTY(double progress READ progress NOTIFY changed)
     Q_PROPERTY(double partialBytes READ partialBytes NOTIFY changed)
     Q_PROPERTY(QString requestDescription READ describeRequest NOTIFY changed)
+    Q_PROPERTY(QVariantMap requestInfo READ requestInfo NOTIFY changed)
     Q_PROPERTY(QStringList requested READ requested NOTIFY changed)
 public:
     explicit ModelManager(QObject *parent=nullptr, QByteArray catalog={}, QUrl testTransport={});
     ~ModelManager() override;
     static QList<ModelAsset> assets();
     QString root() const { return m_root; }
+    bool rootSelectable() const {
+#ifdef MOSS_APP_STORE
+        return false;
+#else
+        return true;
+#endif
+    }
     void setRoot(QString root);
+    QStringList sourceNames() const;
+    QStringList sourceValues() const;
     QString endpoint() const { return m_endpoint; }
     void setEndpoint(QString value);
     QString imageQuant() const { return m_quant; }
@@ -49,6 +64,10 @@ public:
     double progress() const { return m_progress; }
     double partialBytes() const;
     QStringList requested() const { return m_requested; }
+    bool sfxTermsAccepted() const;
+    bool sfxTermsRequired() const;
+    Q_INVOKABLE void acceptSfxTerms();
+    Q_INVOKABLE QString modelTerms(bool english) const;
     bool ready(QString capability) const;
     bool ensure(QStringList capabilities);
     Q_INVOKABLE void requestDownload(QString group);
@@ -60,6 +79,7 @@ public:
     Q_INVOKABLE void cleanPartials();
     Q_INVOKABLE void refresh() { emit changed(); }
     Q_INVOKABLE QString describeRequest() const;
+    QVariantMap requestInfo() const;
     Q_INVOKABLE QString deletionDescription(QString group) const;
     Q_INVOKABLE void openRoot();
 signals:

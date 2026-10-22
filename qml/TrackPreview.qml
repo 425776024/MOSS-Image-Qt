@@ -35,7 +35,7 @@ Rectangle {
     signal importRequested()
     color: StudioTheme.background
     clip: true
-    Accessible.name: "创作画布"
+    Accessible.name: HomeTheme.t("创作画布")
 
     function find(key) {
         for (let i = 0; i < tracks.length; ++i) if (tracks[i].key === key) return tracks[i]
@@ -301,9 +301,9 @@ Rectangle {
                 width: 56; height: 56; radius: 16; color: StudioTheme.selection
                 StudioIcon { anchors.centerIn: parent; width: 26; height: 26; name: "spark"; ink: StudioTheme.accent }
             }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "从一个想法开始"; font.pixelSize: 20; font.weight: Font.Medium; color: root.lightBackground ? "#263B35" : StudioTheme.text }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.audiovisual ? "切换到图像模式创建画面，或单独合成语音和音效" : "在下方描述画面，或导入已有素材"; font.pixelSize: 12; color: root.lightBackground ? "#607069" : StudioTheme.muted }
-            StudioButton { anchors.horizontalCenter: parent.horizontalCenter; text: root.audiovisual ? "去图像模式" : "导入图片"; iconName: "plus"; implicitHeight: 32; enabled: root.editingEnabled; onClicked: root.importRequested() }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: HomeTheme.t("从一个想法开始"); font.pixelSize: 20; font.weight: Font.Medium; color: root.lightBackground ? "#263B35" : StudioTheme.text }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.audiovisual ? HomeTheme.t("切换到图像模式创建画面，或单独合成语音和音效") : HomeTheme.t("在下方描述画面，或导入已有素材"); font.pixelSize: 12; color: root.lightBackground ? "#607069" : StudioTheme.muted }
+            StudioButton { anchors.horizontalCenter: parent.horizontalCenter; text: root.audiovisual ? HomeTheme.t("去图像模式") : HomeTheme.t("导入图片"); iconName: "plus"; implicitHeight: 32; enabled: root.editingEnabled; onClicked: root.importRequested() }
         }
     }
     RowLayout {
@@ -313,12 +313,12 @@ Rectangle {
         Text { text: "1:1"; color: StudioTheme.muted; font.pixelSize: 10 }
         Item { Layout.fillWidth: true }
         Text {
-            text: root.dragKey ? "松开应用 · Esc 取消" : root.selected.key === "speech" && root.visual(root.selected) ? "拖动数字人 · 四角缩放" : "固定画布 · 拖动对象 · 右下角缩放"
+            text: root.dragKey ? HomeTheme.t("松开应用 · Esc 取消") : root.selected.key === "speech" && root.visual(root.selected) ? HomeTheme.t("拖动数字人 · 四角缩放") : HomeTheme.t("固定画布 · 拖动对象 · 右下角缩放")
             color: StudioTheme.muted; font.pixelSize: 10
         }
         StudioButton {
-            visible: root.visual(root.selected); implicitHeight: 23; quiet: true; text: "复位"
-            enabled: root.editingEnabled; hint: "恢复选中元素的位置和尺寸"
+            visible: root.visual(root.selected); implicitHeight: 23; quiet: true; text: HomeTheme.t("复位")
+            enabled: root.editingEnabled; hint: HomeTheme.t("恢复选中元素的位置和尺寸")
             onClicked: root.timeline.resetTransform(root.selected.key)
         }
     }

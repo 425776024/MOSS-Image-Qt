@@ -68,3 +68,7 @@ __pycache__/
 /scripts/remote_image_worker.py
 /scripts/serve_gpu_test_models.py
 /tests/remote_image_worker_tests.py
+
+# Only the two author-approved README demonstrations may enter Git.
+!/assets/showcase/avatar-demo-01.mp4
+!/assets/showcase/avatar-demo-02.mp4

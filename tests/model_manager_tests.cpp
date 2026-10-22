@@ -30,6 +30,41 @@ class ModelManagerTests:public QObject {
 private slots:
     void initTestCase() {QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());QCoreApplication::setOrganizationName("ModelTest");QCoreApplication::setApplicationName("ModelTest");}
     void init(){QSettings().clear();qunsetenv("MOSS_MODEL_ROOT");qunsetenv("MOSS_IMAGE_QUANT");}
+    void soundTermsGateDownloadAndInstalledModelUse() {
+        QTemporaryDir models;
+        ModelManager manager(nullptr,catalog().replace("ditto","sfx"));
+        manager.setRoot(models.path());
+        write(models.path()+"/sfx/model.bin",payload);
+        QVERIFY(manager.ready("sfx"));
+        QSignalSpy requested(&manager,&ModelManager::downloadRequested);
+        QVERIFY(!manager.ensure({"sfx"}));
+        QCOMPARE(requested.count(),1);
+        QVERIFY(manager.sfxTermsRequired());
+        manager.startDownload();
+        QVERIFY(!manager.busy());
+        QVERIFY(!manager.error().isEmpty());
+        manager.acceptSfxTerms();
+        QVERIFY(manager.sfxTermsAccepted());
+        QVERIFY(!manager.sfxTermsRequired());
+        QVERIFY(manager.ensure({"sfx"}));
+        ModelManager restored(nullptr,catalog().replace("ditto","sfx"));
+        QVERIFY(restored.sfxTermsAccepted());
+        QSettings().setValue("sfxModelTermsVersion","obsolete");
+        QVERIFY(!manager.sfxTermsAccepted());
+    }
+    void publicChannelDefaultsToMirrorAndRejectsApple() {
+        ModelManager first(nullptr,catalog());
+        QCOMPARE(first.endpoint(),QString("https://hf-mirror.com"));
+        QVERIFY(!first.sourceValues().contains("apple-assets"));
+        first.setEndpoint("apple-assets");
+        QCOMPARE(first.endpoint(),QString("https://hf-mirror.com"));
+        first.setEndpoint("https://huggingface.co");
+        ModelManager restored(nullptr,catalog());
+        QCOMPARE(restored.endpoint(),QString("https://huggingface.co"));
+        QSettings().setValue("modelEndpoint","https://untrusted.invalid");
+        ModelManager invalid(nullptr,catalog());
+        QCOMPARE(invalid.endpoint(),QString("https://hf-mirror.com"));
+    }
     void missingModelsAskWithoutCreatingFiles() {
         QTemporaryDir root;ModelManager m(nullptr,catalog());m.setRoot(root.path());QSignalSpy prompt(&m,&ModelManager::downloadRequested);
         QVERIFY(!m.ensure({"image","ditto"}));QCOMPARE(prompt.size(),1);QVERIFY(!m.busy());QVERIFY(QDir(root.path()).entryList(QDir::Files).isEmpty());
@@ -77,8 +112,35 @@ private slots:
         m.requestDownload("ditto");m.startDownload();QTRY_VERIFY(!m.busy());QVERIFY(m.error().isEmpty());QCOMPARE(read(root.filePath("ditto/model.bin")),payload);
     }
     void officialCatalogIsPinnedAndPrivatePathsAreAbsent() {
-        const auto files=ModelManager::assets();QVERIFY(files.size()>25);
+        const auto files=ModelManager::assets();QVERIFY(!files.isEmpty());
         for(const auto &f:files){QVERIFY(f.bytes>0);QCOMPARE(f.sha256.size(),64);QVERIFY(!f.path.startsWith("ditto/"));QVERIFY(!f.path.contains("5000"));if(f.resource.isEmpty())QCOMPARE(f.revision.size(),40);}
+    }
+    void legacyVoiceFilesDoNotSatisfyMingDownload() {
+        QTemporaryDir root;ModelManager m;m.setRoot(root.path());
+        for(const auto &name:{"encoder.onnx","decoder.onnx","language-model.onnx","tokenizer.json","zh_tn_tagger.fst","zh_tn_verbalizer.fst"})
+            write(root.filePath("voice/"+QString(name)),payload);
+        QVERIFY(!m.ready("voice"));m.requestDownload("voice");
+        QCOMPARE(m.requested().size(),1);
+        QList<ModelAsset> voice;
+        for(const auto &asset:ModelManager::assets())if(asset.group=="voice")voice.append(asset);
+        QCOMPARE(voice.size(),1);
+        QCOMPARE(voice.front().path,QString("voice/ming-3.0-tts-0.5b-q8_0.gguf"));
+        QCOMPARE(voice.front().bytes,qint64(1742280896));
+        // Removing the current model leaves historical user files untouched.
+        m.removeGroup("voice");QVERIFY(QFileInfo::exists(root.filePath("voice/encoder.onnx")));
+    }
+    void publicFaceModelsExcludeResearchOnlyDetector() {
+        bool yunet=false;
+        for(const auto &f:ModelManager::assets()) {
+            QVERIFY(f.path!="ditto-original/detector.onnx");
+            QVERIFY(f.path!="ditto-original/landmark106.onnx");
+            if(f.path=="ditto-original/face_detection_yunet_2023mar.onnx") {
+                yunet=true;
+                QCOMPARE(f.repo,QString("opencv/opencv_zoo"));
+                QCOMPARE(f.sha256,QString("8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"));
+            }
+        }
+        QVERIFY(yunet);
     }
 };
 QTEST_GUILESS_MAIN(ModelManagerTests)

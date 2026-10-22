@@ -24,7 +24,7 @@ ColumnLayout {
             id: track
             required property string modelData
             Layout.fillWidth: true; spacing: 0
-            Text { Layout.preferredWidth: 44; text: track.modelData === "visual" ? "画面" : "声音"; font.pixelSize: 12; color: HomeTheme.secondary }
+            Text { Layout.preferredWidth: 44; text: track.modelData === "visual" ? HomeTheme.t("画面") : HomeTheme.t("声音"); font.pixelSize: 12; color: HomeTheme.secondary }
             Rectangle {
                 id: lane
                 Layout.fillWidth: true; Layout.preferredHeight: 32; radius: 5; color: HomeTheme.hover; clip: true
@@ -41,7 +41,7 @@ ColumnLayout {
                         border.color: drag.active || activeFocus ? HomeTheme.accent : "transparent"
                         clip: true; focus: false; activeFocusOnTab: true
                         Accessible.role: Accessible.Button
-                        Accessible.name: modelData.name+"，开始 "+modelData.start.toFixed(1)+" 秒，时长 "+modelData.duration.toFixed(1)+" 秒，左右拖动调整"
+                        Accessible.name: modelData.name+HomeTheme.t("，开始 ")+modelData.start.toFixed(1)+HomeTheme.t(" 秒，时长 ")+modelData.duration.toFixed(1)+HomeTheme.t(" 秒，左右拖动调整")
                         Keys.onLeftPressed: root.thread.moveClip(modelData.id,modelData.start-.5)
                         Keys.onRightPressed: root.thread.moveClip(modelData.id,modelData.start+.5)
                         RowLayout {
@@ -61,7 +61,7 @@ ColumnLayout {
                         }
                     }
                 }
-                Text { anchors.centerIn: parent; visible: !root.thread.clips.some(c => c.lane === track.modelData); text: track.modelData === "visual" ? "选择图片或视频" : "选择配音或音效"; font.pixelSize: 11; color: HomeTheme.faint }
+                Text { anchors.centerIn: parent; visible: !root.thread.clips.some(c => c.lane === track.modelData); text: track.modelData === "visual" ? HomeTheme.t("选择图片或视频") : HomeTheme.t("选择配音或音效"); font.pixelSize: 11; color: HomeTheme.faint }
             }
         }
     }

@@ -53,6 +53,7 @@ Image {
         volume: '<path d="m3 9 5 0 5-5v16l-5-5H3Zm14-2a7 7 0 0 1 0 10m3-13a11 11 0 0 1 0 16"/>',
         muted: '<path d="m3 9 5 0 5-5v16l-5-5H3Zm14 0 5 6m0-6-5 6"/>',
         audio: '<path d="M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4"/>',
+        microphone: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v4m-4 0h8"/>',
         monitor: '<rect x="2" y="3" width="20" height="14" rx="3"/><path d="M12 17v5m-5 0h10"/>'
         ,sidebar: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>'
         ,settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>'

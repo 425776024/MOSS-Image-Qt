@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QSettings>
+#include <QLocale>
 #include <QDesktopServices>
 #include <QUuid>
 #include <QDateTime>
@@ -20,7 +21,9 @@ WorkspaceLibrary::WorkspaceLibrary(QString outputRoot, QObject *parent)
     QSettings settings;
     m_appearance = settings.value("home/appearance", "light").toString();
     m_theme = settings.value("home/theme", "blue").toString();
-    m_language = settings.value("home/language", "zh").toString();
+    m_languagePreference = settings.value("home/language", "system").toString();
+    if (!QStringList{"system", "zh", "en"}.contains(m_languagePreference)) m_languagePreference = "system";
+    m_language = m_languagePreference == "system" ? resolveLanguage(QLocale::system().uiLanguages()) : m_languagePreference;
     QFile file(m_root + "/catalog.json");
     if (file.open(QIODevice::ReadOnly)) {
         const auto json = QJsonDocument::fromJson(file.readAll()).object();
@@ -36,9 +39,25 @@ void WorkspaceLibrary::setThemePreset(QString value) {
     if (!QStringList{"dark", "graphite", "teal", "blue"}.contains(value) || value == m_theme) return;
     QSettings().setValue("home/theme", value); m_theme = value; emit preferencesChanged();
 }
+QString WorkspaceLibrary::resolveLanguage(const QStringList &uiLanguages) {
+    for (QString locale : uiLanguages) {
+        locale.replace('_', '-');
+        const auto language = locale.section('-', 0, 0).toLower();
+        if (language == "zh" || language == "en") return language;
+    }
+    return "en";
+}
 void WorkspaceLibrary::setLanguage(QString value) {
-    if (!QStringList{"zh", "en"}.contains(value) || value == m_language) return;
-    QSettings().setValue("home/language", value); m_language = value; emit preferencesChanged();
+    if (!QStringList{"system", "zh", "en"}.contains(value) || value == m_languagePreference) return;
+    QSettings().setValue("home/language", value);
+    m_languagePreference = value;
+    m_language = value == "system" ? resolveLanguage(QLocale::system().uiLanguages()) : value;
+    emit preferencesChanged();
+}
+void WorkspaceLibrary::setSessionLanguage(QString value) {
+    if (value != "en" && value != "zh") return;
+    m_language = value;
+    emit preferencesChanged();
 }
 bool WorkspaceLibrary::save(const QVariantList &avatars, const QVariantList &archived) const {
     if (!QDir().mkpath(m_root)) return false;
@@ -47,7 +66,7 @@ bool WorkspaceLibrary::save(const QVariantList &avatars, const QVariantList &arc
         {"avatars", QJsonArray::fromVariantList(avatars)}, {"archived", QJsonArray::fromVariantList(archived)}}).toJson();
     return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit();
 }
-QString WorkspaceLibrary::importAvatar(QUrl source, QString name) {
+QString WorkspaceLibrary::importAvatar(QUrl source, QString name,QVariantMap generationRecipe) {
     const auto path = source.toLocalFile();
     QImageReader reader(path);
     if (!source.isLocalFile() || !reader.canRead()) return "请选择可读取的 PNG、JPEG 或 WebP 人像图片";
@@ -64,8 +83,10 @@ QString WorkspaceLibrary::importAvatar(QUrl source, QString name) {
         QDir(directory).removeRecursively(); return "无法保存形象图片";
     }
     auto list = m_avatars;
-    list.prepend(QVariantMap{{"id", id}, {"name", name.trimmed()}, {"url", QUrl::fromLocalFile(destination).toString()},
-        {"created", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}, {"builtin", false}, {"kind", "image"}});
+    QVariantMap row{{"id", id}, {"name", name.trimmed()}, {"url", QUrl::fromLocalFile(destination).toString()},
+        {"created", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}, {"builtin", false}, {"kind", "image"}};
+    if(!generationRecipe.isEmpty()){row["synthetic"]=true;row["generationRecipe"]=generationRecipe;}
+    list.prepend(row);
     if (!save(list, m_archived)) { QDir(directory).removeRecursively(); return "无法保存形象库"; }
     m_avatars = list; emit avatarsChanged(); return {};
 }

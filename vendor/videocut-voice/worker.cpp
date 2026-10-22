@@ -1,81 +1,110 @@
-#include "TtsBackend.h"
-#include "VoiceTextFrontend.h"
-#include "NativeTensor.h"
+#include <audiocpp.h>
 #include "../xinshen-ditto/media_io.h"
 #include "../xinshen-ditto/avatar_runtime.h"
 #include <fstream>
 #include <iostream>
-#include <cstring>
 #include <cmath>
+#include <memory>
+#include <set>
 namespace fs=std::filesystem;
-namespace ai=videocut::ai;
-namespace native=videocut::ai::native;
-namespace detail=videocut::ai::native::detail;
 
-static void writeWave(const fs::path &path,const std::vector<float> &samples) {
-    std::ofstream out(path,std::ios::binary);
+static void check(audiocpp_status status) {
+    if(status!=AUDIOCPP_OK)throw std::runtime_error(audiocpp_last_error());
+}
+template<class T,void (*Free)(T*)> using Owner=std::unique_ptr<T,decltype(Free)>;
+static void writeWave(const fs::path &path,const float *samples,size_t frames) {
+    std::ofstream out(path,std::ios::binary|std::ios::trunc);
     auto u16=[&](uint16_t v){out.put(char(v));out.put(char(v>>8));};
     auto u32=[&](uint32_t v){u16(v);u16(v>>16);};
-    out.write("RIFF",4);u32(36+samples.size()*2);out.write("WAVEfmt ",8);u32(16);
-    u16(1);u16(1);u32(24000);u32(48000);u16(2);u16(16);out.write("data",4);u32(samples.size()*2);
-    for(float s:samples)u16(static_cast<uint16_t>(static_cast<int16_t>(std::lround(std::clamp(s,-1.f,1.f)*32767))));
-    if(!out)throw std::runtime_error("无法写入合成语音");
+    out.write("RIFF",4);u32(36+frames*2);out.write("WAVEfmt ",8);u32(16);
+    u16(1);u16(1);u32(44100);u32(88200);u16(2);u16(16);out.write("data",4);u32(frames*2);
+    for(size_t i=0;i<frames;++i)u16(static_cast<uint16_t>(static_cast<int16_t>(std::lround(std::clamp(samples[i],-1.f,1.f)*32767))));
+    out.flush();if(!out)throw std::runtime_error("无法写入合成语音");
 }
 int main(int argc,char **argv) {
+    fs::path partial;
     try {
         if(argc!=2)throw std::runtime_error("usage: moss-voice request.json");
         avatar::installCancellation();
         const auto request=avatar::readJson(argv[1]);
         const fs::path models=request.at("models").get<std::string>();
         const fs::path output=request.at("output").get<std::string>();
-        const auto reference=decodeAudio16k(request.at("reference").get<std::string>());
-        if(reference.size()<16000*3||reference.size()>16000*30)throw std::runtime_error("音色参考录音需要 3–30 秒");
-        const std::string text=request.at("text"),referenceText=request.at("referenceText");
-        if(text.empty()||referenceText.empty())throw std::runtime_error("请输入文案和参考音频对应的文字");
-        ai::model::ResolvedModel model;model.spec.task=ai::AiTask::Tts;
-        for(const auto &[role,file]:std::vector<std::pair<std::string,std::string>>{
-            {"tts.tokenizer","tokenizer.json"},{"tts.encoder","encoder.onnx"},
-            {"tts.language_model","language-model.onnx"},{"tts.decoder","decoder.onnx"},
-            {"text.tn_tagger_fst","zh_tn_tagger.fst"},{"text.tn_verbalizer_fst","zh_tn_verbalizer.fst"}}){
-            if(!fs::is_regular_file(models/file))throw std::runtime_error("语音模型文件缺失："+file);
-            model.files.push_back({role,models/file});
+        const auto modelFile=models/"ming-3.0-tts-0.5b-q8_0.gguf";
+        if(!fs::is_regular_file(modelFile))throw std::runtime_error("Ming Q8 语音模型缺失，请在模型中心下载");
+        const auto mode=request.value("mode",std::string("clone"));
+        const bool design=mode=="design";
+        if(mode!="clone"&&!design)throw std::runtime_error("无效的 Ming 语音模式");
+        const std::string text=request.at("text");
+        const std::string language=request.value("language",std::string("zh"));
+        const std::string emotion=request.value("emotion",std::string("中性"));
+        const std::string dialect=request.value("dialect",std::string("standard"));
+        const std::string description=request.value("description",std::string());
+        if(text.empty()||text.size()>65536)throw std::runtime_error("请输入有效且长度适中的配音文案");
+        if(!std::set<std::string>{"zh","en","ja","ko","de","fr","es"}.count(language))
+            throw std::runtime_error("Ming 不支持该目标语言");
+        if(!std::set<std::string>{"中性","高兴","悲伤","愤怒","恐惧","厌恶","惊讶"}.count(emotion)||
+           !std::set<std::string>{"standard","chuanyu","cantonese"}.count(dialect))
+            throw std::runtime_error("无效的情绪或方言选项");
+        if(dialect!="standard"&&emotion!="中性")throw std::runtime_error("方言和情绪是独立任务，请分别生成");
+        if(design&&(description.empty()||description.size()>4096||request.contains("emotion")||dialect!="standard"))
+            throw std::runtime_error("语音设计需要声音描述；保存音色后可选择情绪或方言朗读");
+        const bool dialectMode=!design&&dialect!="standard";
+        const bool emotionMode=!design&&!dialectMode&&request.contains("emotion");
+        const bool structured=dialectMode||emotionMode;
+        std::vector<float> reference;std::string referenceText;
+        if(!design){
+            reference=decodeAudio16k(request.at("reference").get<std::string>());
+            referenceText=request.value("referenceText",std::string());
+            if(reference.size()<16000*3||reference.size()>16000*30||
+               !std::all_of(reference.begin(),reference.end(),[](float v){return std::isfinite(v);}))
+                throw std::runtime_error("音色参考录音需要 3–30 秒有效音频");
+            if(!structured&&(referenceText.empty()||referenceText.size()>8192))
+                throw std::runtime_error("请输入参考音频对应的文字");
         }
-        native::NativeSdkOptions options;options.inferenceThreads=4;options.ttsMaximumTokens=1024;
-        std::cout<<avatar::Json{{"event","progress"},{"stage","voice-load"},{"done",0},{"total",1}}.dump()<<std::endl;
-        // Same Hojo backend and text normalization as VideoCut-Qt. CPU is a
-        // deterministic supported path; no hardware acceleration is claimed.
-        auto created=detail::CreateTtsBackendFactory(ai::ComputeBackend::Cpu,options)->CreateSession(model);
-        if(!created.ok())throw std::runtime_error(created.error().message);
-        auto session=created.takeValue();
-        detail::VoiceTextFrontend frontend(models/"tokenizer.json");
-        auto chunks=frontend.PlanTargetChunks(text,120);
-        std::vector<float> assembled;
-        for(std::size_t i=0;i<chunks.size();++i){
-            avatar::checkCancelled();
-            ai::InferenceRequest input;input.requestId="moss-page-voice";
-            input.cancellationRequested=[](){try{avatar::checkCancelled();return false;}catch(...){return true;}};
-            input.inputs={detail::MakeUtf8Output(native::kText,chunks[i].text),
-                detail::MakeUtf8Output(native::kPromptText,referenceText),
-                detail::MakeFloatOutput(native::kPromptAudio,{static_cast<int64_t>(reference.size())},reference),
-                detail::MakeInt32Output(native::kPromptSampleRate,{1},{16000})};
-            auto result=session->RunBatch({input});
-            if(!result.ok()){
-                if(result.error().message.find(native::kTtsEosLimitErrorPrefix)!=std::string::npos&&chunks[i].text.size()>12){
-                    auto halves=frontend.BisectTargetChunk(chunks[i].text);
-                    chunks[i]=std::move(halves.first);chunks.insert(chunks.begin()+i+1,std::move(halves.second));--i;continue;
-                }
-                throw std::runtime_error(result.error().message);
-            }
-            for(const auto &tensor:result.value().front().outputs)if(tensor.name==native::kTtsWaveform){
-                const auto count=tensor.bytes->size()/sizeof(float);const auto offset=assembled.size();
-                assembled.resize(offset+count);std::memcpy(assembled.data()+offset,tensor.bytes->data(),tensor.bytes->size());
-            }
-            avatar::progress("voice-synthesis",i+1,chunks.size());
+        const std::string task=design?"voice_design":dialectMode?"dialect":emotionMode?"emotion":language=="zh"||language=="en"?"tts":"multilingual";
+        avatar::progress("voice-load",0,1);
+        audiocpp_registry *registryRaw=nullptr;
+        check(audiocpp_registry_create(nullptr,&registryRaw));
+        Owner<audiocpp_registry,audiocpp_registry_free> registry(registryRaw,audiocpp_registry_free);
+        const audiocpp_model_config config{"ming3_tts",nullptr,nullptr,nullptr};
+        audiocpp_model *modelRaw=nullptr;
+        check(audiocpp_model_load(registry.get(),modelFile.c_str(),&config,nullptr,&modelRaw));
+        Owner<audiocpp_model,audiocpp_model_free> model(modelRaw,audiocpp_model_free);
+        const audiocpp_backend_config backend{"cpu",0,4};
+        audiocpp_session *sessionRaw=nullptr;
+        check(audiocpp_session_create(model.get(),design?"vdes":"clon","offline",&backend,nullptr,&sessionRaw));
+        Owner<audiocpp_session,audiocpp_session_free> session(sessionRaw,audiocpp_session_free);
+        Owner<audiocpp_request,audiocpp_request_free> input(audiocpp_request_create(),audiocpp_request_free);
+        if(!input)throw std::runtime_error("Ming request allocation failed");
+        check(audiocpp_request_set_text(input.get(),text.c_str(),structured?nullptr:language.c_str()));
+        const auto option=[&](const char *key,const std::string &value){check(audiocpp_request_set_option(input.get(),key,value.c_str()));};
+        option("template_name",task);option("seed","1895");option("max_tokens","512");
+        if(design){option("instruct",description);option("zero_speaker_embedding","true");}
+        else{
+            if(dialectMode)option("dialect",dialect=="chuanyu"?"chuanyu dialect":"cantonese");
+            else if(emotionMode)option("emotion",emotion);
+            else option("reference_text",referenceText);
+            check(audiocpp_request_set_voice_audio(input.get(),reference.data(),reference.size(),16000,1));
         }
-        if(assembled.empty())throw std::runtime_error("语音模型未生成有效音频");
-        fs::create_directories(output.parent_path());writeWave(output,assembled);
-        std::cout<<avatar::Json{{"event","complete"},{"output",output.string()},{"durationSeconds",double(assembled.size())/24000}}.dump()<<std::endl;
+        avatar::progress("voice-synthesis",0,1);
+        // audio.cpp owns Ming's tag-aware long-text chunking. A running offline
+        // call cannot be interrupted in the ABI; the parent can kill this worker.
+        audiocpp_result *resultRaw=nullptr;
+        const auto status=audiocpp_session_run(session.get(),input.get(),&resultRaw);
+        Owner<audiocpp_result,audiocpp_result_free> result(resultRaw,audiocpp_result_free);
+        check(status);avatar::checkCancelled();
+        const float *samples=nullptr;size_t frames=0;int rate=0,channels=0;
+        check(audiocpp_result_audio(result.get(),&samples,&frames,&rate,&channels));
+        if(!samples||!frames||rate!=44100||channels!=1||frames>300U*44100U||
+           !std::all_of(samples,samples+frames,[](float v){return std::isfinite(v);}))
+            throw std::runtime_error("Ming 未生成有效音频，或生成超过五分钟");
+        fs::create_directories(fs::absolute(output).parent_path());
+        partial=output.string()+".partial";writeWave(partial,samples,frames);
+        avatar::checkCancelled();fs::rename(partial,output);partial.clear();
+        std::cout<<avatar::Json{{"event","complete"},{"output",output.string()},
+            {"durationSeconds",double(frames)/44100},{"sampleRate",44100},{"engine","ming-3.0-q8"},{"task",task},{"emotion",emotion},{"dialect",dialect}}.dump()<<std::endl;
     }catch(const std::exception &e){
+        if(!partial.empty()){std::error_code ec;fs::remove(partial,ec);}
         std::cerr<<avatar::Json{{"event","error"},{"message",e.what()}}.dump()<<std::endl;return 1;
     }
 }

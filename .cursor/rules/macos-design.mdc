@@ -1,0 +1,12 @@
+---
+description: All UI changes follow macOS conventions and the project's concise design standard
+alwaysApply: true
+---
+
+# macOS 设计
+
+- 修改布局、外观和交互前，阅读并遵守根目录 `DESIGN.md`。
+- 优先 Apple HIG 与系统交互，Qt/QML 共用组件保持一致。
+- 能删除的删除，偶尔需要的按需展示；不把模型名、路径、技术说明塞进普通用户流程。
+- 外部 skill 只在适用范围内使用，来源和边界见 `docs/macos-design-skills.md`。
+- 检查运行界面与键盘行为，不能只凭编译通过宣称符合 macOS 规范。

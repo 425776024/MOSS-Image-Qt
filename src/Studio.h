@@ -37,6 +37,9 @@ class Studio:public QObject {
     Q_PROPERTY(bool imageReady READ imageReady NOTIFY changed)
     Q_PROPERTY(bool dittoReady READ dittoReady NOTIFY changed)
     Q_PROPERTY(bool voiceReady READ voiceReady NOTIFY changed)
+    Q_PROPERTY(QString avatarDesignImage READ avatarDesignImage NOTIFY changed)
+    Q_PROPERTY(QVariantMap avatarDesignRecipe READ avatarDesignRecipe NOTIFY changed)
+    Q_PROPERTY(QString voiceDesignAudio READ voiceDesignAudio NOTIFY changed)
     Q_PROPERTY(bool sfxReady READ sfxReady NOTIFY changed)
     Q_PROPERTY(QString imageUrl READ imageUrl NOTIFY changed)
     Q_PROPERTY(QString videoUrl READ videoUrl NOTIFY changed)
@@ -100,6 +103,12 @@ public:
     bool dittoReady()const;
     bool voiceReady()const;
     bool sfxReady()const;
+    QString avatarDesignImage()const{return m_avatarDesignImage;}
+    QVariantMap avatarDesignRecipe()const{return m_avatarDesignRecipe;}
+    Q_INVOKABLE void generateAvatarImage(QString description);
+    QString voiceDesignAudio()const{return m_voiceDesignAudio;}
+    Q_INVOKABLE void generateVoiceDesign(QString description,QString text);
+    Q_INVOKABLE QString saveDesignedVoice(QString name);
     QString imageUrl()const{return m_image;}
     QString videoUrl()const{return m_video;}
     QVariantList history()const{return m_history;}
@@ -174,6 +183,8 @@ public:
     Q_INVOKABLE void randomizeSeed();
     QString outputRoot()const{return m_outputRoot;}
 signals:
+    void fileExportFinished(bool success, QString detail);
+    void conversationSaveFinished(bool success, QString detail);
     void mouthCacheChanged();
     void changed();
     void jobFinished(bool success);
@@ -197,6 +208,7 @@ private:
     void exportFile(QString source,QUrl destination);
     QJsonObject recipe() const;
     void restoreRecipe(const QJsonObject &recipe);
+    void generateImage(const Document &document,QString kind,int steps);
     void advanceAudioPipeline();
     bool validateSound();
     void renderPageVideo();
@@ -217,6 +229,9 @@ private:
     SoundPlan m_sound;
     TimelineDocument m_timeline;
     QString m_trackGeneration;
+    QString m_avatarDesignImage;
+    QVariantMap m_avatarDesignRecipe;
+    QString m_voiceDesignAudio,m_voiceDesignText,m_voiceDesignDescription;
     QUrl m_timelineExport;
     QProcess m_process;
     RemoteImageClient m_remote;

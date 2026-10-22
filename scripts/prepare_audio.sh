@@ -5,7 +5,7 @@ qt_source="${VIDEOCUT_QT_SOURCE:?Set VIDEOCUT_QT_SOURCE for this optional local 
 video_source="${VIDEOCUT_SOURCE:?Set VIDEOCUT_SOURCE for this optional local dependency importer}"
 runtime="$qt_source/.local/release-closeout-r21/native-deps/ai"
 sa3="$video_source/.local/ai-models/runtime/src/sa3.cpp"
-for input in "$runtime/onnxruntime" "$runtime/sherpa-onnx" "$sa3"; do
+for input in "$runtime/onnxruntime" "$sa3"; do
     if [ ! -d "$input" ]; then echo "Missing audio source: $input" >&2; exit 1; fi
 done
 mkdir -p .local/audio-deps
@@ -13,7 +13,7 @@ copy_once() {
     if [ ! -e "$2" ]; then cp -cR "$1" "$2"; fi
 }
 copy_once "$runtime/onnxruntime" .local/audio-deps/onnxruntime
-copy_once "$runtime/sherpa-onnx" .local/audio-deps/sherpa
+python3 scripts/prepare_ming.py
 if [ ! -f .local/audio-deps/sa3.cpp/CMakeLists.txt ]; then
     mkdir -p .local/audio-deps/sa3.cpp
     rsync -a --exclude='.git' --exclude='build*' --exclude='__pycache__' \

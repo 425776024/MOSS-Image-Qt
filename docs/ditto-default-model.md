@@ -5,7 +5,12 @@
 下载目录为用户模型根目录下的 `ditto-original/`。
 
 - 音频动作：官方 `ditto_onnx/lmdm_v0.4_hubert.onnx`，本地名 `denoise.onnx`。
-- HuBERT、检测器、106/203 关键点：官方 `ditto_pytorch/aux_models/` 中的原文件。
+- HuBERT、203 关键点：官方 `ditto_pytorch/aux_models/` 中的原文件。
+- 检测与初始对齐：OpenCV Zoo YuNet 2023（MIT），替换原 InsightFace 检测器和 106 点模型。
+  YuNet 五点初始化 224 像素裁剪，再由相同的 203 点模型确定最终裁剪。
+  参数沿用 Xinshen `yunet-203-v1`，最终扩展 2.3、纵向偏移 -0.125。
+  固定下载版本及 SHA-256 见 `config/models.json`，许可见
+  `vendor/xinshen-ditto/LICENSE.YuNet`。模型清单含新 pipelineId，旧缓存不可混用。
 - 外观、动作、拼接、解码器：官方 `ditto_onnx/` 中的原文件。
 - Warp：`voxta/ditto-talkinghead-onnx` 提交
   `930ae658ab5247e6209b21c4265cecf2a5b45610` 的 `warp_network_opset20.onnx`。
@@ -27,5 +32,6 @@
 既有源人物口型适配代码仍可用于显式指定的兼容模型；公开原版保持其官方配置，
 没有把微调包的条件或静音校准默认值套用到公开模型。
 
-Ditto、InsightFace、HuBERT 等组件各自保留适用许可；公开可下载不等同于统一商业授权。
+Ditto、YuNet、LivePortrait、HuBERT 等组件各自保留适用许可；公开可下载不等同于统一商业授权。
+旧本地模型目录的 InsightFace 路径仅为兼容及回归对照保留，不在公开下载清单内。
 请结合上游 NOTICE 与 THIRD_PARTY.md 审核使用范围。

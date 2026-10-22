@@ -4,29 +4,45 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 
 Rectangle {
-    id: root
+    id: root; objectName: "homeAvatarLibrary"
     color: HomeTheme.sidebar
     property string selectedId: ""
     property string notice: ""
+    property url pendingAvatarSource
     readonly property var entries: workspace.avatars.filter(row => row.name.toLowerCase().includes(search.text.trim().toLowerCase()))
     readonly property var selected: entries.find(row => row.id === selectedId) || entries[0] || ({})
     signal useAvatar(string url)
     signal createAvatar()
+    function designAvatar() { designDialog.open() }
+    AvatarDesignDialog { id: designDialog; onAvatarSaved: { root.selectedId=workspace.avatars[0].id;root.notice="" } }
     function importAvatar() { imageDialog.open() }
+    function previewAvatar(source) {
+        pendingAvatarSource=source
+        nameInput.text=decodeURIComponent(source.toString().split("/").pop()).replace(/\.[^.]+$/, "")
+        notice=""
+        importDialog.open()
+    }
     function removeAvatar(id) { notice = workspace.removeAvatar(id) }
     FileDialog {
         id: imageDialog; objectName: "homeAvatarSourceDialog"; title: HomeTheme.t("导入形象"); nameFilters: ["Images (*.png *.jpg *.jpeg *.webp)"]
-        onAccepted: { nameInput.text = decodeURIComponent(selectedFile.toString().split("/").pop()).replace(/\.[^.]+$/, ""); root.notice = ""; importDialog.open() }
+        onAccepted: root.previewAvatar(selectedFile)
     }
     HomeDialog {
         id: importDialog; objectName: "homeAvatarImportDialog"; title: HomeTheme.t("导入形象"); anchors.centerIn: Overlay.overlay; modal: true; width: 400
-        ColumnLayout { width: parent.width; spacing: 16
-            Image { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: 160; Layout.preferredHeight: 180; source: imageDialog.selectedFile; fillMode: Image.PreserveAspectFit }
-            HomeField { id: nameInput; objectName: "homeAvatarImportName"; Layout.fillWidth: true; placeholderText: HomeTheme.t("形象名称"); Accessible.name: placeholderText; maximumLength: 120; onAccepted: importSave.clicked() }
+        dialogIcon: "person"
+        defaultAction: importSave
+        property bool saving: false
+        onOpened: {saving=false;nameInput.forceActiveFocus();nameInput.selectAll()}
+        ColumnLayout { width: parent.width; spacing: 12
+            HomeImagePreview {
+                id: importPreview; objectName: "homeAvatarImportPreview"; Layout.fillWidth: true; source: root.pendingAvatarSource
+                HomeButton { anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 8; text: HomeTheme.t("更换图片"); compact: true; onClicked: imageDialog.open() }
+            }
+            HomeField { id: nameInput; objectName: "homeAvatarImportName"; Layout.fillWidth: true; placeholderText: HomeTheme.t("形象名称"); Accessible.name: placeholderText; maximumLength: 120 }
             Text { visible: root.notice !== ""; text: root.notice; color: HomeTheme.danger; wrapMode: Text.Wrap; Layout.fillWidth: true }
             RowLayout { Layout.alignment: Qt.AlignRight
                 HomeButton { text: HomeTheme.t("取消"); onClicked: importDialog.close() }
-                HomeButton { id: importSave; text: HomeTheme.t("保存"); primary: true; enabled: nameInput.text.trim() !== ""; onClicked: { root.notice = workspace.importAvatar(imageDialog.selectedFile, nameInput.text); if(!root.notice)importDialog.close() } }
+                HomeButton { id: importSave; objectName: "homeAvatarImportSave"; text: HomeTheme.t("保存"); primary: true; enabled: !importDialog.saving && nameInput.text.trim() !== "" && importPreview.ready; onClicked: {if(!enabled)return;importDialog.saving=true;root.notice=workspace.importAvatar(root.pendingAvatarSource,nameInput.text);if(!root.notice)importDialog.close();else importDialog.saving=false} }
             }
         }
     }
@@ -42,9 +58,10 @@ Rectangle {
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
-        HomeHeader { Layout.fillWidth: true; title: "我的形象"; detail: String(root.entries.length)
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("我的形象"); detail: String(root.entries.length)
             HomeButton { text: HomeTheme.t("制作数字人"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
-            HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; primary: true; enabled: !studio.busy; onClicked: root.importAvatar() }
+            HomeButton { text: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
+            HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
         }
         RowLayout { Layout.fillWidth: true
             HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索形象"); Accessible.name: placeholderText }
@@ -54,8 +71,11 @@ Rectangle {
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout { visible: root.entries.length===0; anchors.centerIn: parent; spacing: 16
-                HomeEmpty { title: search.text ? "没有匹配的形象" : "还没有形象"; description: search.text ? "" : "导入一张人像图片，即可制作说话视频。"; iconName: "person" }
-                HomeButton { visible: !search.text; Layout.alignment: Qt.AlignHCenter; text: HomeTheme.t("导入形象"); iconName: "plus"; onClicked: root.importAvatar() }
+                HomeEmpty { title: search.text ? HomeTheme.t("没有匹配的形象") : HomeTheme.t("还没有形象"); description: search.text ? "" : HomeTheme.t("输入文字生成形象，或导入图片，制作自己的数字人。"); iconName: "person" }
+                RowLayout { visible: !search.text; Layout.alignment: Qt.AlignHCenter
+                    HomeButton { text: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
+                    HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
+                }
             }
             GridView {
                 id: list; anchors.fill: parent; clip: true; model: root.entries

@@ -8,7 +8,7 @@ AbstractButton {
     implicitHeight: 104
     implicitWidth: 82
     hoverEnabled: true
-    Accessible.name: text + "示例，应用后可以撤销"
+    Accessible.name: text + HomeTheme.t("示例，应用后可以撤销")
     ToolTip.visible: hovered
     ToolTip.delay: 600
     ToolTip.text: Accessible.name
@@ -31,14 +31,14 @@ AbstractButton {
             }
             Column {
                 visible: control.kind === "poster"; x: 8; y: 8; spacing: 2
-                Text { text: "春日"; font.pixelSize: 18; font.weight: Font.Bold; color: "#314431" }
+                Text { text: HomeTheme.t("春日"); font.pixelSize: 18; font.weight: Font.Bold; color: "#314431" }
                 Text { text: "SPRING / 01"; font.pixelSize: 6; font.letterSpacing: 1; color: "#314431" }
             }
             Column {
                 visible: control.kind === "note"; anchors.centerIn: parent; rotation: -8; spacing: 4
-                Text { text: "慢慢来"; font.pixelSize: 15; font.family: "Kaiti SC"; color: "#735941" }
+                Text { text: HomeTheme.t("慢慢来"); font.pixelSize: 15; font.family: "Kaiti SC"; color: "#735941" }
                 Rectangle { width: 42; height: 1; color: "#AA957A" }
-                Text { text: "把日子写成诗"; font.pixelSize: 7; color: "#735941" }
+                Text { text: HomeTheme.t("把日子写成诗"); font.pixelSize: 7; color: "#735941" }
             }
             Row {
                 visible: control.kind === "objects"; anchors.centerIn: parent; spacing: 6

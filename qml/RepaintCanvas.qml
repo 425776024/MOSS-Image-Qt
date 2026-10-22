@@ -31,13 +31,13 @@ Item {
         visible: root.visible
         RowLayout {
             anchors.fill: parent; spacing: 4
-            StudioButton { objectName: "repaintBrush"; text: "画笔"; iconName: "brush"; active: root.tool === "brush"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "brush"; root.viewMode = 1 } }
-            StudioButton { objectName: "repaintRectangle"; text: "框选"; iconName: "rectangle"; active: root.tool === "rectangle"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "rectangle"; root.viewMode = 1 } }
-            StudioButton { objectName: "repaintEraser"; text: "擦除"; iconName: "eraser"; active: root.tool === "erase"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "erase"; root.viewMode = 1 } }
+            StudioButton { objectName: "repaintBrush"; text: HomeTheme.t("画笔"); iconName: "brush"; active: root.tool === "brush"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "brush"; root.viewMode = 1 } }
+            StudioButton { objectName: "repaintRectangle"; text: HomeTheme.t("框选"); iconName: "rectangle"; active: root.tool === "rectangle"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "rectangle"; root.viewMode = 1 } }
+            StudioButton { objectName: "repaintEraser"; text: HomeTheme.t("擦除"); iconName: "eraser"; active: root.tool === "erase"; quiet: true; enabled: root.edit.ready && !studio.busy; onClicked: { root.tool = "erase"; root.viewMode = 1 } }
             Item { Layout.fillWidth: true }
-            StudioButton { objectName: "repaintUndo"; iconName: "undo"; hint: "撤销选区"; quiet: true; enabled: root.edit.canUndo && !studio.busy; onClicked: { root.forceActiveFocus(); root.edit.undo(); root.viewMode = 1 } }
-            StudioButton { objectName: "repaintRedo"; iconName: "redo"; hint: "重做选区"; quiet: true; enabled: root.edit.canRedo && !studio.busy; onClicked: { root.forceActiveFocus(); root.edit.redo(); root.viewMode = 1 } }
-            StudioButton { objectName: "repaintClear"; text: "清空"; hint: "清空选区"; quiet: true; enabled: root.edit.hasMask && !studio.busy; onClicked: { root.edit.clearMask(); root.viewMode = 1 } }
+            StudioButton { objectName: "repaintUndo"; iconName: "undo"; hint: HomeTheme.t("撤销选区"); quiet: true; enabled: root.edit.canUndo && !studio.busy; onClicked: { root.forceActiveFocus(); root.edit.undo(); root.viewMode = 1 } }
+            StudioButton { objectName: "repaintRedo"; iconName: "redo"; hint: HomeTheme.t("重做选区"); quiet: true; enabled: root.edit.canRedo && !studio.busy; onClicked: { root.forceActiveFocus(); root.edit.redo(); root.viewMode = 1 } }
+            StudioButton { objectName: "repaintClear"; text: HomeTheme.t("清空"); hint: HomeTheme.t("清空选区"); quiet: true; enabled: root.edit.hasMask && !studio.busy; onClicked: { root.edit.clearMask(); root.viewMode = 1 } }
         }
     }
     Item {
@@ -47,14 +47,14 @@ Item {
             tool: root.tool; brushSize: brush.value
             showResult: root.viewMode === 2; showMask: root.viewMode === 1
             enabled: !studio.busy && root.viewMode === 1
-            Accessible.name: "局部重绘画布"
+            Accessible.name: HomeTheme.t("局部重绘画布")
         }
         Column {
             visible: !root.edit.ready
             anchors.centerIn: parent; spacing: 14
             StudioIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "brush"; width: 36; height: 36; ink: StudioTheme.muted }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "让局部更接近你的想法"; font.pixelSize: 18; color: StudioTheme.secondary }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "导入图片，或先在本页生成图像"; font.pixelSize: 12; color: StudioTheme.muted }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: HomeTheme.t("让局部更接近你的想法"); font.pixelSize: 18; color: StudioTheme.secondary }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: HomeTheme.t("导入图片，或先在本页生成图像"); font.pixelSize: 12; color: StudioTheme.muted }
         }
         FrostedPanel {
             objectName: "repaintBrushControls"
@@ -65,10 +65,10 @@ Item {
             backdropSource: root.backdropSource
             RowLayout {
                 anchors.fill: parent; anchors.margins: 8; spacing: 10
-                Text { text: root.tool === "rectangle" ? "拖动画出选区" : "笔刷"; color: StudioTheme.secondary; font.pixelSize: 11 }
-                StudioSlider { id: brush; visible: root.tool !== "rectangle"; Layout.fillWidth: true; from: 8; to: 200; value: 48; enabled: !studio.busy; Accessible.name: "笔刷大小" }
+                Text { text: root.tool === "rectangle" ? HomeTheme.t("拖动画出选区") : HomeTheme.t("笔刷"); color: StudioTheme.secondary; font.pixelSize: 11 }
+                StudioSlider { id: brush; visible: root.tool !== "rectangle"; Layout.fillWidth: true; from: 8; to: 200; value: 48; enabled: !studio.busy; Accessible.name: HomeTheme.t("笔刷大小") }
                 Text { visible: root.tool !== "rectangle"; text: Math.round(brush.value) + " px"; color: StudioTheme.secondary; font.pixelSize: 10 }
-                Text { visible: root.tool === "rectangle"; text: "绿色区域将被重绘"; color: StudioTheme.secondary; font.pixelSize: 10 }
+                Text { visible: root.tool === "rectangle"; text: HomeTheme.t("绿色区域将被重绘"); color: StudioTheme.secondary; font.pixelSize: 10 }
             }
         }
     }
@@ -83,9 +83,9 @@ Item {
         RowLayout {
             id: viewControls
             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 4
-            StudioButton { objectName: "repaintOriginalView"; text: "原图"; implicitHeight: 28; active: root.viewMode === 0; quiet: true; enabled: root.edit.ready; onClicked: root.viewMode = 0 }
-            StudioButton { objectName: "repaintMaskView"; text: "选区"; implicitHeight: 28; active: root.viewMode === 1; quiet: true; enabled: root.edit.ready; onClicked: root.viewMode = 1 }
-            StudioButton { objectName: "repaintResultView"; text: "结果"; implicitHeight: 28; active: root.viewMode === 2; quiet: true; enabled: root.edit.resultUrl !== ""; onClicked: root.viewMode = 2 }
+            StudioButton { objectName: "repaintOriginalView"; text: HomeTheme.t("原图"); implicitHeight: 28; active: root.viewMode === 0; quiet: true; enabled: root.edit.ready; onClicked: root.viewMode = 0 }
+            StudioButton { objectName: "repaintMaskView"; text: HomeTheme.t("选区"); implicitHeight: 28; active: root.viewMode === 1; quiet: true; enabled: root.edit.ready; onClicked: root.viewMode = 1 }
+            StudioButton { objectName: "repaintResultView"; text: HomeTheme.t("结果"); implicitHeight: 28; active: root.viewMode === 2; quiet: true; enabled: root.edit.resultUrl !== ""; onClicked: root.viewMode = 2 }
             Item { Layout.fillWidth: true }
             Text { visible: root.edit.ready; text: root.edit.imageWidth + " × " + root.edit.imageHeight; color: StudioTheme.muted; font.pixelSize: 10 }
         }

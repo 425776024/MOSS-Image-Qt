@@ -30,6 +30,7 @@
 #include <numeric>
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
+#include "yunet_alignment.h"
 #include <random>
 #include <thread>
 namespace ditto {
@@ -597,83 +598,99 @@ struct Source {
   cv::Mat affine;
 };
 struct Prep {
-  Net det, l106, l203, motion, appearance;
+  std::unique_ptr<Net> det, l106;
+  cv::Ptr<cv::FaceDetectorYN> yunet;
+  Net l203, motion, appearance;
   Prep(const fs::path &r, bool gpuMotion = true)
-      : det(r / "detector.onnx", false), l106(r / "landmark106.onnx", false),
-        l203(r / "landmark203.onnx", false),
+      : l203(r / "landmark203.onnx", false),
         motion(r / "motion.onnx", gpuMotion),
-        appearance(r / "appearance.onnx") {}
+        appearance(r / "appearance.onnx") {
+    const auto manifest = avatar::readJson(r / "manifest.json");
+    const auto profile = manifest.value("preparation", J::object()).value("profile", std::string());
+    require(profile.empty() || profile == "yunet-203-v1", "unknown face preparation profile");
+    if (profile == "yunet-203-v1")
+      yunet = cv::FaceDetectorYN::create((r / "face_detection_yunet_2023mar.onnx").string(),
+          "", {640,640}, .9f, .3f, 5000, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_TARGET_CPU);
+    else {
+      det = std::make_unique<Net>(r / "detector.onnx", false);
+      l106 = std::make_unique<Net>(r / "landmark106.onnx", false);
+    }
+  }
   Source operator()(const Image &image) {
     cv::Mat im = rgb(image);
-    int nw = 512, nh = int(512. * image.height / image.width);
-    if (nh > 512) {
-      nh = 512;
-      nw = int(512. * image.width / image.height);
-    }
-    float ds = float(nh) / image.height;
-    cv::Mat scaled, padded = cv::Mat::zeros(512, 512, CV_8UC3);
-    cv::resize(im, scaled, {nw, nh});
-    scaled.copyTo(padded(cv::Rect(0, 0, nw, nh)));
-    // Upstream passes RGB into InsightFace's swapRB=True API.
-    auto d =
-        det.run({tensor(padded, 1.f / 128, true, 127.5)}, {{1, 3, 512, 512}});
-    require(d.size() == 9, "detector outputs");
-    struct Box {
-      float x, y, r, b, score;
-    };
-    std::vector<Box> boxes;
-    for (int k = 0; k < 3; ++k) {
-      int stride = 8 << k, w = 512 / stride;
-      for (size_t i = 0; i < d[k].size(); ++i)
-        if (d[k][i] >= .5) {
-          float x = (i / 2 % w) * stride, y = (i / 2 / w) * stride;
-          auto &b = d[k + 3];
-          boxes.push_back({(x - b[i * 4] * stride) / ds,
-                           (y - b[i * 4 + 1] * stride) / ds,
-                           (x + b[i * 4 + 2] * stride) / ds,
-                           (y + b[i * 4 + 3] * stride) / ds, d[k][i]});
-        }
-    }
-    require(!boxes.empty(), "未检测到人脸");
-    std::sort(boxes.begin(), boxes.end(),
-              [](auto a, auto b) { return a.score > b.score; });
-    std::vector<Box> kept;
-    for (auto b : boxes) {
-      bool keep = true;
-      for (auto a : kept) {
-        float area =
-            std::max(0.f, std::min(a.r, b.r) - std::max(a.x, b.x) + 1) *
-            std::max(0.f, std::min(a.b, b.b) - std::max(a.y, b.y) + 1);
-        if (area / ((a.r - a.x + 1) * (a.b - a.y + 1) +
-                    (b.r - b.x + 1) * (b.b - b.y + 1) - area) >
-            .4f) {
-          keep = false;
-          break;
-        }
+    cv::Mat a, inv, crop;
+    if (yunet) {
+      a = yunet_alignment::initialAffine(image, yunet);
+    } else {
+      int nw = 512, nh = int(512. * image.height / image.width);
+      if (nh > 512) {
+        nh = 512;
+        nw = int(512. * image.width / image.height);
       }
-      if (keep)
-        kept.push_back(b);
+      float ds = float(nh) / image.height;
+      cv::Mat scaled, padded = cv::Mat::zeros(512, 512, CV_8UC3);
+      cv::resize(im, scaled, {nw, nh});
+      scaled.copyTo(padded(cv::Rect(0, 0, nw, nh)));
+      // Upstream passes RGB into InsightFace's swapRB=True API.
+      auto d =
+          det->run({tensor(padded, 1.f / 128, true, 127.5)}, {{1, 3, 512, 512}});
+      require(d.size() == 9, "detector outputs");
+      struct Box {
+        float x, y, r, b, score;
+      };
+      std::vector<Box> boxes;
+      for (int k = 0; k < 3; ++k) {
+        int stride = 8 << k, w = 512 / stride;
+        for (size_t i = 0; i < d[k].size(); ++i)
+          if (d[k][i] >= .5) {
+            float x = (i / 2 % w) * stride, y = (i / 2 / w) * stride;
+            auto &b = d[k + 3];
+            boxes.push_back({(x - b[i * 4] * stride) / ds,
+                             (y - b[i * 4 + 1] * stride) / ds,
+                             (x + b[i * 4 + 2] * stride) / ds,
+                             (y + b[i * 4 + 3] * stride) / ds, d[k][i]});
+          }
+      }
+      require(!boxes.empty(), "未检测到人脸");
+      std::sort(boxes.begin(), boxes.end(),
+                [](auto a, auto b) { return a.score > b.score; });
+      std::vector<Box> kept;
+      for (auto b : boxes) {
+        bool keep = true;
+        for (auto a : kept) {
+          float area =
+              std::max(0.f, std::min(a.r, b.r) - std::max(a.x, b.x) + 1) *
+              std::max(0.f, std::min(a.b, b.b) - std::max(a.y, b.y) + 1);
+          if (area / ((a.r - a.x + 1) * (a.b - a.y + 1) +
+                      (b.r - b.x + 1) * (b.b - b.y + 1) - area) >
+              .4f) {
+            keep = false;
+            break;
+          }
+        }
+        if (keep)
+          kept.push_back(b);
+      }
+      auto b = *std::max_element(kept.begin(), kept.end(), [](auto a, auto b) {
+        return (a.r - a.x) * (a.b - a.y) < (b.r - b.x) * (b.b - b.y);
+      });
+      double s = 192. / (std::max(b.r - b.x, b.b - b.y) * 1.5);
+      a = (cv::Mat_<double>(2, 3) << s, 0, 96 - s * (b.x + b.r) / 2, 0, s,
+                   96 - s * (b.y + b.b) / 2);
+      cv::warpAffine(im, crop, a, {192, 192});
+      auto p106 = l106->run({tensor(crop, 1, true)}, {{1, 3, 192, 192}})[0];
+      require(p106.size() == 212, "106 shape");
+      for (float &v : p106)
+        v = (v + 1) * 96;
+      cv::invertAffineTransform(a, inv);
+      auto p = transform(p106, inv);
+      a = cropMatrix(p, 224, 1.5, -.1);
     }
-    auto b = *std::max_element(kept.begin(), kept.end(), [](auto a, auto b) {
-      return (a.r - a.x) * (a.b - a.y) < (b.r - b.x) * (b.b - b.y);
-    });
-    double s = 192. / (std::max(b.r - b.x, b.b - b.y) * 1.5);
-    cv::Mat a = (cv::Mat_<double>(2, 3) << s, 0, 96 - s * (b.x + b.r) / 2, 0, s,
-                 96 - s * (b.y + b.b) / 2),
-            inv, crop;
-    cv::warpAffine(im, crop, a, {192, 192});
-    auto p106 = l106.run({tensor(crop, 1, true)}, {{1, 3, 192, 192}})[0];
-    require(p106.size() == 212, "106 shape");
-    for (float &v : p106)
-      v = (v + 1) * 96;
-    cv::invertAffineTransform(a, inv);
-    auto p = transform(p106, inv);
-    a = cropMatrix(p, 224, 1.5, -.1);
     cv::warpAffine(im, crop, a, {224, 224});
     auto o = l203.run({tensor(crop)}, {{1, 3, 224, 224}});
     require(o.size() >= 3 && o[2].size() == 406, "203 shape");
     cv::invertAffineTransform(a, inv);
-    p = transform(o[2], inv, 224);
+    auto p = transform(o[2], inv, 224);
     a = cropMatrix(p, 512, 2.3, -.125);
     cv::warpAffine(im, crop, a, {512, 512});
     cv::Mat small;

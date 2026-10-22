@@ -25,25 +25,25 @@ ColumnLayout {
         Column {
             anchors.centerIn: parent; spacing: 14; visible: studio.pageVisualUrl === ""
             StudioIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "audio"; width: 36; height: 36; ink: StudioTheme.muted }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "为这一页加上声音"; font.pixelSize: 18; color: StudioTheme.secondary }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: "先生成或导入图片，再添加配音音频"; font.pixelSize: 12; color: StudioTheme.muted }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: HomeTheme.t("为这一页加上声音"); font.pixelSize: 18; color: StudioTheme.secondary }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: HomeTheme.t("先生成或导入图片，再添加配音音频"); font.pixelSize: 12; color: StudioTheme.muted }
         }
     }
     Rectangle {
         Layout.fillWidth: true; height: 38; color: StudioTheme.field
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 10
-            StudioButton { text: "图像"; implicitHeight: 28; quiet: true; active: !root.showVideo || studio.pageVideoUrl === ""; hint: "查看页面图像"; onClicked: { root.showVideo = false; player.pause() } }
-            StudioButton { text: "视频"; implicitHeight: 28; quiet: true; active: root.showVideo && studio.pageVideoUrl !== ""; enabled: studio.pageVideoUrl !== ""; hint: "查看生成视频"; onClicked: root.showVideo = true }
+            StudioButton { text: HomeTheme.t("图像"); implicitHeight: 28; quiet: true; active: !root.showVideo || studio.pageVideoUrl === ""; hint: HomeTheme.t("查看页面图像"); onClicked: { root.showVideo = false; player.pause() } }
+            StudioButton { text: HomeTheme.t("视频"); implicitHeight: 28; quiet: true; active: root.showVideo && studio.pageVideoUrl !== ""; enabled: studio.pageVideoUrl !== ""; hint: HomeTheme.t("查看生成视频"); onClicked: root.showVideo = true }
             Rectangle { width: 1; height: 16; color: StudioTheme.line }
             StudioButton {
                 implicitHeight: 28; quiet: true; iconName: "play"
-                hint: player.playbackState === MediaPlayer.PlayingState ? "暂停" : "播放"
+                hint: player.playbackState === MediaPlayer.PlayingState ? HomeTheme.t("暂停") : HomeTheme.t("播放")
                 enabled: studio.pageVideoUrl !== ""
                 onClicked: { root.showVideo = true; player.playbackState === MediaPlayer.PlayingState ? player.pause() : player.play() }
             }
-            StudioSlider { Layout.fillWidth: true; from: 0; to: Math.max(1, player.duration); value: player.position; enabled: studio.pageVideoUrl !== ""; onMoved: player.position = value; Accessible.name: "页面视频进度" }
-            Text { text: (player.position / 1000).toFixed(1) + " / " + (player.duration / 1000).toFixed(1) + " 秒"; font.pixelSize: 10; color: StudioTheme.muted }
+            StudioSlider { Layout.fillWidth: true; from: 0; to: Math.max(1, player.duration); value: player.position; enabled: studio.pageVideoUrl !== ""; onMoved: player.position = value; Accessible.name: HomeTheme.t("页面视频进度") }
+            Text { text: (player.position / 1000).toFixed(1) + " / " + (player.duration / 1000).toFixed(1) + HomeTheme.t(" 秒"); font.pixelSize: 10; color: StudioTheme.muted }
         }
     }
 }

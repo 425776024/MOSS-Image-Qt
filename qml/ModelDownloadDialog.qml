@@ -1,38 +1,85 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 HomeDialog {
     id: dialog
     objectName: "modelDownloadDialog"
-    title: "准备模型"
-    width: Math.min(580,Overlay.overlay ? Overlay.overlay.width-40 : 580)
+    property bool termsExpanded: false
+    property bool sourceExpanded: false
+    property bool wasDownloading: false
+    readonly property bool ready: wasDownloading && !studio.models.busy && !studio.models.error && studio.models.progress>=1
+    title: HomeTheme.t(ready ? "准备完成" : studio.models.error ? "下载未完成" : "准备创作资源")
+    dialogIcon: ready ? "check" : "download"
+    tone: studio.models.error ? HomeTheme.danger : HomeTheme.accent
+    width: Math.min(400,Overlay.overlay ? Overlay.overlay.width-40 : 400)
     closePolicy: studio.models.busy ? Popup.NoAutoClose : Popup.CloseOnEscape
-    Connections { target: studio.models; function onDownloadRequested() { dialog.open() } }
+    defaultAction: studio.models.busy ? null : ready ? downloadClose : downloadConfirm
+    Connections {
+        target: studio.models
+        function onDownloadRequested() { dialog.open() }
+        function onChanged() { if(studio.models.busy)dialog.wasDownloading=true }
+    }
+    onOpened: {termsConsent.checked=false;termsExpanded=false;sourceExpanded=false;wasDownloading=studio.models.busy}
     onClosed: studio.models.dismissRequest()
     contentItem: ColumnLayout {
         spacing: 14
-        Text { Layout.fillWidth: true; text: studio.models.requestDescription; wrapMode: Text.Wrap; color: HomeTheme.text; font.pixelSize: 13 }
-        RowLayout {
-            visible: studio.models.requested.indexOf("image")>=0; Layout.fillWidth: true; enabled: !studio.models.busy
-            HomeChoiceCard { Layout.fillWidth: true; title: "Q4 · 轻量"; detail: "整套约 9.28 GB"; selected: studio.imageQuant==="Q4_K"; onClicked: studio.imageQuant="Q4_K" }
-            HomeChoiceCard { Layout.fillWidth: true; title: "Q8 · 较高精度"; detail: "整套约 11.66 GB"; selected: studio.imageQuant==="Q8_0"; onClicked: studio.imageQuant="Q8_0" }
+        Label {
+            Layout.fillWidth: true
+            text: dialog.ready ? HomeTheme.t("已就绪，请重新点击生成")
+                : studio.models.error ? HomeTheme.t(studio.models.error.indexOf("磁盘")>=0 ? "空间不足，请清理后重试" : "下载中断，请重试")
+                : studio.models.busy ? HomeTheme.t(studio.models.status.indexOf("校验")===0 ? "正在校验…" : studio.models.status.indexOf("取消")>=0 ? "正在取消…" : "正在下载…")
+                : HomeTheme.t("首次使用需下载")+" "+studio.models.requestInfo.size
+            wrapMode: Text.Wrap; color: HomeTheme.secondary; font.pixelSize: 13
         }
-        Label { text: "下载源"; color: HomeTheme.secondary }
-        ComboBox {
-            objectName: "modelDownloadSource"; Layout.fillWidth: true; enabled: !studio.models.busy
-            model: ["Hugging Face · huggingface.co", "国内镜像 · hf-mirror.com"]
-            currentIndex: studio.models.endpoint==="https://hf-mirror.com" ? 1 : 0
-            onActivated: studio.models.endpoint=currentIndex===1 ? "https://hf-mirror.com" : "https://huggingface.co"
-        }
-        Text { Layout.fillWidth: true; text: "保存到："+studio.modelRoot; wrapMode: Text.WrapAnywhere; color: HomeTheme.secondary; font.pixelSize: 11 }
-        Text { Layout.fillWidth: true; text: "各模型保留上游许可，模型来源与版本可在模型管理中查看。"; wrapMode: Text.Wrap; color: HomeTheme.secondary; font.pixelSize: 11 }
-        ProgressBar { Layout.fillWidth: true; visible: studio.models.busy; value: studio.models.progress }
-        Text { Layout.fillWidth: true; visible: text.length>0; text: studio.models.error || studio.models.status; wrapMode: Text.Wrap; color: studio.models.error ? HomeTheme.danger : HomeTheme.secondary; font.pixelSize: 12 }
         RowLayout {
-            Layout.alignment: Qt.AlignRight
-            HomeButton { text: studio.models.busy ? "取消下载" : "关闭"; onClicked: studio.models.busy ? studio.models.cancel() : dialog.close() }
-            HomeButton { objectName: "confirmModelDownload"; visible: !studio.models.busy; text: "下载 / 修复"; primary: true; onClicked: studio.models.startDownload() }
+            visible: studio.models.busy
+            Layout.fillWidth: true; spacing: 12
+            ProgressBar {
+                id: downloadProgress; objectName: "modelDownloadProgress"
+                Layout.fillWidth: true; Layout.preferredHeight: 6
+                value: studio.models.progress; padding: 0
+                background: Rectangle { implicitHeight: 6; radius: 3; color: HomeTheme.dark ? HomeTheme.surface : "#d8e2e8" }
+                contentItem: Item { Rectangle { width: downloadProgress.visualPosition*parent.width; height: parent.height; radius: 3; color: HomeTheme.accent } }
+            }
+            Label { objectName: "modelDownloadPercent"; text: Math.floor(downloadProgress.position*100)+"%"; color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignRight }
+        }
+        // Consent remains explicit; the full terms open only when requested.
+        ColumnLayout {
+            visible: studio.models.sfxTermsRequired && !studio.models.busy && !dialog.ready
+            Layout.fillWidth: true; spacing: 6
+            RowLayout {
+                Layout.fillWidth: true
+                AppCheckBox { id: termsConsent; objectName: "soundModelTermsConsent"; text: HomeTheme.t("同意音效使用条款") }
+                Item { Layout.fillWidth: true }
+                HomeButton { text: HomeTheme.t(dialog.termsExpanded ? "收起" : "查看"); compact: true; quiet: true; onClicked: dialog.termsExpanded=!dialog.termsExpanded }
+            }
+            ScrollView {
+                visible: dialog.termsExpanded
+                Layout.fillWidth: true; Layout.preferredHeight: 150; contentWidth: availableWidth; clip: true
+                TextArea { text: studio.models.modelTerms(HomeTheme.english); textFormat: TextEdit.MarkdownText; readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap; color: HomeTheme.secondary; font.pixelSize: 12; onLinkActivated: link=>Qt.openUrlExternally(link); background: Rectangle { radius: 8; color: HomeTheme.preview } }
+            }
+        }
+        HomeCombo {
+            visible: dialog.sourceExpanded && !studio.models.busy
+            Layout.fillWidth: true; Layout.preferredHeight: 32
+            model: studio.models.sourceNames.map(function(name) {return HomeTheme.t(name)})
+            currentIndex: studio.models.sourceValues.indexOf(studio.models.endpoint)
+            onActivated: studio.models.endpoint=studio.models.sourceValues[currentIndex]
+        }
+        RowLayout {
+            Layout.fillWidth: true; spacing: 8
+            HomeButton { visible: !!studio.models.error && !studio.models.busy; text: HomeTheme.t("更换下载源"); quiet: true; compact: true; onClicked: dialog.sourceExpanded=!dialog.sourceExpanded }
+            Item { Layout.fillWidth: true }
+            HomeButton { id: downloadClose; text: HomeTheme.t(studio.models.busy ? "取消下载" : dialog.ready ? "完成" : "稍后"); primary: dialog.ready; implicitHeight: 28; onClicked: studio.models.busy ? studio.models.cancel() : dialog.close() }
+            HomeButton {
+                id: downloadConfirm
+                objectName: "confirmModelDownload"; visible: !studio.models.busy && !dialog.ready
+                implicitHeight: 28
+                text: HomeTheme.t(studio.models.error ? "重试" : "下载"); primary: true
+                enabled: !studio.models.sfxTermsRequired || termsConsent.checked
+                onClicked: {if(studio.models.sfxTermsRequired)studio.models.acceptSfxTerms();studio.models.startDownload()}
+            }
         }
     }
 }

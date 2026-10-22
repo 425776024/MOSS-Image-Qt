@@ -1,3 +1,6 @@
+#ifdef MOSS_APP_STORE
+#include "AppleAssetDownload.h"
+#endif
 #include "ModelManager.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -39,11 +42,19 @@ ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport
     const auto data=QJsonDocument::fromJson(catalog.isEmpty()?read(":/models/config/models.json"):catalog).object();
     m_assets=parse(data);m_groups=data["groups"].toArray().toVariantList();
     QSettings settings;
+#ifdef MOSS_APP_STORE
+    m_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/models";
+#else
     m_root=qEnvironmentVariable("MOSS_MODEL_ROOT",settings.value("publicModelRoot").toString());
+#endif
     if(m_root.isEmpty())m_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/models";
     m_root=QDir(m_root).absolutePath();
-    m_endpoint=settings.value("modelEndpoint","https://huggingface.co").toString();
-    if(m_endpoint!="https://hf-mirror.com")m_endpoint="https://huggingface.co";
+#ifdef MOSS_APP_STORE
+    m_endpoint=settings.value("storeModelEndpoint","apple-assets").toString();
+#else
+    m_endpoint=settings.value("modelEndpoint","https://hf-mirror.com").toString();
+#endif
+    if(!sourceValues().contains(m_endpoint))m_endpoint=sourceValues().first();
     m_quant=qEnvironmentVariable("MOSS_IMAGE_QUANT",settings.value("imageQuant","Q8_0").toString());
     if(m_quant!="Q4_K"&&m_quant!="Q8_0")m_quant="Q8_0";
     if(!settings.contains("imageQuant")&&!qEnvironmentVariableIsSet("MOSS_IMAGE_QUANT")&&ready("image-q4")&&!ready("image-q8"))m_quant="Q4_K";
@@ -53,12 +64,33 @@ ModelManager::~ModelManager() {
     m_part.close();
 }
 void ModelManager::setRoot(QString value) {
+    if(!rootSelectable())return;
     if(locked()||value.isEmpty()||!QDir::isAbsolutePath(value))return;
     m_root=QDir::cleanPath(value);QSettings().setValue("publicModelRoot",m_root);m_error.clear();emit changed();
 }
+QStringList ModelManager::sourceNames() const {
+#ifdef MOSS_APP_STORE
+    return {"Apple · App Store 资源包", "国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+#else
+    return {"国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+#endif
+}
+QStringList ModelManager::sourceValues() const {
+#ifdef MOSS_APP_STORE
+    return {"apple-assets", "https://hf-mirror.com", "https://huggingface.co"};
+#else
+    return {"https://hf-mirror.com", "https://huggingface.co"};
+#endif
+}
 void ModelManager::setEndpoint(QString value) {
-    if(locked()||(value!="https://huggingface.co"&&value!="https://hf-mirror.com"))return;
-    m_endpoint=value;QSettings().setValue("modelEndpoint",value);emit changed();
+    if(locked()||!sourceValues().contains(value))return;
+    m_endpoint=value;
+#ifdef MOSS_APP_STORE
+    QSettings().setValue("storeModelEndpoint",value);
+#else
+    QSettings().setValue("modelEndpoint",value);
+#endif
+    emit changed();
 }
 void ModelManager::setImageQuant(QString value) {
     if(locked()||(value!="Q4_K"&&value!="Q8_0"))return;
@@ -112,8 +144,22 @@ QVariantList ModelManager::groups() const {
 double ModelManager::partialBytes() const {
     qint64 bytes=0;for(const auto &a:m_assets)if(safePath(a.path+".part")&&QFileInfo(m_root+"/"+a.path+".part").isFile())bytes+=QFileInfo(m_root+"/"+a.path+".part").size();return bytes;
 }
+bool ModelManager::sfxTermsAccepted() const {
+    return QSettings().value("sfxModelTermsVersion").toString()=="2026-10-22";
+}
+bool ModelManager::sfxTermsRequired() const {
+    return expand(m_requested).contains("sfx")&&!sfxTermsAccepted();
+}
+void ModelManager::acceptSfxTerms() {
+    QSettings settings;settings.setValue("sfxModelTermsVersion","2026-10-22");settings.sync();emit changed();
+}
+QString ModelManager::modelTerms(bool english) const {
+    const auto text=QString::fromUtf8(read(":/model-terms/docs/model-terms.md"));
+    const auto section=text.indexOf("## English");
+    return english&&section>=0?text.mid(section):text.left(section>=0?section:text.size());
+}
 bool ModelManager::ensure(QStringList capabilities) {
-    QStringList missing;for(const auto &id:expand(capabilities))if(!ready(id))missing<<id;
+    QStringList missing;for(const auto &id:expand(capabilities))if(!ready(id)||(id=="sfx"&&!sfxTermsAccepted()))missing<<id;
     if(missing.isEmpty())return true;
     // Keep the logical image group so Q4/Q8 can be selected in the dialog.
     m_requested=capabilities;m_error.clear();emit changed();emit downloadRequested();return false;
@@ -123,13 +169,17 @@ void ModelManager::requestDownload(QString group) {
     m_requested={group};m_error.clear();emit changed();emit downloadRequested();
 }
 void ModelManager::dismissRequest(){if(!busy()){m_requested.clear();emit changed();}}
-QString ModelManager::describeRequest() const {
+QVariantMap ModelManager::requestInfo() const {
     QStringList names;qint64 bytes=0;
     for(const auto &id:expand(m_requested)) {
         for(const auto &r:m_groups)if(r.toMap()["id"]==id)names<<r.toMap()["title"].toString();
         for(const auto &a:selected({id}))if(!present(a))bytes+=a.bytes;
     }
-    return names.join("、")+"\n待补齐文件约 "+sizeText(bytes)+"，已有文件会校验后复用。下载完成后请重新点击生成。";
+    return {{"titles",names},{"size",sizeText(bytes)}};
+}
+QString ModelManager::describeRequest() const {
+    const auto info=requestInfo();
+    return info["titles"].toStringList().join("、")+"\n待补齐文件约 "+info["size"].toString()+"，已有文件会校验后复用。下载完成后请重新点击生成。";
 }
 bool ModelManager::acquire() {
     if(locked())return false;
@@ -139,8 +189,10 @@ bool ModelManager::acquire() {
     return true;
 }
 void ModelManager::startDownload() {
+    if(sfxTermsRequired()){m_error="Please accept the sound model terms before downloading or using these models. / 请先同意音效模型使用条款。";emit changed();return;}
     const auto files=selected(expand(m_requested));if(files.isEmpty()||!acquire())return;
     qint64 required=0;for(const auto &a:files)if(!present(a))required+=std::max<qint64>(0,a.bytes-QFileInfo(m_root+"/"+a.path+".part").size());
+    if(m_endpoint=="apple-assets"){qint64 largest=0;for(const auto &a:files)largest=std::max(largest,a.bytes);required+=largest;}
     QStorageInfo storage(m_root);
     if(storage.isValid()&&storage.bytesAvailable()<required+64*1024*1024){m_lock.reset();m_error="磁盘空间不足，请先清理模型或更换目录";emit changed();return;}
     m_queue=files;m_busy=true;m_cancelled=false;m_verifyOnly=false;m_error.clear();m_index=0;m_done=0;m_total=0;m_progress=0;
@@ -151,7 +203,11 @@ void ModelManager::verifyGroup(QString id) {
     m_queue=files;m_busy=true;m_cancelled=false;m_verifyOnly=true;m_error.clear();m_index=0;m_done=0;m_total=0;m_progress=0;
     for(const auto &a:files)m_total+=a.bytes;emit changed();next();
 }
-void ModelManager::cancel() { if(!m_busy)return;m_cancelled=true;if(m_reply)m_reply->abort();else {m_status="正在取消…";emit changed();} }
+void ModelManager::cancel() {
+#ifdef MOSS_APP_STORE
+    for(auto transport:findChildren<AppleAssetDownload *>())transport->cancel();
+#endif
+    if(!m_busy)return;m_cancelled=true;if(m_reply)m_reply->abort();else {m_status="正在取消…";emit changed();} }
 void ModelManager::finish(QString error,bool cancelled) {
     m_part.close();m_lock.reset();m_busy=false;m_error=error;
     m_status=cancelled?"已取消，下载残留可续传或清理":error.isEmpty()?(m_verifyOnly?"所选模型 SHA-256 校验通过":"模型已就绪，请重新点击生成"):"操作未完成";
@@ -174,7 +230,9 @@ void ModelManager::next() {
         if(!out.open(QIODevice::WriteOnly)||out.write(data)!=data.size()||!out.commit()){finish("无法写入模型配置");return;}
         advance();return;
     }
-    if(QFileInfo(path+".part").size()==a.bytes){checkFile(a,path+".part",true);return;}
+    const bool noticeReady=m_endpoint!="apple-assets" ||
+        (safePath(".licenses/"+a.sha256+".txt") && QFileInfo(m_root+"/.licenses/"+a.sha256+".txt").isFile());
+    if(QFileInfo(path+".part").size()==a.bytes && noticeReady){checkFile(a,path+".part",true);return;}
     transfer(a);
 }
 void ModelManager::checkFile(ModelAsset a,QString path,bool install) {
@@ -203,6 +261,24 @@ void ModelManager::checkFile(ModelAsset a,QString path,bool install) {
 void ModelManager::transfer(ModelAsset a) {
     const auto path=m_root+"/"+a.path+".part";
     if(!safePath(a.path+".part")){finish("下载路径包含符号链接");return;}
+#ifdef MOSS_APP_STORE
+    if(m_endpoint=="apple-assets") {
+        const auto notice=".licenses/"+a.sha256+".txt";
+        if(!safePath(notice)||!QDir().mkpath(m_root+"/.licenses")){finish("无法保存模型许可文件");return;}
+        auto transport=new AppleAssetDownload(this);
+        m_status="Apple 资源包 · "+a.path;emit changed();
+        connect(transport,&AppleAssetDownload::progress,this,[this,a](double value){
+            m_progress=double(m_done+qint64(a.bytes*value))/std::max<qint64>(1,m_total);emit changed();
+        });
+        connect(transport,&AppleAssetDownload::completed,this,[this,transport,a,path](QString error){
+            transport->deleteLater();
+            if(m_cancelled){finish({},true);return;}
+            if(!error.isEmpty()){finish("Apple 资源包未完成："+error+"。可重试或手动选择镜像源。");return;}
+            checkFile(a,path,true);
+        });
+        transport->start("model-"+a.sha256,a.path,path,m_root+"/"+notice,a.bytes);return;
+    }
+#endif
     m_part.setFileName(path);
     if(!m_part.open(QIODevice::ReadWrite)){finish("无法写入模型文件："+m_part.errorString());return;}
     qint64 offset=m_part.size();if(offset>=a.bytes){if(!m_part.resize(0)){finish("无法重置下载文件");return;}offset=0;}

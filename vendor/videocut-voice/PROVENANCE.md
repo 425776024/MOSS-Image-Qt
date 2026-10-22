@@ -2,19 +2,24 @@
 
 Imported on 2026-10-20 at the user's request.
 
-- `src/` and `include/`: selected native Hojo TTS backend, tensor/ORT helpers,
-  text frontend and normalization code from the user's
-  `VideoCut-Qt` checkout.
-- `worker.cpp` and `src/MossModelAdapter.cpp`: Moss adapters. The worker reads
-  a request file, normalizes/chunks text, uses a 3–30 second reference recording,
-  and writes 24 kHz PCM WAV. This integration currently selects CPU inference.
-- `assets/voices/catalog.json` and its WAV files: VideoCut-Qt's 28 selected
-  synthetic voice presets. Preserve the catalog's individual source, license
-  and synthetic-reference fields. Other copied reference assets retain their
-  existing provenance and are not added to the active voice selector.
-- Hojo ONNX weights and WeTextProcessing FST files are downloaded on demand
-  from the pinned public catalog. Historical upstream evidence is under `licenses/hojo`;
-  the current FST download revision and hashes are in `config/models.json`.
+- `worker.cpp`: Moss adapter using the audio.cpp C ABI, Ming-3.0 Q8 CPU
+  inference, built-in tag-aware chunking and native 44.1 kHz PCM WAV output.
+  The same worker is compiled for public and App Store editions.
+- Runtime: https://github.com/0xShug0/audio.cpp at
+  `db433f3e6dfe0159828532958698d56529bb3c5c` (Apache-2.0).
+  `scripts/prepare_ming.py` builds a Ming-only deployment library, excludes
+  eSpeak and download tools, hides ggml symbols and replaces debugger
+  subprocess backtraces with native stack symbols.
+- Weights: https://huggingface.co/audio-cpp/Ming-3.0-TTS-0.5B-GGUF at
+  `2eb8d37c7f10672e69c8aa33091baa04c461b66c` (upstream inclusionAI MIT).
+  The Q8 file is 1,742,280,896 bytes; hash is pinned in `config/models.json`.
+- `assets/voices/catalog.json` and its WAV files retain the existing selected
+  synthetic voice references, individual licenses and consent metadata.
+  Custom voices retain their reference audio and transcript. Changing engines
+  does not establish similarity or accent retention for each reference.
+- The retired Hojo sources, headers and model notices have been removed.
+  Hash-matched local Hojo weights and obsolete asset archives were removed
+  from this checkout; existing voice recordings and generated audio are retained.
 - Text-to-SFX uses `sa3.cpp` from the user's **VideoCut** checkout at
   `VideoCut/.local/ai-models/runtime/src/sa3.cpp`,
   revision `10d0373ec4f3e195cfee9bc73a39feefa933ecab`, with its bundled ggml

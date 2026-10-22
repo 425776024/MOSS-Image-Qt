@@ -25,16 +25,18 @@ Column {
     onActiveChanged: if(!active)player.pause()
     Rectangle {
         id: stage; objectName: "inlineVideoStage"
-        width: Math.min(parent.width,(root.expanded ? 520 : root.compact ? Math.min(84,parent.width) : 210)*root.ratio); height: width/root.ratio
+        width: Math.min(parent.width,(root.expanded ? 520 : root.compact ? 84 : 210)*root.ratio); height: width/root.ratio
         color: "#101214"; radius: 6; clip: true
         HoverHandler { id: hover }
         VideoOutput { id: output; anchors.fill: parent; fillMode: VideoOutput.PreserveAspectFit; endOfStreamPolicy: VideoOutput.KeepLastFrame }
         Image { id: poster; anchors.fill: parent; visible: player.source.toString() === ""; source: root.asset.poster || ""; fillMode: Image.PreserveAspectFit; asynchronous: true; retainWhileLoading: true; sourceSize: Qt.size(1280,1280) }
         TapHandler { onTapped: root.playPause() }
         IconButton {
-            visible: !root.playing || (root.compact && (hover.hovered || activeFocus)); anchors.centerIn: parent
+            opacity: hover.hovered || hovered || visualFocus ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 120 } }
+            anchors.centerIn: parent
             width: root.compact ? 28 : 36; height: width; iconSize: root.compact ? 14 : 17
-            glyph: root.playing ? "pause" : "play"; iconColor: "white"; hint: root.playing ? "暂停视频" : "播放视频"
+            glyph: root.playing ? "pause" : "play"; iconColor: "white"; hint: root.playing ? HomeTheme.t("暂停视频") : HomeTheme.t("播放视频")
             background: Rectangle { radius: width/2; color: "#99101214"; border.color: "#50ffffff" }
             onClicked: root.playPause()
         }
@@ -46,10 +48,10 @@ Column {
             color: "#b0101214"
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4; spacing: 4
-                IconButton { id: playButton; glyph: root.playing ? "pause" : "play"; hint: root.playing ? "暂停视频" : "播放视频"; iconColor: "white"; onClicked: root.playPause() }
-                AppSlider { id: progress; Layout.fillWidth: true; from: 0; to: Math.max(1,player.duration); value: player.position; onMoved: player.position=value; Accessible.name: "视频进度"; accentColor: "#e0ffffff"; thumbColor: "white"; trackGradient: Gradient { GradientStop { position: 0; color: "#60ffffff" } GradientStop { position: 1; color: "#60ffffff" } } }
+                IconButton { id: playButton; glyph: root.playing ? "pause" : "play"; hint: root.playing ? HomeTheme.t("暂停视频") : HomeTheme.t("播放视频"); iconColor: "white"; onClicked: root.playPause() }
+                AppSlider { id: progress; Layout.fillWidth: true; from: 0; to: Math.max(1,player.duration); value: player.position; onMoved: player.position=value; Accessible.name: HomeTheme.t("视频进度"); accentColor: "#e0ffffff"; thumbColor: "white"; trackGradient: Gradient { GradientStop { position: 0; color: "#60ffffff" } GradientStop { position: 1; color: "#60ffffff" } } }
                 Text { text: root.time(player.position/1000)+" / "+root.time(player.duration/1000 || root.asset.duration); color: "#eeffffff"; font.pixelSize: 9; font.family: "Menlo" }
-                IconButton { id: expandButton; visible: root.allowExpand; glyph: "expand"; iconSize: 13; iconColor: "white"; hint: root.expanded ? "收起视频" : "展开视频"; onClicked: root.expandRequested() }
+                IconButton { id: expandButton; visible: root.allowExpand; glyph: "expand"; iconSize: 13; iconColor: "white"; hint: root.expanded ? HomeTheme.t("收起视频") : HomeTheme.t("展开视频"); onClicked: root.expandRequested() }
             }
         }
     }

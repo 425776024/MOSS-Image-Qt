@@ -1,6 +1,11 @@
 #include "avatar_runtime.h"
 #include "media_io.h"
+#ifdef __APPLE__
+#include <CommonCrypto/CommonDigest.h>
+#else
 #include <openssl/evp.h>
+#endif
+#include <limits>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -52,33 +57,64 @@ std::filesystem::path member(const std::filesystem::path& root, const std::strin
     if (b == result.end() || *a != *b) throw std::runtime_error("形象资源链接越界");
   return result;
 }
+namespace {
+class Sha256 {
+public:
+  Sha256() {
+#ifdef __APPLE__
+    if (CC_SHA256_Init(&context_) != 1) throw std::runtime_error("SHA256 初始化失败");
+#else
+    if (!context_ || EVP_DigestInit_ex(context_.get(), EVP_sha256(), nullptr) != 1)
+      throw std::runtime_error("SHA256 初始化失败");
+#endif
+  }
+  void update(const void* bytes, size_t size) {
+#ifdef __APPLE__
+    const auto* cursor = static_cast<const unsigned char*>(bytes);
+    while (size) {
+      const auto chunk = static_cast<CC_LONG>(std::min(size, size_t(std::numeric_limits<CC_LONG>::max())));
+      if (CC_SHA256_Update(&context_, cursor, chunk) != 1) throw std::runtime_error("SHA256 校验失败");
+      cursor += chunk; size -= chunk;
+    }
+#else
+    if (EVP_DigestUpdate(context_.get(), bytes, size) != 1) throw std::runtime_error("SHA256 校验失败");
+#endif
+  }
+  std::string finish() {
+    unsigned char digest[32];
+#ifdef __APPLE__
+    if (CC_SHA256_Final(digest, &context_) != 1) throw std::runtime_error("SHA256 失败");
+#else
+    unsigned int length = 0;
+    if (EVP_DigestFinal_ex(context_.get(), digest, &length) != 1 || length != sizeof(digest))
+      throw std::runtime_error("SHA256 失败");
+#endif
+    std::ostringstream result;
+    for (auto byte : digest) result << std::hex << std::setw(2) << std::setfill('0') << int(byte);
+    return result.str();
+  }
+private:
+#ifdef __APPLE__
+  CC_SHA256_CTX context_{};
+#else
+  std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> context_{EVP_MD_CTX_new(), EVP_MD_CTX_free};
+#endif
+};
+}
 std::string sha256(const void* bytes, size_t size) {
-  unsigned char digest[EVP_MAX_MD_SIZE]; unsigned int length;
-  if(EVP_Digest(bytes,size,digest,&length,EVP_sha256(),nullptr)!=1)
-    throw std::runtime_error("SHA256 校验失败");
-  std::ostringstream result;
-  for(unsigned int i=0;i<length;++i)
-    result << std::hex << std::setw(2) << std::setfill('0') << int(digest[i]);
-  return result.str();
+  Sha256 hash; hash.update(bytes, size); return hash.finish();
 }
 std::string sha256(const std::filesystem::path& path) {
   std::ifstream in(path, std::ios::binary);
   if (!in) throw std::runtime_error("无法校验 " + path.string());
-  auto ctx = std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)>(EVP_MD_CTX_new(), EVP_MD_CTX_free);
-  if (!ctx || EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr) != 1)
-    throw std::runtime_error("SHA256 初始化失败");
+  Sha256 hash;
   std::array<char, 1024 * 256> buffer{};
   while (in) {
     checkCancelled(); in.read(buffer.data(), buffer.size());
-    if (EVP_DigestUpdate(ctx.get(), buffer.data(), in.gcount()) != 1)
-      throw std::runtime_error("SHA256 校验失败");
+    hash.update(buffer.data(), static_cast<size_t>(in.gcount()));
   }
   if (!in.eof()) throw std::runtime_error("资源读取失败");
-  unsigned char digest[EVP_MAX_MD_SIZE]; unsigned int length;
-  if (EVP_DigestFinal_ex(ctx.get(), digest, &length) != 1) throw std::runtime_error("SHA256 失败");
-  std::ostringstream result;
-  for (unsigned int i = 0; i < length; ++i) result << std::hex << std::setw(2) << std::setfill('0') << int(digest[i]);
-  return result.str();
+  return hash.finish();
 }
 AudioPlan readAudioPlan(const std::filesystem::path& path) {
   const auto plan = readJson(path);

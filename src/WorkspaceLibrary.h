@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QUrl>
 #include <QColor>
 
@@ -11,6 +12,8 @@ class WorkspaceLibrary : public QObject {
     Q_PROPERTY(QString appearanceMode READ appearanceMode WRITE setAppearanceMode NOTIFY preferencesChanged)
     Q_PROPERTY(QString themePreset READ themePreset WRITE setThemePreset NOTIFY preferencesChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY preferencesChanged)
+    Q_PROPERTY(QString languagePreference READ languagePreference NOTIFY preferencesChanged)
+    Q_PROPERTY(QString appName READ appName NOTIFY preferencesChanged)
     Q_PROPERTY(QString root READ root CONSTANT)
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(bool canRestoreAvatar READ canRestoreAvatar NOTIFY avatarsChanged)
@@ -22,11 +25,15 @@ public:
     QString appearanceMode() const { return m_appearance; }
     QString themePreset() const { return m_theme; }
     QString language() const { return m_language; }
+    QString languagePreference() const { return m_languagePreference; }
+    QString appName() const { return m_language == "zh" ? QStringLiteral("新身数字人") : QStringLiteral("XAvatar"); }
+    static QString resolveLanguage(const QStringList &uiLanguages);
     void setAppearanceMode(QString value);
     void setThemePreset(QString value);
     void setLanguage(QString value);
+    void setSessionLanguage(QString value);
     bool canRestoreAvatar() const { return !m_archived.isEmpty(); }
-    Q_INVOKABLE QString importAvatar(QUrl source, QString name);
+    Q_INVOKABLE QString importAvatar(QUrl source, QString name,QVariantMap generationRecipe={});
     Q_INVOKABLE QString renameAvatar(QString id, QString name);
     Q_INVOKABLE QString removeAvatar(QString id);
     Q_INVOKABLE QString restoreAvatar();
@@ -38,6 +45,6 @@ signals:
     void preferencesChanged();
 private:
     bool save(const QVariantList &avatars, const QVariantList &archived) const;
-    QString m_root, m_appearance, m_theme, m_language;
+    QString m_root, m_appearance, m_theme, m_language, m_languagePreference;
     QVariantList m_avatars, m_archived;
 };

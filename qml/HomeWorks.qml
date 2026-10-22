@@ -30,7 +30,7 @@ Item {
     ColumnLayout {
         anchors.fill: parent; anchors.leftMargin: root.width < 1000 ? 20 : 30; anchors.rightMargin: root.width < 1000 ? 20 : 30; anchors.topMargin: 22; anchors.bottomMargin: 14; spacing: 0
         HomeHeader {
-            Layout.fillWidth: true; title: "我的作品"; detail: HomeTheme.count(root.history ? studio.history.length : studio.creationPages.length, "作品")
+            Layout.fillWidth: true; title: HomeTheme.t("我的作品"); detail: HomeTheme.count(root.history ? studio.history.length : studio.creationPages.length, HomeTheme.t("作品"))
             HomeButton { text: HomeTheme.t("导入工程"); iconName: "folder"; enabled: !studio.busy; onClicked: root.importProject() }
             HomeButton { objectName: "homeCreateProject"; text: HomeTheme.t("新建作品"); iconName: "plus"; primary: true; enabled: !studio.busy; onClicked: root.createProject() }
         }
@@ -38,7 +38,7 @@ Item {
             Layout.fillWidth: true; Layout.topMargin: 18; spacing: 12
             HomeField { id: search; objectName: "homeWorkSearch"; search: true; Layout.fillWidth: true; placeholderText: HomeTheme.t("搜索作品"); Accessible.name: placeholderText }
             HomeButton {
-                text: HomeTheme.t(root.sortByName ? "作品名称" : "最近修改"); iconName: "chevron"
+                text: HomeTheme.t(root.sortByName ? HomeTheme.t("作品名称") : HomeTheme.t("最近修改")); iconName: "chevron"
                 onClicked: sortMenu.popup()
                 Menu { id: sortMenu
                     MenuItem { text: HomeTheme.t("最近修改"); checkable: true; checked: !root.sortByName; onTriggered: root.sortByName = false }
@@ -50,7 +50,7 @@ Item {
                 HomeButton { iconName: "list"; hint: HomeTheme.t("列表视图"); active: !root.grid; onClicked: root.grid = false }
             }
         }
-        HomeTabs { Layout.topMargin: 12; labels: ["创作工程", "生成记录"]; currentIndex: root.history ? 1 : 0; onSelected: index => root.history = index === 1 }
+        HomeTabs { Layout.topMargin: 12; labels: [HomeTheme.t("创作工程"), HomeTheme.t("生成记录")]; currentIndex: root.history ? 1 : 0; onSelected: index => root.history = index === 1 }
         Rectangle { Layout.fillWidth: true; height: 1; color: HomeTheme.line }
         RowLayout {
             visible: !root.grid && root.entries.length > 0; Layout.fillWidth: true; Layout.topMargin: 12; Layout.preferredHeight: 38; spacing: 12
@@ -64,7 +64,7 @@ Item {
             Layout.fillWidth: true; Layout.fillHeight: true; Layout.topMargin: root.grid ? 16 : 0
             HomeEmpty {
                 anchors.centerIn: parent; visible: root.entries.length === 0
-                title: search.text ? "没有找到匹配的作品" : "从第一件作品开始"; description: "新建图像作品，或导入已有工程继续创作。"; iconName: "document"
+                title: search.text ? HomeTheme.t("没有找到匹配的作品") : HomeTheme.t("从第一件作品开始"); description: HomeTheme.t("新建图像作品，或导入已有工程继续创作。"); iconName: "document"
             }
             ListView {
                 id: list; visible: !root.grid; anchors.fill: parent; clip: true; model: root.entries
@@ -86,14 +86,14 @@ Item {
                         ColumnLayout {
                             Layout.fillWidth: true; Layout.preferredWidth: 190; spacing: 5
                             Text { Layout.fillWidth: true; text: rowDelegate.modelData.name; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 18; font.weight: Font.DemiBold }
-                            Text { text: HomeTheme.t(root.history ? "生成记录" : "本地作品"); color: HomeTheme.secondary; font.pixelSize: 14 }
+                            Text { text: HomeTheme.t(root.history ? HomeTheme.t("生成记录") : HomeTheme.t("本地作品")); color: HomeTheme.secondary; font.pixelSize: 14 }
                         }
-                        Text { Layout.preferredWidth: 110; text: HomeTheme.t(root.history ? (modelData.row.kind === "image" ? "图像创作" : modelData.row.kind === "edit" ? "局部重绘" : "图片数字人") : modelData.row.video ? "图片数字人" : "图像创作"); color: HomeTheme.secondary; font.pixelSize: 15 }
+                        Text { Layout.preferredWidth: 110; text: HomeTheme.t(root.history ? (modelData.row.kind === "image" ? HomeTheme.t("图像创作") : modelData.row.kind === "edit" ? HomeTheme.t("局部重绘") : HomeTheme.t("图片数字人")) : modelData.row.video ? HomeTheme.t("图片数字人") : HomeTheme.t("图像创作")); color: HomeTheme.secondary; font.pixelSize: 15 }
                         Text { Layout.preferredWidth: 110; text: modelData.row.document ? modelData.row.document.width + " × " + modelData.row.document.height : "—"; color: HomeTheme.secondary; font.pixelSize: 14 }
                         Text { Layout.preferredWidth: 145; text: root.modified(modelData.row); color: HomeTheme.secondary; font.pixelSize: 15 }
                         HomeButton { text: HomeTheme.t("打开"); quiet: true; enabled: !studio.busy; onClicked: root.openWork(rowDelegate.modelData.index) }
                         HomeButton {
-                            visible: !root.history; implicitWidth: 32; iconName: "more"; quiet: true; hint: HomeTheme.english ? "Project actions" : "作品管理"; enabled: !studio.busy
+                            visible: !root.history; implicitWidth: 32; iconName: "more"; quiet: true; hint: HomeTheme.english ? "Project actions" : HomeTheme.t("作品管理"); enabled: !studio.busy
                             onClicked: { actions.targetIndex = rowDelegate.modelData.index; actions.targetName = rowDelegate.modelData.name; actions.popup() }
                         }
                     }
@@ -127,7 +127,7 @@ Item {
         }
         Rectangle { Layout.fillWidth: true; height: 1; color: HomeTheme.line }
         RowLayout { Layout.fillWidth: true; Layout.topMargin: 8
-            Text { text: HomeTheme.count(root.entries.length, "作品"); color: HomeTheme.secondary; font.pixelSize: 14 }
+            Text { text: HomeTheme.count(root.entries.length, HomeTheme.t("作品")); color: HomeTheme.secondary; font.pixelSize: 14 }
             Item { Layout.fillWidth: true }
             HomeButton { visible: studio.canRestorePage; text: HomeTheme.t("恢复上次移除"); quiet: true; implicitHeight: 32; enabled: !studio.busy; onClicked: studio.restoreDeletedPage() }
             HomeButton { text: HomeTheme.t("打开作品目录"); iconName: "folder"; quiet: true; implicitHeight: 32; onClicked: studio.openOutputs() }

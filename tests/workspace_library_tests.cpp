@@ -6,10 +6,41 @@
 #include <QFile>
 #include <QDir>
 #include <QDataStream>
+#include <QSettings>
 
 class WorkspaceLibraryTest : public QObject {
     Q_OBJECT
+    QTemporaryDir m_settings;
 private slots:
+    void initTestCase() {
+        QVERIFY(m_settings.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,m_settings.path());
+    }
+    void systemLanguageResolution() {
+        QCOMPARE(WorkspaceLibrary::resolveLanguage({"zh-Hans-CN", "en-US"}), QString("zh"));
+        QCOMPARE(WorkspaceLibrary::resolveLanguage({"en-GB", "zh-CN"}), QString("en"));
+        QCOMPARE(WorkspaceLibrary::resolveLanguage({"zh_TW"}), QString("zh"));
+        QCOMPARE(WorkspaceLibrary::resolveLanguage({"fr-FR"}), QString("en"));
+        QCOMPARE(WorkspaceLibrary::resolveLanguage({}), QString("en"));
+    }
+    void languagePreferenceAndSessionOverride() {
+        QTemporaryDir directory;
+        WorkspaceLibrary library(directory.path());
+        QCOMPARE(library.languagePreference(),QString("system"));
+        library.setLanguage("en");
+        QCOMPARE(library.appName(),QString("XAvatar"));
+        library.setSessionLanguage("zh");
+        QCOMPARE(library.appName(),QString::fromUtf8("新身数字人"));
+        QCOMPARE(QSettings().value("home/language").toString(),QString("en"));
+        WorkspaceLibrary restored(directory.path());
+        QCOMPARE(restored.language(),QString("en"));
+        restored.setLanguage("system");
+        WorkspaceLibrary automatic(directory.path());
+        QCOMPARE(automatic.languagePreference(),QString("system"));
+        automatic.setLanguage("invalid");
+        QCOMPARE(automatic.languagePreference(),QString("system"));
+    }
     void avatarLibraryOwnsItsSourceAndRestoresAcrossRestart() {
         QTemporaryDir dir;
         const auto source = dir.filePath("portrait.png");
@@ -31,6 +62,22 @@ private slots:
         QVERIFY(restored.avatars().isEmpty()); QVERIFY(restored.restoreAvatar().isEmpty());
         QCOMPARE(restored.avatars().first().toMap()["name"].toString(), QString("我的形象"));
         QVERIFY(!restored.canRestoreAvatar()); QCOMPARE(QImage(ownedPath), image);
+    }
+    void generatedAvatarOwnsImageAndPersistsRecipe(){
+        QTemporaryDir root;const auto source=root.filePath("generated.png");QImage image(16,24,QImage::Format_RGB32);image.fill(Qt::blue);QVERIFY(image.save(source));
+        WorkspaceLibrary library(root.path());QVERIFY(library.importAvatar(QUrl::fromLocalFile(source),"New avatar",{{"engine","MOSS-Image"},{"prompt","A fictional person"}}).isEmpty());
+        const auto row=library.avatars().first().toMap();QVERIFY(row["synthetic"].toBool());const auto owned=QUrl(row["url"].toString()).toLocalFile();QVERIFY(owned!=source);
+        QFile::remove(source);QVERIFY(QFileInfo::exists(owned));WorkspaceLibrary reopened(root.path());
+        QCOMPARE(reopened.avatars().first().toMap()["generationRecipe"].toMap()["prompt"].toString(),QString("A fictional person"));
+    }
+    void speechStylesInvalidateAudioAndRoundTrip(){
+        SoundPlan sound;QCOMPARE(sound.settings()["emotion"].toString(),QString("中性"));
+        sound.setResult("speechResult","old.wav");sound.set("emotion","高兴");
+        QVERIFY(sound.settings()["speechResult"].toString().isEmpty());
+        sound.set("dialect","cantonese");QCOMPARE(sound.settings()["emotion"].toString(),QString("中性"));
+        SoundPlan restored;restored.restore(sound.json());QCOMPARE(restored.settings()["dialect"].toString(),QString("cantonese"));
+        restored.set("emotion","悲伤");QCOMPARE(restored.settings()["dialect"].toString(),QString("standard"));
+        restored.set("emotion","unsupported");QCOMPARE(restored.settings()["emotion"].toString(),QString("悲伤"));
     }
     void voiceImportRequiresManualTranscriptAndKeepsManagedAudio() {
         QTemporaryDir dir;
