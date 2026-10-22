@@ -74,11 +74,11 @@ def unzip(archive, destination, prefix):
 
 
 def cmake(source, build, *options):
-    manifest = (ROOT / 'config/windows.manifest').as_posix()
+    manifest_overlay = (ROOT / 'config/windows-manifest.cmake').as_posix()
     run('cmake', '-S', source, '-B', build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_C_FLAGS=/utf-8 /DWIN32_LEAN_AND_MEAN /DNOMINMAX',
         '-DCMAKE_CXX_FLAGS=/utf-8 /bigobj /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_USE_MATH_DEFINES',
-        f'-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:EMBED /MANIFESTINPUT:"{manifest}"',
+        f'-DCMAKE_PROJECT_INCLUDE={manifest_overlay}',
         '-DBUILD_SHARED_LIBS=OFF', '-DGGML_NATIVE=OFF', '-DGGML_AVX=OFF',
         '-DGGML_AVX2=OFF', '-DGGML_FMA=OFF', '-DGGML_F16C=OFF',
         '-DGGML_AVX512=OFF', '-DGGML_CCACHE=OFF', *options)

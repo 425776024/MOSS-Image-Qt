@@ -1,11 +1,14 @@
 """Exercise release boundaries without requiring a Windows build host."""
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,6 +25,52 @@ release = module('windows_release', 'scripts/public_release.py')
 
 
 class WindowsDistributionTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('cmake') and shutil.which('ninja'), 'CMake and Ninja are required')
+    def test_compiler_probe_and_nested_executable_manifests(self):
+        # On Windows this uses the exact production configure helper, so a
+        # global linker override that breaks try_compile fails before the
+        # expensive dependency build. Other hosts exercise target discovery.
+        with tempfile.TemporaryDirectory(prefix='moss manifest ') as tmp:
+            root = Path(tmp)
+            source, output = root / 'source', root / 'build'
+            (source / 'nested').mkdir(parents=True)
+            overlay = (ROOT / 'config/windows-manifest.cmake').as_posix()
+            (source / 'main.cpp').write_text('int main() { return 0; }\n')
+            (source / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
+project(ManifestProbe LANGUAGES C CXX)
+if(NOT MSVC)
+    set(MSVC TRUE)
+    include("''' + overlay + '''")
+endif()
+add_executable(manifest_probe main.cpp)
+add_library(probe_library STATIC main.cpp)
+add_subdirectory(nested)
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/main-sources.txt" CONTENT "$<TARGET_PROPERTY:manifest_probe,SOURCES>")
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/nested-sources.txt" CONTENT "$<TARGET_PROPERTY:nested_probe,SOURCES>")
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/library-sources.txt" CONTENT "$<TARGET_PROPERTY:probe_library,SOURCES>")
+''')
+            (source / 'nested/CMakeLists.txt').write_text('''project(NestedProbe LANGUAGES CXX)
+add_executable(nested_probe ../main.cpp)
+''')
+            if os.name == 'nt':
+                build.cmake(source, output)
+            else:
+                subprocess.run(['cmake', '-S', str(source), '-B', str(output), '-G', 'Ninja',
+                    '-DCMAKE_PROJECT_INCLUDE=' + overlay], check=True, capture_output=True, text=True)
+            for name in ('main', 'nested'):
+                files = (output / (name + '-sources.txt')).read_text().split(';')
+                self.assertEqual(sum(Path(p).name == 'windows.manifest' for p in files), 1)
+            self.assertNotIn('windows.manifest', (output / 'library-sources.txt').read_text())
+            subprocess.run(['cmake', '--build', str(output)], check=True, capture_output=True, text=True)
+            if os.name == 'nt':
+                manifest = root / 'embedded.manifest'
+                subprocess.run(['mt.exe', '-nologo',
+                    f'-inputresource:{output / "manifest_probe.exe"};#1', f'-out:{manifest}'],
+                    check=True, capture_output=True, text=True)
+                xml = ET.parse(manifest)
+                self.assertEqual(xml.findtext('.//{http://schemas.microsoft.com/SMI/2019/WindowsSettings}activeCodePage'), 'UTF-8')
+                self.assertEqual(xml.findtext('.//{http://schemas.microsoft.com/SMI/2016/WindowsSettings}longPathAware'), 'true')
+
     def test_selected_archive_subtree_cannot_escape_destination(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
