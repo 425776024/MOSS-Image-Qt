@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODEL_SUFFIXES = {'.npz', '.engine', '.onnx', '.pth', '.pt', '.ckpt', '.gguf', '.safetensors', '.mlmodel', '.task', '.fst', '.bin', '.dylib', '.a', '.so', '.mp4', '.mov'}
 MODEL_SUFFIXES |= {'.p12', '.p8', '.pem', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile'}
 SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets', '.github')
-SOURCE_DOCS = ('LICENSE', 'README.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', '.gitattributes',
+SOURCE_DOCS = ('LICENSE', 'README.md', 'README-en.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', '.gitattributes',
                'AGENTS.md', 'DESIGN.md', '.cursor/rules/macos-design.mdc', 'docs/macos-design-skills.md',
                'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md',
                'docs/macos-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md')
