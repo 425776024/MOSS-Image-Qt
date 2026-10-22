@@ -10,15 +10,27 @@ Version 0.1.0 preview for **Apple Silicon (M1 or later) and macOS 15+**. The app
 
 ## Feature preview
 
-Generate images through conversation, paint over areas to edit, and drag objects to guide composition. Design or clone a voice, animate a portrait, then combine media and export an MP4.
+Generate images through conversation, paint over areas to edit, and drag objects to guide composition. Design or clone a voice, animate a portrait, generate sound effects, then combine media and export an MP4.
 
-| Image generation | Local editing | Layout composition |
+| Image generation | Brush inpainting | Layout composition |
 | --- | --- | --- |
-| <a href="assets/screenshots/en/studio.png"><img src="assets/screenshots/en/studio.png" alt="Image generation" width="270" /></a> | <a href="assets/screenshots/en/image-edit.png"><img src="assets/screenshots/en/image-edit.png" alt="Local editing" width="270" /></a> | <a href="assets/screenshots/en/layout.png"><img src="assets/screenshots/en/layout.png" alt="Layout composition" width="270" /></a> |
-| **Talking avatars** | **Voice design** | **Video composition** |
-| <a href="assets/screenshots/en/avatar.png"><img src="assets/screenshots/en/avatar.png" alt="Talking avatars" width="270" /></a> | <a href="assets/screenshots/en/voice-design.png"><img src="assets/screenshots/en/voice-design.png" alt="Voice design" width="270" /></a> | <a href="assets/screenshots/en/video-pack.png"><img src="assets/screenshots/en/video-pack.png" alt="Video composition" width="270" /></a> |
+| <a href="assets/screenshots/en/studio.png"><img src="assets/screenshots/en/studio.png" alt="Image generation" width="270" /></a> | <a href="assets/screenshots/en/image-edit.png"><img src="assets/screenshots/en/image-edit.png" alt="Brush inpainting" width="270" /></a> | <a href="assets/screenshots/en/layout.png"><img src="assets/screenshots/en/layout.png" alt="Layout composition" width="270" /></a> |
+
+| Talking avatars | Voice design |
+| --- | --- |
+| <a href="assets/screenshots/en/avatar.png"><img src="assets/screenshots/en/avatar.png" alt="Talking avatars" width="410" /></a> | <a href="assets/screenshots/en/voice-design.png"><img src="assets/screenshots/en/voice-design.png" alt="Voice design" width="410" /></a> |
+| **Sound effects** | **Video composition** |
+| <a href="assets/screenshots/en/sfx.png"><img src="assets/screenshots/en/sfx.png" alt="Sound effects" width="410" /></a> | <a href="assets/screenshots/en/video-pack.png"><img src="assets/screenshots/en/video-pack.png" alt="Video composition" width="410" /></a> |
 
 Screenshots show the current development UI; the published preview build may differ. Click any screenshot to view it at full size. [All English screenshots](assets/screenshots/en) · [中文截图](assets/screenshots/zh-Hans)
+
+## Sound-effects preview
+
+**Garden wind · 5 seconds**, generated with Stable Audio 3 Small SFX. Click to play.
+
+https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
+
+[Download the original WAV](assets/showcase/garden-wind-sfx.wav)
 
 ## Image editing examples
 
@@ -68,7 +80,7 @@ Manage resources by task: images, avatars, speech, and sound effects. Download, 
 | Talking avatars | [ditto-talkinghead](https://github.com/antgroup/ditto-talkinghead) | [Audio-driven portraits](assets/screenshots/en/avatar.png), silent-mouth calibration, and speech-onset optimization |
 | Face detection and rendering | [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), [LivePortrait](https://github.com/KwaiVGI/LivePortrait) | Face alignment, motion, and rendering |
 | Speech and voices | [Ming-3.0 TTS 0.5B](https://github.com/inclusionAI/Ming-3.0-tts) · [GGUF Q8_0](https://huggingface.co/audio-cpp/Ming-3.0-TTS-0.5B-GGUF) | Text-to-speech, voice cloning, [voice design](assets/screenshots/en/voice-design.png), emotion, and dialect controls |
-| Sound effects | [Stable Audio 3 Small SFX](https://huggingface.co/thepatch/stable-audio-3-small-sfx-GGUF) · F16 with T5Gemma | Environmental sounds and effects from text |
+| Sound effects | [Stable Audio 3 Small SFX](https://huggingface.co/thepatch/stable-audio-3-small-sfx-GGUF) · F16 with T5Gemma | [Sound generation](assets/screenshots/en/sfx.png), [listen](#sound-effects-preview) |
 
 Built with Qt / QML / C++. Pinned model revisions, hashes, and sources are listed in the [model catalog](config/models.json).
 

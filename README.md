@@ -10,15 +10,27 @@
 
 ## 功能预览
 
-对话生成图像，涂抹局部编辑，拖动对象控制构图；设计或克隆音色，驱动人像说话，再组合素材导出 MP4。
+对话生成图像，涂抹局部编辑，拖动对象控制构图；设计或克隆音色，驱动人像说话，生成环境音效，再组合素材导出 MP4。
 
-| 图像创作 | 局部编辑 | 布局构图 |
+| 图像创作 | 图像涂抹 | 布局构图 |
 | --- | --- | --- |
-| <a href="assets/screenshots/zh-Hans/studio.png"><img src="assets/screenshots/zh-Hans/studio.png" alt="图像创作" width="270" /></a> | <a href="assets/screenshots/zh-Hans/image-edit.png"><img src="assets/screenshots/zh-Hans/image-edit.png" alt="局部编辑" width="270" /></a> | <a href="assets/screenshots/zh-Hans/layout.png"><img src="assets/screenshots/zh-Hans/layout.png" alt="布局构图" width="270" /></a> |
-| **数字人创作** | **语音设计** | **视频打包** |
-| <a href="assets/screenshots/zh-Hans/avatar.png"><img src="assets/screenshots/zh-Hans/avatar.png" alt="数字人创作" width="270" /></a> | <a href="assets/screenshots/zh-Hans/voice-design.png"><img src="assets/screenshots/zh-Hans/voice-design.png" alt="语音设计" width="270" /></a> | <a href="assets/screenshots/zh-Hans/video-pack.png"><img src="assets/screenshots/zh-Hans/video-pack.png" alt="视频打包" width="270" /></a> |
+| <a href="assets/screenshots/zh-Hans/studio.png"><img src="assets/screenshots/zh-Hans/studio.png" alt="图像创作" width="270" /></a> | <a href="assets/screenshots/zh-Hans/image-edit.png"><img src="assets/screenshots/zh-Hans/image-edit.png" alt="图像涂抹" width="270" /></a> | <a href="assets/screenshots/zh-Hans/layout.png"><img src="assets/screenshots/zh-Hans/layout.png" alt="布局构图" width="270" /></a> |
+
+| 数字人创作 | 语音设计 |
+| --- | --- |
+| <a href="assets/screenshots/zh-Hans/avatar.png"><img src="assets/screenshots/zh-Hans/avatar.png" alt="数字人创作" width="410" /></a> | <a href="assets/screenshots/zh-Hans/voice-design.png"><img src="assets/screenshots/zh-Hans/voice-design.png" alt="语音设计" width="410" /></a> |
+| **音效生成** | **视频打包** |
+| <a href="assets/screenshots/zh-Hans/sfx.png"><img src="assets/screenshots/zh-Hans/sfx.png" alt="音效生成" width="410" /></a> | <a href="assets/screenshots/zh-Hans/video-pack.png"><img src="assets/screenshots/zh-Hans/video-pack.png" alt="视频打包" width="410" /></a> |
 
 截图展示当前开发界面，已发布预览安装包可能有所不同。点击截图查看原图。[全部中文截图](assets/screenshots/zh-Hans) · [English screenshots](assets/screenshots/en)
+
+## 音效试听
+
+**花园微风 · 5 秒**，由 Stable Audio 3 Small SFX 生成。点击播放。
+
+https://github.com/user-attachments/assets/1e2d898d-4a0d-4ab0-8ed0-398f7b382d06
+
+[下载原始 WAV](assets/showcase/garden-wind-sfx.wav)
 
 ## 图像编辑效果
 
@@ -68,7 +80,7 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 | 数字人 | [ditto-talkinghead](https://github.com/antgroup/ditto-talkinghead) | [音频驱动人像](assets/screenshots/zh-Hans/avatar.png)、静音口型校准与起音过渡优化 |
 | 人脸检测与渲染 | [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)、[LivePortrait](https://github.com/KwaiVGI/LivePortrait) | 人脸定位、动作与画面合成 |
 | 语音与音色 | [Ming-3.0 TTS 0.5B](https://github.com/inclusionAI/Ming-3.0-tts) · [GGUF Q8_0](https://huggingface.co/audio-cpp/Ming-3.0-TTS-0.5B-GGUF) | 文字配音、音色克隆、[语音设计](assets/screenshots/zh-Hans/voice-design.png)、情绪与方言控制 |
-| 音效 | [Stable Audio 3 Small SFX](https://huggingface.co/thepatch/stable-audio-3-small-sfx-GGUF) · F16，配套 T5Gemma | 文字生成环境声与音效 |
+| 音效 | [Stable Audio 3 Small SFX](https://huggingface.co/thepatch/stable-audio-3-small-sfx-GGUF) · F16，配套 T5Gemma | [音效生成](assets/screenshots/zh-Hans/sfx.png)、[试听](#音效试听) |
 
 
 基于 Qt / QML / C++。固定模型版本、文件摘要与来源见 [模型清单](config/models.json)。

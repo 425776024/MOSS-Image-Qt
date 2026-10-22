@@ -2,6 +2,10 @@
 
 本目录为项目作者提供并指定用于 README 展示的素材。
 
+`garden-wind-sfx.wav` 为 App 实际生成的 5 秒花园微风音效（Stable Audio 3 Small SFX），保留原始 44.1 kHz、双声道、16 位 PCM。提示词：`Soft wind blowing through a quiet garden, natural ambient sound.`
+
+音效试听使用 GitHub 附件，包含由该音频绘制的波形与 AAC 声音；原始 WAV 可独立下载，没有加入人声或额外配乐。
+
 - `text-edit-before-after.png`：中英文文字替换对比，原图原样保留。
 - `portrait-edit-before-after.png`：局部发色编辑对比，原图原样保留。
 - `avatar-demo-01.mp4`：多种形象的口型对比，约 84 秒。
