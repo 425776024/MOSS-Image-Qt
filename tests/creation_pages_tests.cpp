@@ -224,6 +224,10 @@ private slots:
         s.loadProject(QUrl::fromLocalFile(path));QCOMPARE(s.conversation()->draft(),draft);
         QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
         const auto custom=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(custom);QCOMPARE(s.layoutTemplates().size(),3);
+        // Replacing an existing catalog must also work with Windows file sharing.
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),5);
+        const auto second=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(second);QCOMPARE(s.layoutTemplates().size(),4);
     }
     void mouthAdaptationPersistsAndInvalidatesOnlyRenderedVideo() {
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());

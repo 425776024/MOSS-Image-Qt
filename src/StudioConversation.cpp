@@ -195,14 +195,14 @@ QString Studio::importLayoutTemplate(QUrl source){
     if(!document.layout())return "此工程没有构图区域，请选择包含构图数据的模板";
     auto rows=layoutTemplates();rows.erase(std::remove_if(rows.begin(),rows.end(),[](const QVariant &v){return v.toMap()["builtin"].toBool();}),rows.end());
     rows.append(QVariantMap{{"id",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"name",QFileInfo(source.toLocalFile()).completeBaseName()},{"builtin",false},{"document",document.json().toVariantMap()}});
-    QJsonObject catalog;QFile previous(m_outputRoot+"/library/layout-templates.json");if(previous.open(QIODevice::ReadOnly))catalog=QJsonDocument::fromJson(previous.readAll()).object();
+    QJsonObject catalog;QFile previous(m_outputRoot+"/library/layout-templates.json");if(previous.open(QIODevice::ReadOnly))catalog=QJsonDocument::fromJson(previous.readAll()).object();previous.close();
     catalog["version"]=1;catalog["templates"]=QJsonArray::fromVariantList(rows);
     QDir().mkpath(m_outputRoot+"/library");if(!write(m_outputRoot+"/library/layout-templates.json",catalog))return "无法保存构图模板";
     emit templatesChanged();return {};
 }
 void Studio::removeLayoutTemplate(QString id){
     auto rows=layoutTemplates();QVariantList kept,archived;
-    QFile file(m_outputRoot+"/library/layout-templates.json");if(file.open(QIODevice::ReadOnly))archived=QJsonDocument::fromJson(file.readAll()).object()["archived"].toArray().toVariantList();
+    QFile file(m_outputRoot+"/library/layout-templates.json");if(file.open(QIODevice::ReadOnly))archived=QJsonDocument::fromJson(file.readAll()).object()["archived"].toArray().toVariantList();file.close();
     for(const auto &value:rows){const auto row=value.toMap();if(row["builtin"].toBool())continue;if(row["id"]==id)archived.append(row);else kept.append(row);}
     if(!write(m_outputRoot+"/library/layout-templates.json",{{"version",1},{"templates",QJsonArray::fromVariantList(kept)},{"archived",QJsonArray::fromVariantList(archived)}})){fail("无法更新模板库");return;}emit templatesChanged();
 }
