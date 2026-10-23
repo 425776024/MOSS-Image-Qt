@@ -67,8 +67,8 @@ Rectangle {
         }
         RowLayout { Layout.fillWidth: true
             HomeTabs { labels: [HomeTheme.t("我的形象"),HomeTheme.t("内置形象")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.builtin=index===1;root.selectedId=""} }
+            HomeField { id: search; objectName: "avatarSearch"; Layout.preferredWidth: 200; Layout.minimumWidth: 160; Layout.maximumWidth: 220; search: true; placeholderText: HomeTheme.t("搜索形象"); Accessible.name: placeholderText }
             Item { Layout.fillWidth: true }
-            HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索形象"); Accessible.name: placeholderText }
             IconButton { glyph: "folder"; hint: HomeTheme.t("打开目录"); onClicked: workspace.openDirectory(workspace.root+"/avatars") }
         }
         Item {

@@ -69,8 +69,8 @@ Rectangle {
         }
         RowLayout { Layout.fillWidth: true; spacing: 12
             HomeTabs { labels: [HomeTheme.t("我的音色"),HomeTheme.t("内置音色")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.stopPreview();root.builtin=index===1} }
+            HomeField { id: search; objectName: "voiceSearch"; Layout.preferredWidth: 200; Layout.minimumWidth: 160; Layout.maximumWidth: 220; search: true; placeholderText: HomeTheme.t("搜索音色"); Accessible.name: placeholderText }
             Item { Layout.fillWidth: true }
-            HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索音色"); Accessible.name: placeholderText }
         }
         VoiceStyleControls { Layout.fillWidth: true; options: studio.sound.settings; onOptionEdited: (key,value)=>studio.sound.set(key,value) }
         Item {
