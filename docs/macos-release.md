@@ -18,39 +18,72 @@
 - `SHA256SUMS.txt` 和 `release-manifest.json`。
 
 `unsigned` 包只有本地 ad-hoc 签名，**不是公证发布版**，不能承诺通过 Gatekeeper。
-主线推送构建成功后，`publish-preview.yml` 会校验来源、提交和 SHA-256，
-自动发布独立的 `macos-build-<run-id>` 预发布版到 Releases，标题明确标注“未公证”。
-既有已公证版本保留；自动开发包不会标记为正式 Latest，也不会覆盖它们。
-PR、失败或过期构建不发布；漏发时可手动运行该工作流并填写成功的主线推送 run ID。
-发布任务仅上传校验后的产物，不执行下载的二进制。
+macOS 未公证开发包只保留在 Actions Artifacts，不再自动公开发布到 Releases。
+`publish-preview.yml` 仅自动发布 Windows 构建；macOS 使用下面的本地一键脚本。
 流程运行 CTest、公开源码边界审计、App 依赖审计、DMG 校验，
 以及部署后离屏启动测试。CI 不下载大模型，也不宣称已验收模型推理、GPU 性能或真实用户首次安装。
 
-## 先在本机公证（无需导出签名私钥）
+## 本地一键公证和发布
 
-本机已经有正式的 Developer ID Application 证书及私钥时，可直接使用钥匙串签名。
-从成功的主分支 Actions 下载测试包，核对 `SHA256SUMS.txt`，再用 `ditto -x -k` 解压 App ZIP。
-
-首次公证需在 [Apple 账号](https://account.apple.com/)的“登录与安全 → App 专用密码”中
-生成专用密码，然后在自己的终端运行下面的命令。替换账号和 Team ID，
-专用密码由 Apple 工具隐藏输入，不要写入命令参数、脚本或聊天：
+在签名 Mac 上双击 `scripts/release_macos.command`，或在仓库根目录运行：
 
 ```sh
+./scripts/release_macos.command
+```
+
+脚本会选择 GitHub 当前 `public-release` 提交的 macOS push 构建；仍在构建时会等待。
+失败、取消、PR 或非主线构建不会发布，也不会悄悄退回旧构建。
+它不提交或上传本地未提交代码；界面修改须先提交并推送到主线。
+
+执行流程：校验构建来源与 SHA-256 → 下载 App ZIP → 验证包内路径 →
+使用钥匙串 Developer ID 签名 → App 公证、附票与 Gatekeeper 检查 →
+生成 DMG → DMG 签名、公证、附票与 Gatekeeper 检查 →
+签名后离屏启动 → 上传 → 核对 GitHub 返回的资产 SHA-256 → 更新发布说明。
+
+同一构建使用 `macos-build-<run-id>` 下载条目：若原来是未公证预览，完成后改成“已公证”，
+仅删除该条目中被替代的未公证 App ZIP/DMG；其他版本不受影响。
+新条目先以草稿上传，校验完毕再公开。版本仍标为预发布，不冒充正式稳定版。
+README 始终链接到下载目录，无需修改版本号。
+
+下载、公证产物和日志放在 `.local/macos-release/<run-id>/`，不会进入 Git。
+上传失败后重跑会复用已完成公证的产物，校验并跳过已上传的相同文件。
+公证阶段失败会保留该次 `attempt-*` 日志，下次从已校验的下载包重新签名、公证。
+同一构建的并发操作会被本地文件锁阻止。
+
+若公证期间有更新的成功构建，默认停止发布旧构建并保留产物，重新运行即可处理新版。
+需要明确重试某次成功主线构建时，可指定 Actions run ID：
+
+```sh
+./scripts/release_macos.command --run-id 123456789
+```
+
+### 首次准备
+
+需要 Xcode Command Line Tools、Python 3.9+、已登录且可发布此仓库 Release 的 `gh`，
+以及钥匙串中的正式 **Developer ID Application** 证书和对应私钥。
+只有一个正式签名身份时自动选择，忽略名字包含 Self-Signed 的测试身份。
+多身份时用 `--identity <SHA-1指纹>` 或环境变量 `MOSS_SIGNING_IDENTITY` 指定。
+最终仍以 Apple 公证结果和 Gatekeeper 检查为准。
+
+公证凭据默认读取钥匙串 profile `MossStudio-release`；可用
+`--keychain-profile <名称>` 或 `MOSS_NOTARY_PROFILE` 改名。
+已有可用 profile 无需重复设置。首次配置时，在自己的终端执行：
+
+```sh
+gh auth login
 xcrun notarytool store-credentials MossStudio-release \
   --apple-id '你的开发者账号邮箱' --team-id '你的 Team ID'
 ```
 
-凭据验证成功后保存在本机钥匙串。用 `security find-identity -v -p codesigning`
-查找正式 Apple 签发的 Developer ID Application 的 40 位 SHA-1 指纹，然后运行：
+专用密码由 Apple 工具隐藏输入，不要写入脚本、参数或聊天。
+脚本不导出 `.p12`，不读取密码，不把私钥或 Apple 认证凭据上传 GitHub。
+
+底层手动公证命令仍可用于已部署的本地 App，但它本身不上传：
 
 ```sh
 python3 scripts/macos_distribution.py sign-notarize-local 'dist/Moss Studio.app' \
   --identity '你的证书指纹' --keychain-profile MossStudio-release --output dist/notarized
 ```
-
-本机模式与 CI 使用同样的签名、公证、附票和 Gatekeeper 检查；不导出 `.p12`，也不上传私钥到 GitHub。
-它适合先完成一次发布。若要让 GitHub 后续全自动公证，再配置下一节的 CI 凭据。
-证书名称相同的自签名证书不能代替 Apple 正式签发的 Developer ID 证书。
 
 ## 一次性配置 GitHub Apple 凭据
 

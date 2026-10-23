@@ -32,7 +32,7 @@ PUBLIC_SCRIPTS = {
     "apple_model_assets.py", "upload_apple_assets.py", "package_appstore.py",
     "configure_appstore_upload.py", "appstore_keychain_service.swift",
     "build_ci_windows.py", "package_windows.py", "test_windows.ps1", "test_windows.cmd",
-    "diagnose_windows_runtime.py", "publish_preview.py",
+    "diagnose_windows_runtime.py", "publish_preview.py", "release_macos.py", "release_macos.command",
 }
 
 PRIVATE_SERVER_FILES = {

@@ -2,13 +2,13 @@ name: Publish development downloads
 
 on:
   workflow_run:
-    workflows: [macOS App and DMG, Windows x64 App]
+    workflows: [Windows x64 App]
     types: [completed]
     branches: [public-release]
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'Successful public-release push build to publish'
+        description: 'Successful Windows public-release push build to publish'
         required: true
         type: string
 

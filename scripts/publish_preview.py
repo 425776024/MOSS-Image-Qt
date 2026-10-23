@@ -35,7 +35,7 @@ def validate_run(run):
     return PLATFORMS[run['path']]
 
 
-def verified_assets(folder, platform, checksums, sha):
+def verified_assets(folder, platform, checksums, sha, *, notarized=False):
     entries = {}
     checksum_file = folder / checksums
     if checksum_file.is_symlink():
@@ -55,7 +55,8 @@ def verified_assets(folder, platform, checksums, sha):
             if actual.hexdigest() != digest:
                 raise ValueError(f'Checksum mismatch: {name}')
         entries[name] = digest
-    suffixes = (('-macOS-arm64-unsigned.app.zip', '-macOS-arm64-unsigned.dmg')
+    kind = 'notarized' if notarized else 'unsigned'
+    suffixes = ((f'-macOS-arm64-{kind}.app.zip', f'-macOS-arm64-{kind}.dmg')
                 if platform == 'macos' else ('-Windows-x64-preview.zip',))
     if len(entries) != len(suffixes) or any(
             sum(name.startswith('Moss-Studio-') and name.endswith(suffix) for name in entries) != 1
@@ -67,9 +68,11 @@ def verified_assets(folder, platform, checksums, sha):
         if manifest_path.is_symlink():
             raise ValueError('Manifest must not be a symlink')
         manifest = json.loads(manifest_path.read_text())
-        if (manifest.get('commit') != sha or manifest.get('notarized') is not False
+        if (manifest.get('commit') != sha or manifest.get('notarized') is not notarized
                 or manifest.get('modelWeightsIncluded') is not False or manifest.get('sha256') != entries):
-            raise ValueError('Manifest does not match this unsigned, model-free build')
+            raise ValueError('Manifest does not match the expected build and signing status')
+        if notarized and len(manifest.get('notarySubmissionIds', [])) != 2:
+            raise ValueError('Both app and DMG require notarization receipts')
         names.add(manifest_path.name)
     if {p.name for p in folder.iterdir()} != names:
         raise ValueError('Unexpected files in build artifact')
@@ -87,6 +90,9 @@ def publish(run_id):
         raise ValueError('Unexpected repository')
     run = api(f'actions/runs/{run_id}')
     platform, label, artifact, checksums = validate_run(run)
+    if platform == 'macos':
+        print('macOS requires local notarization. Run scripts/release_macos.command on the signing Mac.')
+        return
     sha = run['head_sha']
     if api(f'compare/{sha}...{BRANCH}')['status'] not in ('ahead', 'identical'):
         raise ValueError('Build commit is no longer on the release branch')
