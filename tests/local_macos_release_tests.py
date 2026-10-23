@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,41 @@ spec.loader.exec_module(release)
 
 
 class LocalMacOSReleaseTests(unittest.TestCase):
+    def test_draft_without_git_tag_is_looked_up_by_release_id(self):
+        url = 'https://api.github.com/repos/' + release.preview.REPO + '/releases/123'
+        replies = [subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)'),
+                   subprocess.CompletedProcess([], 0, url + '\n', '')]
+        with patch.object(release.subprocess, 'run', side_effect=replies), patch.object(
+                release.preview, 'gh', return_value=json.dumps({'draft': True, 'target_commitish': 'a' * 40})) as gh:
+            self.assertTrue(release.release_snapshot('macos-build-123')['draft'])
+            gh.assert_called_once_with('api', url)
+
+    def test_new_release_is_a_draft_until_verified_assets_are_uploaded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            asset = root / 'notarized.dmg'
+            asset.write_bytes(b'notarized bytes')
+            state = None
+            def gh(*args):
+                nonlocal state
+                if args[:2] == ('release', 'create'):
+                    self.assertIn('--draft', args)
+                    state = dict(draft=True, assets=[], name='pending', html_url='https://example.com/release')
+                elif args[:2] == ('release', 'upload'):
+                    self.assertTrue(state['draft'])
+                    path = Path(args[3])
+                    state['assets'].append(dict(name=path.name, size=path.stat().st_size,
+                                               digest='sha256:' + release.distribution.sha256(path)))
+                elif args[:2] == ('release', 'edit'):
+                    self.assertEqual({a['name'] for a in state['assets']}, {'notarized.dmg', 'build-source.json'})
+                    self.assertIn('--draft=false', args)
+                    state.update(draft=False, name=args[args.index('--title') + 1])
+            run = dict(head_sha='a' * 40, id=123, html_url='https://example.com/build', updated_at='2026-10-23')
+            with patch.object(release, 'release_snapshot', side_effect=lambda tag: state), patch.object(
+                    release.preview, 'gh', side_effect=gh):
+                release.publish_signed(run, [asset], root)
+            self.assertFalse(state['draft'])
+
     def test_latest_running_build_is_waited_for_and_not_replaced_by_old_success(self):
         run = dict(id=123, head_sha='a' * 40, status='in_progress', event='push',
                    head_branch='public-release', path='.github/workflows/macos.yml',

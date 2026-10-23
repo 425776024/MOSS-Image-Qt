@@ -87,7 +87,17 @@ def release_snapshot(tag):
                             capture_output=True, text=True)
     if result.returncode:
         if 'HTTP 404' in result.stderr:
-            return None
+            # Draft releases have no Git tag yet. gh resolves them by release ID.
+            draft = subprocess.run(['gh', 'release', 'view', tag, '--repo', preview.REPO,
+                                    '--json', 'apiUrl', '--jq', '.apiUrl'], capture_output=True, text=True)
+            if draft.returncode:
+                if 'release not found' in draft.stderr.lower() or 'HTTP 404' in draft.stderr:
+                    return None
+                raise ValueError('无法读取 GitHub 草稿，请检查 gh 登录和网络。')
+            url = draft.stdout.strip()
+            if not re.fullmatch(r'https://api\.github\.com/repos/' + re.escape(preview.REPO) + r'/releases/[0-9]+', url):
+                raise ValueError('GitHub 返回了意外的草稿地址。')
+            return json.loads(preview.gh('api', url))
         raise ValueError('无法读取 GitHub Release，请检查 gh 登录和网络。')
     return json.loads(result.stdout)
 
@@ -105,8 +115,11 @@ def publish_signed(run, assets, work):
     sha, run_id = run['head_sha'], run['id']
     tag = f'macos-build-{run_id}'
     old = release_snapshot(tag)
-    if old and preview.api(f'compare/{sha}...{tag}')['status'] != 'identical':
-        raise ValueError('现有发布标签不对应所选构建，停止更新。')
+    if old:
+        matches = (old.get('target_commitish') == sha if old['draft']
+                   else preview.api(f'compare/{sha}...{tag}')['status'] == 'identical')
+        if not matches:
+            raise ValueError('现有发布标签或草稿不对应所选构建，停止更新。')
     source = work / 'build-source.json'
     source.write_text(json.dumps({'commit': sha, 'runId': run_id, 'buildUrl': run['html_url'],
         'builtAt': run['updated_at'], 'notarized': True, 'signingLocation': 'local-keychain'}, indent=2) + '\n')
