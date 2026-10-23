@@ -10,10 +10,15 @@ Item {
     signal openEditor()
     property string deleteId: ""
     property string deleteTitle: ""
-    property bool optionsExpanded: false
     property bool filesExpanded: false
     readonly property var groups: studio.models.groups
     readonly property bool locked: studio.busy || studio.models.busy
+    readonly property var sourceLabels: ({
+        "apple-assets": "App Store",
+        "auto": HomeTheme.t("自动选择"),
+        "https://hf-mirror.com": "hf-mirror.com",
+        "https://huggingface.co": "Hugging Face"
+    })
     readonly property var resources: [
         {id:"image",title:"图像创作",icon:"image",ids:["image-q4","image-q8","image-shared"]},
         {id:"ditto",title:"数字人",icon:"person",ids:["ditto"]},
@@ -54,7 +59,7 @@ Item {
     HomeMenu {
         id: resourceOptions
         AppMenuItem { text: HomeTheme.t("打开资源文件夹"); glyph: "folder"; onTriggered: studio.models.openRoot() }
-        AppMenuItem { text: HomeTheme.t("下载设置"); glyph: "settings"; onTriggered: root.optionsExpanded=!root.optionsExpanded }
+        AppMenuItem { visible: studio.models.rootSelectable; text: HomeTheme.t("更改目录"); glyph: "folder"; enabled: !root.locked; onTriggered: modelDialog.open() }
         AppMenuItem { text: HomeTheme.t("文件管理"); glyph: "document"; onTriggered: root.filesExpanded=!root.filesExpanded }
         AppMenuItem { text: HomeTheme.t("清理下载缓存"); glyph: "trash"; enabled: !root.locked && studio.models.partialBytes>0; onTriggered: studio.models.cleanPartials() }
         AppMenuItem { text: HomeTheme.t("刷新"); glyph: "refresh"; enabled: !root.locked; onTriggered: studio.models.refresh() }
@@ -74,14 +79,30 @@ Item {
             HomeSection {
                 Layout.fillWidth: true; padding: 12; contentSpacing: 0
                 RowLayout {
-                    Layout.fillWidth: true; Layout.bottomMargin: 8; spacing: 8
-                    Text { Layout.fillWidth: true; text: HomeTheme.t("图像质量"); color: HomeTheme.text; font.pixelSize: 13 }
-                    HomeCombo {
-                        objectName: "imageQualitySelect"; Layout.preferredWidth: 142; implicitHeight: 28; enabled: !root.locked
-                        model: [HomeTheme.t("标准"),HomeTheme.t("高精度")]
-                        currentIndex: studio.imageQuant==="Q4_K" ? 0 : 1
-                        onActivated: studio.imageQuant=currentIndex===0 ? "Q4_K" : "Q8_0"
+                    Layout.fillWidth: true; Layout.bottomMargin: 8; spacing: 24
+                    RowLayout {
+                        Layout.fillWidth: false; spacing: 8
+                        Text { text: HomeTheme.t("图像质量"); color: HomeTheme.text; font.pixelSize: 13 }
+                        HomeCombo {
+                            objectName: "imageQualitySelect"; Layout.fillWidth: false; implicitHeight: 28; enabled: !root.locked
+                            Accessible.name: HomeTheme.t("图像质量")
+                            model: [HomeTheme.t("标准"),HomeTheme.t("高精度")]
+                            currentIndex: studio.imageQuant==="Q4_K" ? 0 : 1
+                            onActivated: studio.imageQuant=currentIndex===0 ? "Q4_K" : "Q8_0"
+                        }
                     }
+                    RowLayout {
+                        Layout.fillWidth: false; spacing: 8
+                        Text { text: HomeTheme.t("下载源"); color: HomeTheme.text; font.pixelSize: 13 }
+                        HomeCombo {
+                            objectName: "modelSourceChoice"; Layout.fillWidth: false; implicitHeight: 28; enabled: !root.locked
+                            Accessible.name: HomeTheme.t("下载源")
+                            model: studio.models.sourceValues.map(source=>root.sourceLabels[source])
+                            currentIndex: studio.models.sourceValues.indexOf(studio.models.endpoint)
+                            onActivated: studio.models.endpoint=studio.models.sourceValues[currentIndex]
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
                 }
                 Repeater {
                     model: root.resources
@@ -126,18 +147,6 @@ Item {
                 HomeButton { text: HomeTheme.t("取消"); compact: true; onClicked: studio.models.cancel() }
             }
             Text { visible: !!studio.models.error; Layout.fillWidth: true; text: HomeTheme.t("资源操作未完成，请重试"); color: HomeTheme.danger; font.pixelSize: 12 }
-            HomeSection {
-                visible: root.optionsExpanded; Layout.fillWidth: true; padding: 12; contentSpacing: 8
-                RowLayout { Layout.fillWidth: true
-                    Text { Layout.fillWidth: true; text: HomeTheme.t("下载设置"); color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.DemiBold }
-                    IconButton { glyph: "close"; hint: HomeTheme.t("关闭"); onClicked: root.optionsExpanded=false }
-                }
-                RowLayout { Layout.fillWidth: true; spacing: 12
-                    Text { text: HomeTheme.t("下载源"); color: HomeTheme.secondary; font.pixelSize: 12 }
-                    HomeCombo { Layout.fillWidth: true; implicitHeight: 28; enabled: !root.locked; model: studio.models.sourceNames.map(n=>HomeTheme.t(n)); currentIndex: studio.models.sourceValues.indexOf(studio.models.endpoint); onActivated: studio.models.endpoint=studio.models.sourceValues[currentIndex] }
-                }
-                HomeButton { visible: studio.models.rootSelectable; text: HomeTheme.t("更改目录"); quiet: true; compact: true; enabled: !root.locked; onClicked: modelDialog.open() }
-            }
             HomeSection {
                 visible: root.filesExpanded; Layout.fillWidth: true; padding: 12; contentSpacing: 4
                 RowLayout { Layout.fillWidth: true

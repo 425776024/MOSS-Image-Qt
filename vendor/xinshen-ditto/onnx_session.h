@@ -15,6 +15,8 @@ inline Ort::SessionOptions onnxOptions(const std::filesystem::path& model,
   Ort::SessionOptions options;
   options.SetIntraOpNumThreads(4);
   options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+  const auto availableProviders = Ort::GetAvailableProviders();
+  std::string selectedProvider = "CPU";
 #ifdef MOSS_ONNX_DIRECTML
   const char* device = std::getenv("XINSHEN_ONNX_DEVICE");
   if (!cpuOnly && (!device || std::string(device) != "cpu")) {
@@ -23,7 +25,7 @@ inline Ort::SessionOptions onnxOptions(const std::filesystem::path& model,
     // ORT partitions unsupported operators to CPU. Failure to create the GPU
     // provider is explicit; do not report GPU acceleration for a CPU session.
     Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(options, 0));
-    std::cerr << "[inference] " << model.filename() << " DirectML GPU\n";
+    selectedProvider = "DirectML";
   }
 #endif
 #if defined(__APPLE__) && defined(__aarch64__)
@@ -51,10 +53,15 @@ inline Ort::SessionOptions onnxOptions(const std::filesystem::path& model,
       options.SetLogSeverityLevel(0);
     }
     options.AppendExecutionProvider("CoreML", config);
+    selectedProvider = "CoreML";
     progress("accelerator", 0, 0);
     std::cerr << "[inference] " << model.filename() << " CoreML CPUAndGPU\n";
   }
 #endif
+  std::cerr << Json{{"event","backend"},{"component",model.filename().string()},
+      {"backend",selectedProvider},{"availableProviders",availableProviders},
+      {"gpu",selectedProvider=="CPU"?"no":"unknown"},
+      {"evidence","session-options; CoreML placement not measured"}}.dump() << std::endl;
   return options;
 }
 } // namespace avatar

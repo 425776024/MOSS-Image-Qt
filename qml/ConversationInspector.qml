@@ -24,6 +24,10 @@ Rectangle {
     signal packRequested(string id)
     signal reuseRequested(var entry)
     signal pickerRequested()
+    function controlMedia(action,seconds) {
+        if(asset.kind === "audio")audioPreview.control(action,seconds)
+        else if(asset.kind === "video" && videoPreview.item)videoPreview.item.control(action,seconds)
+    }
     color: HomeTheme.field
     ColumnLayout {
         anchors.fill: parent; spacing: 0
@@ -103,11 +107,11 @@ Rectangle {
                         Image { objectName: "inspectorImage"; anchors.fill: parent; source: root.asset.kind === "image" ? root.asset.url || "" : ""; fillMode: Image.PreserveAspectFit; sourceSize: Qt.size(1600,1600); asynchronous: true; retainWhileLoading: true }
                     }
                     Loader {
-                        Layout.fillWidth: true; visible: active; active: root.asset.kind === "video"
+                        id: videoPreview; Layout.fillWidth: true; visible: active; active: root.asset.kind === "video"
                         Layout.preferredHeight: item ? item.implicitHeight : 0
                         sourceComponent: Component { ConversationVideo { asset: root.asset; active: root.active; expanded: true; allowExpand: false } }
                     }
-                    ConversationAudio { objectName: "inspectorAudioPreview"; visible: root.asset.kind === "audio"; Layout.fillWidth: true; title: root.asset.name || ""; source: root.asset.kind === "audio" ? root.asset.url || "" : ""; seconds: root.asset.duration || 0; active: root.active && visible }
+                    ConversationAudio { id: audioPreview; objectName: "inspectorAudioPreview"; visible: root.asset.kind === "audio"; Layout.fillWidth: true; title: root.asset.name || ""; source: root.asset.kind === "audio" ? root.asset.url || "" : ""; seconds: root.asset.duration || 0; active: root.active && visible }
                     Text { visible: !!root.asset.id && root.asset.kind !== "audio"; Layout.fillWidth: true; text: root.asset.name || ""; color: HomeTheme.text; font.pixelSize: 14; font.weight: Font.Medium; wrapMode: Text.Wrap }
                     Text {
                         visible: !!root.asset.id && root.asset.kind !== "audio"; Layout.fillWidth: true; font.pixelSize: 11; color: HomeTheme.secondary

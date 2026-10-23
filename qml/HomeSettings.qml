@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 Rectangle {
     id: root
@@ -8,6 +9,26 @@ Rectangle {
     property int section: 0
     property string cacheNotice: ""
     signal openEditor()
+    FileDialog {
+        id: diagnosticExport
+        objectName: "diagnosticsSaveDialog"
+        title: HomeTheme.t("导出诊断日志")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "log"
+        nameFilters: [HomeTheme.t("诊断日志 (*.log)")]
+        onAccepted: studio.exportDiagnostics(selectedFile)
+    }
+    HomeNoticeDialog { id: diagnosticNotice; objectName: "diagnosticsExportNotice" }
+    Connections {
+        target: studio
+        function onDiagnosticsExportFinished(success, detail) {
+            diagnosticNotice.message=HomeTheme.t(success ? "文件已保存" : "导出失败")
+            diagnosticNotice.severity=success ? "success" : "error"
+            diagnosticNotice.filePath=success ? detail : ""
+            diagnosticNotice.detail=success ? "" : detail
+            diagnosticNotice.open()
+        }
+    }
     onVisibleChanged: if (visible) { cacheNotice=""; studio.refreshMouthCache() }
     component LegalPage: HomeSection {
         id: legal; property string bodyText: ""
@@ -89,6 +110,23 @@ Rectangle {
                                     Text { text: HomeTheme.t(storageRow.modelData.name); color: HomeTheme.text; font.pixelSize: 12; Layout.preferredWidth: HomeTheme.english ? 96 : 65 }
                                     Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: storageRow.modelData.path; elide: Text.ElideMiddle; color: HomeTheme.muted; font.pixelSize: 11 }
                                     IconButton { glyph: "folder"; hint: HomeTheme.t("打开目录"); onClicked: workspace.openDirectory(storageRow.modelData.path) }
+                                }
+                            }
+                        }
+                        HomeSection {
+                            Layout.fillWidth: true; title: HomeTheme.t("诊断日志"); iconName: "document"
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 12
+                                Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: HomeTheme.t("记录性能、计算设备和错误，最多保留 16 MiB。"); color: HomeTheme.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                                HomeButton {
+                                    objectName: "exportDiagnostics"
+                                    text: HomeTheme.t("导出日志")
+                                    focusPolicy: Qt.StrongFocus
+                                    activeFocusOnTab: true
+                                    onClicked: {
+                                        diagnosticExport.selectedFile=studio.defaultDiagnosticsExportUrl()
+                                        diagnosticExport.open()
+                                    }
                                 }
                             }
                         }

@@ -44,6 +44,19 @@ private slots:
         QVERIFY(ConversationMediaStore::pin(QVariantMap{{"source",path}}));
         QVERIFY(QFileInfo::exists(path));
     }
+    void diagnosticExportUsesLocalSaveUrlAndReportsResult(){
+        QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());Studio studio;
+        const auto suggested=studio.defaultDiagnosticsExportUrl();
+        QVERIFY(suggested.isLocalFile());QVERIFY(QDir::isAbsolutePath(suggested.toLocalFile()));
+        QVERIFY(suggested.fileName().endsWith(".log"));
+        QSignalSpy exported(&studio,&Studio::diagnosticsExportFinished);
+        const auto destination=QUrl::fromLocalFile(dir.filePath("诊断日志.log"));
+        studio.exportDiagnostics(destination);QCOMPARE(exported.size(),1);QVERIFY(exported[0][0].toBool());
+        QFile file(destination.toLocalFile());QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(QJsonDocument::fromJson(file.readLine()).object()["event"].toString(),QString("diagnostic-export"));
+        studio.exportDiagnostics(QUrl("https://example.invalid/log"));QCOMPARE(exported.size(),2);QVERIFY(!exported[1][0].toBool());
+        studio.exportDiagnostics(QUrl::fromLocalFile(dir.filePath("missing/log")));QCOMPARE(exported.size(),3);QVERIFY(!exported[2][0].toBool());
+    }
     void missingAvatarImageModelsDoNotChangeEditor(){
         QTemporaryDir work,models;const auto previousRoot=qgetenv("MOSS_MODEL_ROOT");
         qputenv("MOSS_OUTPUT_ROOT",work.path().toUtf8());qputenv("MOSS_MODEL_ROOT",models.path().toUtf8());

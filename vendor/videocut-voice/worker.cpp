@@ -71,18 +71,27 @@ int main(int argc,char **argv) {
         audiocpp_model *modelRaw=nullptr;
         check(audiocpp_model_load(registry.get(),modelFile.string().c_str(),&config,nullptr,&modelRaw));
         Owner<audiocpp_model,audiocpp_model_free> model(modelRaw,audiocpp_model_free);
-        const char *backendName="cpu";
-#ifdef MOSS_VOICE_VULKAN
-        backendName=std::getenv("MOSS_VOICE_BACKEND");
-        if(!backendName)backendName="vulkan";
-        if(std::string(backendName)!="cpu"&&std::string(backendName)!="vulkan")
-            throw std::runtime_error("MOSS_VOICE_BACKEND must be cpu or vulkan");
-#endif
-        const audiocpp_backend_config backend{backendName,0,4};
         audiocpp_session *sessionRaw=nullptr;
-        check(audiocpp_session_create(model.get(),design?"vdes":"clon","offline",&backend,nullptr,&sessionRaw));
-        std::cout<<avatar::Json{{"event","voice-backend"},{"backend",backendName}}.dump()<<std::endl;
+        // Explicit GPU candidates: audio.cpp's "best" may silently select CPU.
+        // This runtime has no Core ML backend; on macOS use its native Metal path.
+#ifdef __APPLE__
+        const std::vector<const char*> candidates={"metal"};
+#else
+        const std::vector<const char*> candidates={"cuda","hip","vulkan"};
+#endif
+        std::string selectedBackend;
+        for(const auto candidate:candidates){
+            const audiocpp_backend_config backend{candidate,0,4};
+            const auto status=audiocpp_session_create(model.get(),design?"vdes":"clon","offline",&backend,nullptr,&sessionRaw);
+            if(status==AUDIOCPP_OK){selectedBackend=candidate;break;}
+            const auto reason=std::string(audiocpp_last_error());
+            if(sessionRaw){audiocpp_session_free(sessionRaw);sessionRaw=nullptr;}
+            std::cerr<<avatar::Json{{"event","backend-unavailable"},{"backend",candidate},{"message",reason}}.dump()<<std::endl;
+        }
+        if(!sessionRaw)throw std::runtime_error("语音 GPU 加速不可用，请更新显卡驱动或应用后重试；详细原因见诊断日志");
         Owner<audiocpp_session,audiocpp_session_free> session(sessionRaw,audiocpp_session_free);
+        std::cout<<avatar::Json{{"event","backend"},{"component","voice"},{"backend",selectedBackend},
+            {"gpu","yes"},{"threads",4},{"evidence","session-created; GPU utilization not measured"}}.dump()<<std::endl;
         Owner<audiocpp_request,audiocpp_request_free> input(audiocpp_request_create(),audiocpp_request_free);
         if(!input)throw std::runtime_error("Ming request allocation failed");
         check(audiocpp_request_set_text(input.get(),text.c_str(),structured?nullptr:language.c_str()));

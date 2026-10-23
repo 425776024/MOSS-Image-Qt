@@ -7,6 +7,7 @@
 #include "TimelineDocument.h"
 #include "RemoteImageClient.h"
 #include "ConversationDocument.h"
+#include "InferenceDiagnostics.h"
 #include <QObject>
 #include <QProcess>
 #include <QElapsedTimer>
@@ -98,6 +99,8 @@ public:
     int mouthCacheLimitMiB()const{return 128;}
     Q_INVOKABLE void refreshMouthCache();
     Q_INVOKABLE QString clearMouthCache();
+    Q_INVOKABLE void exportDiagnostics(QUrl destination);
+    Q_INVOKABLE QUrl defaultDiagnosticsExportUrl() const;
     double progress()const{return m_progress;}
     bool imageReady()const;
     bool dittoReady()const;
@@ -183,6 +186,7 @@ public:
     Q_INVOKABLE void randomizeSeed();
     QString outputRoot()const{return m_outputRoot;}
 signals:
+    void diagnosticsExportFinished(bool success, QString detail);
     void fileExportFinished(bool success, QString detail);
     void conversationSaveFinished(bool success, QString detail);
     void mouthCacheChanged();
@@ -236,6 +240,7 @@ private:
     QProcess m_process;
     RemoteImageClient m_remote;
     QElapsedTimer m_timer;
+    InferenceDiagnostics m_diagnostics;
     ModelManager m_modelManager;
     QFile m_jobLog;
     QString m_models,m_outputRoot,m_status="准备创作",m_error,m_log,m_image,m_video,m_portrait,m_audio,m_backend="待运行";

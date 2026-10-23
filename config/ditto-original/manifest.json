@@ -1,7 +1,7 @@
 {
   "version": 1,
   "engine": "ditto-native-v1",
-  "pipelineId": "f2cec7b04c0cf3e71fc6e9aaa164fed4ce5a241763a5e877745abb9ee10b7626",
+  "pipelineId": "341331fcc26be939ad1be09e036206ecc01e789f57a986e828929bd4e1bf66da",
   "upstreamCommit": "c3e47eee2e626500017a0556b470d6d4182f85e8",
   "audioModel": {
     "name": "ditto-original",
@@ -9,8 +9,8 @@
   },
   "files": {
     "hubert.onnx": {
-      "bytes": 1460740880,
-      "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697"
+      "bytes": 1458714493,
+      "sha256": "327a5b90c0bfb9df251c9af91d0bea5e6284dbb0a4d02814f1d3ace6b4c2b5aa"
     },
     "landmark203.onnx": {
       "bytes": 114666491,

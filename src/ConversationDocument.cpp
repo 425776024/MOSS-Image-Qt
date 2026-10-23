@@ -105,12 +105,12 @@ QString ConversationDocument::importMedia(QUrl source,QString purpose){
     if(!source.isLocalFile()||!QFileInfo(source.toLocalFile()).isFile()){report("请选择本机可读取的素材文件");return {};}
     const auto path=source.toLocalFile(),mime=QMimeDatabase().mimeTypeForFile(path).name();
     const auto kind=QImageReader(path).canRead()?QString("image"):mime.startsWith("audio/")?QString("audio"):mime.startsWith("video/")?QString("video"):QString();
-    if(kind.isEmpty()||(purpose=="target"&&kind!="image")||(purpose=="audio"&&kind!="audio")){report("请选择与当前功能匹配的图像、音频或视频");return {};}
+    if(kind.isEmpty()||(purpose=="target"&&kind!="image")||((purpose=="audio"||purpose=="sfx")&&kind!="audio")){report("请选择与当前功能匹配的图像、音频或视频");return {};}
     const auto directory=m_root+"/conversation-assets/"+uid();const auto dest=directory+"/"+QFileInfo(path).fileName();
     QFile input(path);QSaveFile output(dest);if(!QDir().mkpath(directory)||!input.open(QIODevice::ReadOnly)||!output.open(QIODevice::WriteOnly)){report("无法保存导入素材");return {};}
     while(!input.atEnd()){const auto data=input.read(1024*1024);if(data.isEmpty()||output.write(data)!=data.size()){report("保存导入素材失败");return {};}}
     if(!output.commit()){report("保存导入素材失败");return {};}
-    const auto id=addAsset(dest,kind);markTemporary(id,directory);addResults({id},"import","导入素材");
+    const auto id=addAsset(dest,kind);markTemporary(id,directory);addResults({id},purpose=="sfx"?"sfx":"import","导入素材");
     if(purpose=="target")chooseTarget(id);else if(purpose=="audio")chooseAudio(id);else if(purpose=="pack")toggleSelected(id);
     m_error.clear();touch();return id;
 }

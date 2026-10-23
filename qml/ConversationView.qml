@@ -54,6 +54,29 @@ Item {
     }
     function editAsset(id) {root.forceActiveFocus();thread.task="edit";thread.editScope="local";thread.chooseTarget(id);imageToolsOpen=false;openImageTools()}
     function showPackTools() {root.forceActiveFocus();if(imageToolsOpen)studio.flushWorkspace();imageToolsOpen=false;inspectorOpen=true;packExpanded=true}
+    function mcpControl(a) {
+        function fail(message) { return {ok:false,error:{code:"UI_ACTION_FAILED",message:message}} }
+        if(a.assetId && !thread.asset(a.assetId).id)return fail("Unknown assetId")
+        if(a.messageId && !thread.messages.some(m=>m.id===a.messageId))return fail("Unknown messageId")
+        if(a.action === "show")return {ok:true,data:{workId:thread.id}}
+        if(a.action === "hide_details") {if(imageToolsOpen)studio.flushWorkspace();imageToolsOpen=false;inspectorOpen=false}
+        else if(a.action === "logs")logs.open()
+        else if(a.action === "parameters") {if(!studio.prepareConversationSettings())return fail("Cannot open generation parameters");parameters.open()}
+        else if(a.action === "edit") {if(a.assetId)editAsset(a.assetId);else openImageTools()}
+        else if(a.action === "pack") {if(a.assetId)usePackAsset(a.assetId);else showPackTools()}
+        else {
+            const assetId=a.assetId || inspectedAsset.id
+            const messageId=a.messageId || (thread.messages.find(m=>(m.assetIds || []).includes(assetId)) || {}).id || ""
+            showDetails(messageId,assetId)
+            if(["play","pause","seek"].includes(a.action)) {
+                if(!["audio","video"].includes(thread.asset(assetId).kind))return fail("Select an audio or video asset")
+                if(a.action==="seek" && a.seconds===undefined)return fail("seconds is required")
+                Qt.callLater(()=>inspector.controlMedia(a.action,a.seconds || 0))
+                return {ok:true,data:{accepted:true,assetId:assetId}}
+            }
+        }
+        return {ok:true,data:{workId:thread.id}}
+    }
     function usePackAsset(id) {thread.task="pack";if(id && !thread.selected.includes(id))thread.toggleSelected(id);showPackTools()}
     Connections {
         target: root.thread

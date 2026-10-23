@@ -1,4 +1,5 @@
 #include "AppleAssetDownload.h"
+#include "ResumableAssetCopy.h"
 #include <QPointer>
 #include <QFile>
 #include <QSaveFile>
@@ -13,30 +14,53 @@ API_AVAILABLE(macos(26))
 @public
     QPointer<AppleAssetDownload> owner;
     std::atomic_bool cancelled;
+    std::atomic_bool finished;
 }
 @property(nonatomic, strong) NSProgress *downloadProgress;
 @property(nonatomic, copy) NSString *packID;
 - (void)finish:(QString)error;
 @end
-@implementation XinshenAssetJob
-- (void)finish:(QString)error {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (self->owner) emit self->owner->completed(error);
-    });
+// BAAssetPackManager has a single delegate. Route all concurrently scheduled
+// pack updates through one retained dispatcher instead of overwriting it per job.
+API_AVAILABLE(macos(26))
+@interface XinshenAssetDispatcher : NSObject <BAManagedAssetPackDownloadDelegate>
+@property(nonatomic, strong) NSMutableDictionary<NSString *,XinshenAssetJob *> *jobs;
++ (instancetype)shared;
+@end
+@implementation XinshenAssetDispatcher
++ (instancetype)shared {
+    static XinshenAssetDispatcher *value;static dispatch_once_t once;
+    dispatch_once(&once, ^{value=[XinshenAssetDispatcher new];value.jobs=[NSMutableDictionary new];});return value;
 }
 - (void)downloadOfAssetPack:(BAAssetPack *)pack hasProgress:(NSProgress *)progress {
-    if (![pack.identifier isEqualToString:self.packID]) return;
     dispatch_async(dispatch_get_main_queue(), ^{
-        self.downloadProgress=progress;
-        if (self->cancelled) [progress cancel];
-        else if (self->owner) emit self->owner->progress(progress.fractionCompleted);
+        XinshenAssetJob *job=self.jobs[pack.identifier];
+        if(!job||job->finished)return;
+        job.downloadProgress=progress;
+        if(job->cancelled)[progress cancel];
+        else if(job->owner)emit job->owner->progress(progress.fractionCompleted);
+    });
+}
+@end
+@implementation XinshenAssetJob
+- (void)finish:(QString)error {
+    if(finished.exchange(true))return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        auto dispatcher=XinshenAssetDispatcher.shared;
+        if(dispatcher.jobs[self.packID]==self)[dispatcher.jobs removeObjectForKey:self.packID];
+        if(self->owner)emit self->owner->completed(error);
     });
 }
 @end
 
 AppleAssetDownload::~AppleAssetDownload() {
     cancel();
-    if(m_job) CFRelease(m_job);
+    if(m_job) {
+        auto job=(__bridge XinshenAssetJob *)m_job;job->owner=nullptr;
+        auto dispatcher=XinshenAssetDispatcher.shared;
+        if(dispatcher.jobs[job.packID]==job)[dispatcher.jobs removeObjectForKey:job.packID];
+        CFRelease(m_job);
+    }
 }
 void AppleAssetDownload::cancel() {
     if (@available(macOS 26, *)) {
@@ -53,10 +77,11 @@ void AppleAssetDownload::start(QString pack,QString relativePath,QString destina
         if(![[NSBundle mainBundle] objectForInfoDictionaryKey:@"BAUsesAppleHosting"]) {
             emit completed(QStringLiteral("此安装包未配置 Apple 资源包"));return;
         }
-        auto job=[XinshenAssetJob new]; job->owner=this; job->cancelled=false;
+        auto job=[XinshenAssetJob new]; job->owner=this; job->cancelled=false;job->finished=false;
         job.packID=pack.toNSString(); m_job=(__bridge_retained void *)job;
         auto manager=BAAssetPackManager.sharedManager;
-        manager.delegate=job;
+        auto dispatcher=XinshenAssetDispatcher.shared;
+        dispatcher.jobs[job.packID]=job;manager.delegate=dispatcher;
         [manager getAssetPackWithIdentifier:job.packID completionHandler:^(BAAssetPack *asset,NSError *error) {
             if(error || !asset || job->cancelled) {
                 [job finish:error ? QString::fromNSString(error.localizedDescription) : QStringLiteral("下载已取消")]; return;
@@ -75,23 +100,11 @@ void AppleAssetDownload::start(QString pack,QString relativePath,QString destina
                         QString failure;
                         if(fd<0) failure=QString::fromNSString(readError.localizedDescription ?: @"资源文件不可读");
                         else {
-                            int out=::open(QFile::encodeName(destination).constData(),O_WRONLY|O_CREAT|O_TRUNC|O_NOFOLLOW,0600);
-                            if(out<0) failure=QStringLiteral("无法写入模型缓存");
-                            else {
-                                QByteArray buffer(1024*1024,Qt::Uninitialized); qint64 total=0;
-                                while(!job->cancelled) {
-                                    ssize_t n=::read(fd,buffer.data(),buffer.size());
-                                    if(n==0)break;
-                                    if(n<0 || total+n>bytes){failure=QStringLiteral("资源包文件大小或读取异常");break;}
-                                    ssize_t done=0;
-                                    while(done<n){auto w=::write(out,buffer.data()+done,n-done);if(w<=0){failure=QStringLiteral("磁盘写入失败");break;}done+=w;}
-                                    if(!failure.isEmpty())break;
-                                    total+=n;
-                                }
-                                if(job->cancelled)failure=QStringLiteral("下载已取消");
-                                if(failure.isEmpty()&&total!=bytes)failure=QStringLiteral("资源包文件大小不符");
-                                ::close(out);
-                            }
+                            failure=copyAssetResuming(fd,destination,bytes,job->cancelled,[job,bytes](qint64 copied){
+                                dispatch_async(dispatch_get_main_queue(), ^{
+                                    if(job->owner&&!job->cancelled&&!job->finished)emit job->owner->progress(double(copied)/bytes);
+                                });
+                            });
                             ::close(fd);
                         }
                         if(failure.isEmpty()) {
@@ -105,6 +118,9 @@ void AppleAssetDownload::start(QString pack,QString relativePath,QString destina
                                     failure=QStringLiteral("无法保存模型许可文件");
                             }
                         }
+                        // Keep the system pack after cancellation or copy failure so
+                        // retry can reuse it. BackgroundAssets owns network resume.
+                        if(!failure.isEmpty()||job->cancelled){[job finish:failure.isEmpty()?QStringLiteral("下载已取消"):failure];return;}
                         // Owned copy is version-pinned. Release the system copy to avoid
                         // retaining two full sets of model weights and automatic updates.
                         [manager removeAssetPackWithIdentifier:job.packID completionHandler:^(NSError *removeError) {

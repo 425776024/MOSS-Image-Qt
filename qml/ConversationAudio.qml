@@ -21,6 +21,11 @@ CardSurface {
     implicitHeight: (compact ? 28 : 40)+(showTime ? 13 : 0)+(title.length ? 18 : 0)
     baseColor: compact ? "transparent" : HomeTheme.hover; radius: 6
     function pause() { player.pause() }
+    function control(action,seconds) {
+        if(action === "pause")player.pause()
+        else if(action === "seek")seek(seconds)
+        else {if(player.source.toString() !== source.toString())player.source=source;player.play()}
+    }
     function time(value) { const s=Math.floor(Math.max(0,value)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0") }
     function seek(value) {
         interacted()

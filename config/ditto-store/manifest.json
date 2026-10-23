@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "engine": "ditto-native-v1",
+  "pipelineId": "21fdd6c611964ae9efee5650f6f33116e40f3a3f14f565ba0081066c54a4ff74",
+  "upstreamCommit": "c3e47eee2e626500017a0556b470d6d4182f85e8",
+  "audioModel": {
+    "name": "focused-05000",
+    "trainingSteps": 5000,
+    "checkpointSha256": "b129c9b08ebe714717399788a5529cf5d5d9d14b57ef2bee40255199fbf9469b",
+    "sourceConditioning": "source-neutral-v1",
+    "mouthConditionReference": true
+  },
+  "files": {
+    "hubert.onnx": {
+      "bytes": 1458714493,
+      "sha256": "327a5b90c0bfb9df251c9af91d0bea5e6284dbb0a4d02814f1d3ace6b4c2b5aa"
+    },
+    "landmark203.onnx": {
+      "bytes": 114666491,
+      "sha256": "31d22a5041326c31f19b78886939a634a5aedcaa5ab8b9b951a1167595d147db"
+    },
+    "denoise.onnx": {
+      "bytes": 193113121,
+      "sha256": "bb30d10ccc0ef8746c2623b558cebb8fa6e37dbc1ec0f7bdc04a7243fafa3164"
+    },
+    "appearance.onnx": {
+      "bytes": 3355896,
+      "sha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6"
+    },
+    "motion.onnx": {
+      "bytes": 112610626,
+      "sha256": "91bd0c05e9fa2cb4918d32cfe547db1d3f3fbbf79713ffbe207670f422e069a1"
+    },
+    "stitch.onnx": {
+      "bytes": 185542,
+      "sha256": "d3629a08268f1125d60c194e6dbd495126424e8de1112f2fc368170660dde043"
+    },
+    "decoder.onnx": {
+      "bytes": 221530139,
+      "sha256": "94fca15fe5b67885edebfacbcadcac29e79238ac0d9ffbf0d688391cefb890be"
+    },
+    "warp.onnx": {
+      "bytes": 199684279,
+      "sha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099"
+    },
+    "config.json": {
+      "bytes": 227896,
+      "sha256": "b69363ad93ba273554f28c2033f925c77c220da8522955b099fe9dac720a296b"
+    },
+    "schedule.json": {
+      "bytes": 3267,
+      "sha256": "21dd3bcca09b695391c9a8a05e48cd9d2355ca612ec52c0c3d8f5e03d7722e03"
+    },
+    "face_detection_yunet_2023mar.onnx": {
+      "bytes": 232589,
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+    },
+    "face_landmarker.task": {
+      "bytes": 3758596,
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    }
+  },
+  "preparation": {
+    "profile": "yunet-203-v1",
+    "detectorInputSize": 640,
+    "scoreThreshold": 0.9,
+    "nmsThreshold": 0.3,
+    "landmarkCropScale": 1.5,
+    "landmarkCropShiftY": -0.1,
+    "sourceCropScale": 2.3,
+    "sourceCropShiftY": -0.125
+  }
+}

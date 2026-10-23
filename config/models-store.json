@@ -1,0 +1,38 @@
+{
+  "files": [
+    {
+      "group": "ditto",
+      "path": "ditto-original/config.json",
+      "resource": ":/models/config/ditto-store/config.json",
+      "bytes": 227896,
+      "sha256": "b69363ad93ba273554f28c2033f925c77c220da8522955b099fe9dac720a296b"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/manifest.json",
+      "resource": ":/models/config/ditto-store/manifest.json",
+      "bytes": 2396,
+      "sha256": "eb1c62bfbfc7e2d2c35adab00525d322c46538119468ede67907bb5e2452846f"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/denoise.onnx",
+      "repo": "",
+      "revision": "focused-05000",
+      "file": "denoise.onnx",
+      "appleOnly": true,
+      "bytes": 193113121,
+      "sha256": "bb30d10ccc0ef8746c2623b558cebb8fa6e37dbc1ec0f7bdc04a7243fafa3164"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/face_landmarker.task",
+      "repo": "",
+      "revision": "1",
+      "file": "face_landmarker.task",
+      "appleOnly": true,
+      "bytes": 3758596,
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    }
+  ]
+}

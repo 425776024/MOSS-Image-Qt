@@ -28,6 +28,7 @@ endif()
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Network Multimedia Concurrent Svg Test)
 qt_standard_project_setup(REQUIRES 6.8)
 qt_add_executable(MossStudio MACOSX_BUNDLE
+    src/DiagnosticLog.cpp src/DiagnosticLog.h src/InferenceDiagnostics.cpp src/InferenceDiagnostics.h
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
     src/WorkspaceLibrary.cpp src/WorkspaceLibrary.h src/main.cpp src/ModelManager.cpp src/ModelManager.h src/Studio.cpp src/StudioTimeline.cpp src/Studio.h src/RemoteImageClient.cpp src/RemoteImageClient.h src/TimelineDocument.cpp src/TimelineDocument.h src/AudioDurationProbe.cpp src/AudioDurationProbe.h src/Document.cpp src/Document.h src/SoundPlan.cpp src/SoundPlan.h)
 qt_add_resources(MossStudio home_resources PREFIX "/home"
@@ -50,6 +51,7 @@ if(APPLE)
 endif()
 set_source_files_properties(qml/HomeTheme.qml qml/StudioTheme.qml qml/VideoCutTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
+    QML_FILES qml/HomeMcp.qml
     RESOURCES qml/Translations.js qml/VoiceDesignPresets.js
     QML_FILES qml/GenerationAvatar.qml qml/AvatarDesignDialog.qml qml/VoiceStyleControls.qml qml/VoiceDesignDialog.qml
     QML_FILES qml/ModelDownloadDialog.qml qml/HomeSection.qml qml/HomeChoiceCard.qml qml/CanvasSizePicker.qml qml/HomeDialog.qml qml/HomeNoticeDialog.qml qml/HomeImagePreview.qml qml/HomeMenu.qml
@@ -61,6 +63,8 @@ qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
     QML_FILES qml/Main.qml qml/StudioButton.qml qml/StudioField.qml qml/LayoutCanvas.qml qml/RepaintCanvas.qml qml/RepaintSettings.qml qml/NarrationCanvas.qml qml/NarrationSettings.qml qml/CreationPage.qml qml/TrackTimeline.qml qml/TrackPreview.qml qml/BackgroundSettings.qml qml/InputArea.qml qml/StudioCombo.qml qml/CompositionPage.qml qml/StudioTheme.qml qml/StudioIcon.qml qml/TemplateCard.qml qml/CreationPages.qml qml/StudioSlider.qml qml/StudioSpinBox.qml qml/StudioCheckBox.qml
     SOURCES src/AudioWaveform.h src/AudioWaveform.cpp src/EditDocument.h src/EditDocument.cpp src/MaskCanvas.h src/MaskCanvas.cpp src/LayerDocument.h src/LayerDocument.cpp src/LayerCanvas.h src/LayerCanvas.cpp)
 target_include_directories(MossStudio PRIVATE src)
+set(MOSS_MCP_SOURCES src/McpService.cpp src/McpService.h src/McpHttpServer.cpp src/McpHttpServer.h src/McpCatalog.cpp src/McpCatalog.h src/McpCallModel.cpp src/McpCallModel.h src/McpMediaStore.cpp src/McpMediaStore.h)
+target_sources(MossStudio PRIVATE ${MOSS_MCP_SOURCES})
 if(MOSS_APP_STORE)
     if(NOT APPLE)
         message(FATAL_ERROR "MOSS_APP_STORE requires macOS")
@@ -128,6 +132,7 @@ target_include_directories(layer_tests PRIVATE src)
 target_link_libraries(layer_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Svg Qt6::Test)
 moss_add_qt_test(layers layer_tests)
 qt_add_executable(creation_pages_tests tests/creation_pages_tests.cpp
+    src/DiagnosticLog.cpp src/DiagnosticLog.h src/InferenceDiagnostics.cpp src/InferenceDiagnostics.h
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
     src/ModelManager.cpp src/ModelManager.h src/Studio.cpp src/StudioTimeline.cpp src/Studio.h src/RemoteImageClient.cpp src/RemoteImageClient.h src/TimelineDocument.cpp src/TimelineDocument.h src/AudioDurationProbe.cpp src/AudioDurationProbe.h src/Document.cpp src/Document.h src/SoundPlan.cpp src/SoundPlan.h
     src/EditDocument.cpp src/EditDocument.h src/LayerDocument.cpp src/LayerDocument.h)
@@ -135,6 +140,10 @@ target_include_directories(creation_pages_tests PRIVATE src)
 target_compile_definitions(creation_pages_tests PRIVATE MOSS_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(creation_pages_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Network Qt6::Multimedia Qt6::Concurrent Qt6::Svg Qt6::Test)
 moss_add_qt_test(creation_pages creation_pages_tests)
+qt_add_executable(diagnostic_log_tests tests/diagnostic_log_tests.cpp src/DiagnosticLog.cpp src/InferenceDiagnostics.cpp)
+target_include_directories(diagnostic_log_tests PRIVATE src)
+target_link_libraries(diagnostic_log_tests PRIVATE Qt6::Core Qt6::Test)
+moss_add_qt_test(diagnostic_log diagnostic_log_tests)
 add_executable(mouth_cache_tests tests/mouth_cache_tests.cpp)
 add_test(NAME mouth_cache COMMAND mouth_cache_tests)
 option(MOSS_BUILD_DITTO "Build native Ditto worker" ON)
@@ -178,9 +187,38 @@ if(MOSS_APP_STORE)
         src/ModelManager.cpp src/ModelManager.h src/AppleAssetDownload.mm src/AppleAssetDownload.h)
     target_include_directories(store_model_channel_tests PRIVATE src)
     target_compile_definitions(store_model_channel_tests PRIVATE MOSS_APP_STORE=1)
+    qt_add_resources(store_model_channel_tests model_resources PREFIX "/models" FILES
+        config/models.json config/ditto-original/config.json config/ditto-original/schedule.json config/ditto-original/manifest.json)
+    foreach(store_target MossStudio store_model_channel_tests)
+        qt_add_resources(${store_target} store_model_resources PREFIX "/models" FILES
+            config/models-store.json config/ditto-store/config.json config/ditto-store/manifest.json)
+    endforeach()
     target_link_libraries(store_model_channel_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Concurrent Qt6::Test)
     target_link_options(store_model_channel_tests PRIVATE "SHELL:-weak_framework BackgroundAssets" "SHELL:-framework Foundation")
     moss_add_qt_test(store_model_channel store_model_channel_tests)
 endif()
 
 qt_add_resources(MossStudio sound_model_terms PREFIX "/model-terms" FILES docs/model-terms.md)
+
+foreach(download_target MossStudio creation_pages_tests model_manager_tests)
+    target_sources(${download_target} PRIVATE src/ModelHttpDownload.cpp src/ModelHttpDownload.h)
+endforeach()
+if(MOSS_APP_STORE)
+    target_sources(store_model_channel_tests PRIVATE src/ModelHttpDownload.cpp src/ModelHttpDownload.h)
+endif()
+qt_add_executable(model_http_download_tests tests/model_http_download_tests.cpp src/ModelHttpDownload.cpp src/ModelHttpDownload.h)
+target_include_directories(model_http_download_tests PRIVATE src)
+target_link_libraries(model_http_download_tests PRIVATE Qt6::Core Qt6::Network Qt6::Test)
+add_test(NAME model_http_download COMMAND model_http_download_tests)
+
+# Exercise the MCP boundary against the real application services in an isolated root.
+if(NOT MOSS_APP_STORE) # Tests rely on output-root overrides unavailable in sandbox builds.
+get_target_property(MOSS_MCP_TEST_CORE creation_pages_tests SOURCES)
+list(FILTER MOSS_MCP_TEST_CORE EXCLUDE REGEX "tests/creation_pages_tests\\.cpp$")
+qt_add_executable(mcp_tests tests/mcp_tests.cpp ${MOSS_MCP_TEST_CORE} ${MOSS_MCP_SOURCES} src/WorkspaceLibrary.cpp src/WorkspaceLibrary.h)
+target_include_directories(mcp_tests PRIVATE src)
+target_compile_definitions(mcp_tests PRIVATE MOSS_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(mcp_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Network Qt6::Multimedia Qt6::Concurrent Qt6::Svg Qt6::Test)
+qt_add_resources(mcp_tests mcp_model_terms PREFIX "/model-terms" FILES docs/model-terms.md)
+moss_add_qt_test(mcp mcp_tests)
+endif()

@@ -8,14 +8,22 @@
 #include <QElapsedTimer>
 #include <QLockFile>
 #include <memory>
+#include <QSet>
+#include <QHash>
 
 struct ModelAsset {
     QString group, path, repo, revision, file, sha256, resource;
     qint64 bytes=0;
+    bool appleOnly=false;
+    QString modelscopeUrl;
+    qint64 downloadBytes=0;
+    QString downloadSha256,conversion;
+    qint64 transferBytes() const { return downloadBytes?downloadBytes:bytes; }
+    QString transferSha256() const { return downloadSha256.isEmpty()?sha256:downloadSha256; }
 };
 
 // The catalog is the sole authority for downloads, deletion and release packaging.
-// Private weights and arbitrary files outside this catalog are never managed.
+// Only explicitly catalogued channel assets are managed.
 class ModelManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString root READ root NOTIFY changed)
@@ -100,22 +108,25 @@ private:
     bool acquire();
     void finish(QString error={},bool cancelled=false);
     void next();
+    void prepare(ModelAsset asset);
     void transfer(ModelAsset asset);
     void checkFile(ModelAsset asset,QString path,bool install);
-    void advance();
+    void advance(ModelAsset asset);
+    void fail(ModelAsset asset,QString error);
+    void updateProgress(QString path,qint64 bytes);
     QString m_root,m_endpoint,m_quant="Q4_K",m_status,m_error;
     QStringList m_requested;
     QList<ModelAsset> m_assets,m_queue;
     QVariantList m_groups;
     bool m_busy=false,m_cancelled=false,m_inference=false,m_verifyOnly=false;
+    bool m_stopping=false;
     bool m_initialSetup=false,m_setupOffered=false;
+    QSet<QString> m_active;
+    QHash<QString,qint64> m_activeBytes;
     int m_index=0;
     qint64 m_total=0,m_done=0;
     double m_progress=0;
     QElapsedTimer m_refreshTimer;
-    QNetworkAccessManager m_network;
-    QPointer<QNetworkReply> m_reply;
-    QFile m_part;
     std::unique_ptr<QLockFile> m_lock;
     QUrl m_testTransport;
 };

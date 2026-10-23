@@ -9,6 +9,7 @@
 #include <memory>
 #include "Studio.h"
 #include "WorkspaceLibrary.h"
+#include "McpService.h"
 #include "AudioWaveform.h"
 #include <QStyleHints>
 #include <QJsonDocument>
@@ -19,6 +20,7 @@
 #include <QSettings>
 #include <QKeyEvent>
 #include <QIcon>
+#include <QClipboard>
 #ifdef Q_OS_MACOS
 #include "WindowAppearance.h"
 #endif
@@ -60,6 +62,8 @@ int main(int argc,char **argv){
     app.setOrganizationName("MossStudio");app.setApplicationName("MossStudio");app.setApplicationVersion("0.1.0");
     app.setApplicationDisplayName(QString::fromUtf8("新身数字人"));
     app.setWindowIcon(QIcon(":/home/assets/app-icon/xinshen-1024.png"));
+    DiagnosticLog::installQtHandler();
+    struct DiagnosticGuard { ~DiagnosticGuard(){DiagnosticLog::restoreQtHandler();} } diagnosticGuard;
     if(qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,qEnvironmentVariable("MOSS_SETTINGS_ROOT"));
@@ -78,7 +82,7 @@ int main(int argc,char **argv){
     if(QFileInfo::exists(QCoreApplication::applicationDirPath()+"/assets/voices/catalog.json"))
         qputenv("MOSS_DISABLE_DEV_PATHS","1");
 #endif
-    Studio studio;WorkspaceLibrary workspace(studio.outputRoot());QQmlApplicationEngine engine;
+    Studio studio;WorkspaceLibrary workspace(studio.outputRoot());McpService mcp(&studio,&workspace);QQmlApplicationEngine engine;
     app.setApplicationDisplayName(workspace.appName());
     QObject::connect(&workspace,&WorkspaceLibrary::preferencesChanged,&app,[&]{app.setApplicationDisplayName(workspace.appName());});
     const auto args=app.arguments();
@@ -95,11 +99,18 @@ int main(int argc,char **argv){
     if(themeAt>=0&&themeAt+1<args.size())workspace.setAppearanceMode(args[themeAt+1]);
     engine.rootContext()->setContextProperty("studio",&studio);
     engine.rootContext()->setContextProperty("workspace",&workspace);
+    engine.rootContext()->setContextProperty("mcp",&mcp);
     engine.addImageProvider("moss-canvas",new CanvasImageProvider(&studio));
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("MossStudio","Main");
     if (engine.rootObjects().isEmpty()) return 2;
     auto homeWindow=qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    mcp.uiControl=[homeWindow](const QJsonObject &arguments){
+        QVariant result;
+        if(!QMetaObject::invokeMethod(homeWindow,"mcpControl",Q_RETURN_ARG(QVariant,result),Q_ARG(QVariant,arguments.toVariantMap())))
+            return QJsonObject{{"ok",false},{"error",QJsonObject{{"code","UI_UNAVAILABLE"},{"message","Window command unavailable"}}}};
+        return QJsonObject::fromVariantMap(result.toMap());
+    };
     auto editorWindow=homeWindow; // Creation now lives in the one main window.
     const bool editorTest=args.contains("--smoke-ui")||args.contains("--timeline-test")||args.contains("--generate-test")||args.contains("--edit-test")||args.contains("--avatar-test")||args.contains("--page-video-test")||args.contains("--voice-only-test");
     auto mainWindow=editorTest?editorWindow:homeWindow;
@@ -232,6 +243,36 @@ int main(int argc,char **argv){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         if(!args.contains("--preserve-preview")&&!args.contains("--home-smoke"))studio.document()->example();
         if(args.contains("--home-smoke")){
+            if(args.contains("--check-mcp"))QTimer::singleShot(600,&app,[&]{
+                if(!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")||!qEnvironmentVariableIsSet("MOSS_OUTPUT_ROOT")){app.exit(5);return;}
+                homeWindow->setProperty("destination","mcp");
+                auto toggle=homeWindow->findChild<QQuickItem *>("mcpToggle");
+                if(!toggle||mcp.running()){app.exit(5);return;}
+                toggle->forceActiveFocus(Qt::TabFocusReason);
+                const auto key=[&](Qt::Key value){QKeyEvent press(QEvent::KeyPress,value,Qt::NoModifier),release(QEvent::KeyRelease,value,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                key(Qt::Key_Space);if(!mcp.running()){app.exit(5);return;}
+                key(Qt::Key_Space);if(mcp.running()){app.exit(5);return;}
+                key(Qt::Key_Space);if(!mcp.running()){app.exit(5);return;}
+                key(Qt::Key_Tab);if(!homeWindow->activeFocusItem()){app.exit(5);return;}
+                if(args.contains("--check-mcp-lan")) {
+                    auto lan=homeWindow->findChild<QQuickItem *>("mcpLanToggle");
+                    if(!lan||mcp.lanEnabled()||mcp.lanAddresses().isEmpty()){app.exit(5);return;}
+                    lan->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                    if(!mcp.running()||!mcp.lanEnabled()||!mcp.url().contains(mcp.lanAddress())){app.exit(5);return;}
+                    key(Qt::Key_Space);if(mcp.lanEnabled()||!mcp.url().contains("127.0.0.1")){app.exit(5);return;}
+                    key(Qt::Key_Space);if(!mcp.lanEnabled()){app.exit(5);return;}
+                }
+                mcp.dispatch({{"jsonrpc","2.0"},{"id",1},{"method","initialize"},{"params",QJsonObject{{"protocolVersion","2025-11-25"}}}});
+                mcp.dispatch({{"jsonrpc","2.0"},{"id",2},{"method","tools/call"},{"params",QJsonObject{{"name","app_status"},{"arguments",QJsonObject()}}}});
+                auto panel=homeWindow->findChild<QObject *>("homeMcpPanel");
+                auto model=mcp.calls();const auto first=model->data(model->index(0,0),Qt::UserRole).toMap();
+                if(!panel||first["state"]!="completed"){app.exit(5);return;}
+                QMetaObject::invokeMethod(panel,"select",Q_ARG(QVariant,first["id"]));
+                auto copy=homeWindow->findChild<QObject *>("mcpCopyPrompt");
+                if(!copy||!QMetaObject::invokeMethod(copy,"clicked")){app.exit(5);return;}
+                if(QGuiApplication::clipboard()->text()!=mcp.connectionText(workspace.language()=="en")){app.exit(5);return;}
+                qInfo("MCP panel: keyboard enable/disable, Tab, copy prompt and live completed call verified");
+            });
             if(args.contains("--cycle-library-pages")){
                 if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT"))return 5;
                 const QStringList pages={"avatars","voices","settings","avatars","createVoice","voices","avatars",argument("--home-page","voices")};
@@ -466,6 +507,19 @@ int main(int argc,char **argv){
                 QMetaObject::invokeMethod(dialog,"open");
             });
             const auto inputName=argument("--check-input",QString());
+            if(args.contains("--check-download-source"))QTimer::singleShot(1000,&app,[&]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
+                auto models=homeWindow->findChild<QObject *>("homeModels");
+                auto choice=models?models->findChild<QQuickItem *>("modelSourceChoice"):nullptr;
+                if(!choice||studio.models()->imageQuant()!="Q4_K"){app.exit(5);return;}
+                const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);};
+                choice->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);key(Qt::Key_End);key(Qt::Key_Return);
+                if(studio.models()->endpoint()!="https://huggingface.co"){app.exit(5);return;}
+                choice->forceActiveFocus();key(Qt::Key_Space);key(Qt::Key_Home);key(Qt::Key_Return);
+                if(studio.models()->endpoint()!="auto"){app.exit(5);return;}
+                key(Qt::Key_Space);key(Qt::Key_Escape);key(Qt::Key_Tab);
+                qInfo()<<"Download source keyboard check passed";
+            });
             if(args.contains("--check-scope-keyboard"))QTimer::singleShot(1000,&app,[&]{
                 if(app.platformName()!="offscreen"){app.exit(5);return;}
                 auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));

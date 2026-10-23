@@ -16,7 +16,8 @@ SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets', '
 SOURCE_DOCS = ('LICENSE', 'README.md', 'README-en.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', '.gitattributes',
                'AGENTS.md', 'DESIGN.md', '.cursor/rules/macos-design.mdc', 'docs/macos-design-skills.md',
                'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md',
-               'docs/macos-release.md', 'docs/windows-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md')
+               'docs/macos-release.md', 'docs/windows-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md',
+               'docs/mcp.md', 'docs/diagnostics.md')
 
 # Exact, hash-pinned showcase exceptions. Local exports remain forbidden.
 PUBLIC_DEMO_MEDIA = {

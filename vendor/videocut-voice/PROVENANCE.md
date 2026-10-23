@@ -24,8 +24,11 @@ Imported on 2026-10-20 at the user's request.
   `VideoCut/.local/ai-models/runtime/src/sa3.cpp`,
   revision `10d0373ec4f3e195cfee9bc73a39feefa933ecab`, with its bundled ggml
   sources. The MIT engine notice is `licenses/sa3-MIT.txt`.
-  The five Small SFX GGUF payloads come from that checkout's
-  `.local/ai-models/eval/stable-audio-3-small-sfx-gguf` directory.
+  The default sound model is Stable Audio 3 Medium F16, with SAME-L and
+  the shared T5Gemma encoder/tokenizer. The five pinned files are available
+  from `LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF` on ModelScope;
+  upstream GGUF conversion is by `thepatch` on Hugging Face.
+  File identities and provider-specific URLs are pinned in `config/models.json`.
   Engine licensing does not replace the separate model license.
 
 `scripts/prepare_audio.sh` copies dependencies to this project's owned

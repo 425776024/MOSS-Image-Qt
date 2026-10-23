@@ -86,6 +86,7 @@ def main():
     inv = sub.add_parser('inventory')
     inv.add_argument('--root', action='append', required=True, type=Path)
     inv.add_argument('--output', required=True, type=Path)
+    inv.add_argument('--app-store', action='store_true', help='Apply the App Store model overrides')
     pkg = sub.add_parser('build')
     pkg.add_argument('--inventory', required=True, type=Path)
     pkg.add_argument('--model', required=True, help='Exact catalog-relative model path')
@@ -93,7 +94,12 @@ def main():
     pkg.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     if args.command == 'inventory':
-        rows = inventory(json.loads((ROOT / 'config/models.json').read_text()), args.root)
+        catalog = json.loads((ROOT / 'config/models.json').read_text())
+        if args.app_store:
+            files = {a['path']: a for a in catalog['files']}
+            files.update({a['path']: a for a in json.loads((ROOT / 'config/models-store.json').read_text())['files']})
+            catalog['files'] = list(files.values())
+        rows = inventory(catalog, args.root)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n')
         print(json.dumps({'verified': sum(r['status'] == 'verified' for r in rows),

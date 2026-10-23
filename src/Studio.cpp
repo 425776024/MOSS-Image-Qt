@@ -63,6 +63,13 @@ Studio::Studio(QObject *p):QObject(p),m_doc(this),m_edit(this),m_layers(this),m_
         if(!m_busy){m_status=m_modelManager.status();m_progress=m_modelManager.progress();m_error=m_modelManager.error();}
         emit changed();
     });
+    auto previousModelError=std::make_shared<QString>();
+    connect(&m_modelManager,&ModelManager::changed,this,[this,previousModelError]{
+        const auto error=m_modelManager.error();
+        if(!error.isEmpty()&&error!=*previousModelError)
+            DiagnosticLog::instance().record("error","model-error",{{"message",error}});
+        *previousModelError=error;
+    });
     connect(this,&Studio::changed,this,[this]{m_modelManager.setInferenceBusy(m_busy);});
     if(m_remote.available()&&qEnvironmentVariable("MOSS_IMAGE_DEVICE",settings.value("imageDevice","local").toString())=="remote")m_imageDevice="remote";
     connect(&m_remote,&RemoteImageClient::changed,this,&Studio::changed);
@@ -80,8 +87,15 @@ Studio::Studio(QObject *p):QObject(p),m_doc(this),m_edit(this),m_layers(this),m_
     connect(&m_process,&QProcess::readyReadStandardOutput,this,&Studio::readOutput);
     connect(&m_process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),this,&Studio::finished);
     connect(&m_process,&QProcess::errorOccurred,this,[this](QProcess::ProcessError e){
-        if(e==QProcess::FailedToStart){m_busy=false;m_audioPipeline=false;fail("无法启动本地引擎："+m_process.errorString());emit jobFinished(false);}
+        m_diagnostics.processError(int(e),m_process.errorString());
+        if(e==QProcess::FailedToStart){
+            m_jobLog.close();m_diagnostics.finish(false,false,-1,false,m_process.errorString());
+            m_busy=false;m_audioPipeline=false;fail("无法启动本地引擎："+m_process.errorString());emit jobFinished(false);
+        }
     });
+    auto diagnosticHeartbeat=new QTimer(this);diagnosticHeartbeat->setInterval(10000);
+    connect(diagnosticHeartbeat,&QTimer::timeout,this,[this]{m_diagnostics.heartbeat();});
+    diagnosticHeartbeat->start();
     auto session=readJson(m_outputRoot+"/session.json");
     if(!session.isEmpty()){
         QString error;m_doc.load(session["document"].toObject(),&error);
@@ -113,6 +127,18 @@ Studio::Studio(QObject *p):QObject(p),m_doc(this),m_edit(this),m_layers(this),m_
     if(m_imageDevice=="remote")QTimer::singleShot(0,&m_remote,[this]{m_remote.connectServer();});
 }
 Studio::~Studio(){persist();if(m_process.state()!=QProcess::NotRunning){m_process.kill();m_process.waitForFinished(3000);}}
+QUrl Studio::defaultDiagnosticsExportUrl() const{
+    return QUrl::fromLocalFile(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)+
+        "/Xinshen-diagnostics-"+QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss")+".log");
+}
+void Studio::exportDiagnostics(QUrl destination){
+    QString error;
+    if(!destination.isLocalFile()||destination.toLocalFile().isEmpty()){
+        emit diagnosticsExportFinished(false,"请选择本地文件");return;
+    }
+    const bool success=DiagnosticLog::instance().exportTo(destination.toLocalFile(),&error);
+    emit diagnosticsExportFinished(success,success?destination.toLocalFile():error);
+}
 void Studio::refreshMouthCache(){
     try {
         const auto path=(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)+"/ditto-mouth-v2").toStdString();
@@ -301,18 +327,19 @@ void Studio::saveText(QUrl url,QString text){
     else{m_status="输入内容已导出";emit changed();}
 }
 QString Studio::engine(QString name)const{
+    QString executable=name;
 #ifdef Q_OS_WIN
-    name += ".exe";
+    executable+=".exe";
 #endif
-    QStringList paths={QCoreApplication::applicationDirPath()+"/"+name,
-        QCoreApplication::applicationDirPath()+"/../Helpers/"+name,
+    QStringList paths={QCoreApplication::applicationDirPath()+"/"+executable,
+        QCoreApplication::applicationDirPath()+"/../Helpers/"+executable,
         };
     if(!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
-        paths.append(QCoreApplication::applicationDirPath()+"/../../../workers/"+name);
-    if(name.startsWith("sa3-generate")&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
-        paths.append(QString(MOSS_SOURCE_ROOT)+"/.local/build-audio/bin/sa3-generate");
+        paths.append(QCoreApplication::applicationDirPath()+"/../../../workers/"+executable);
+    if(name=="sa3-generate"&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
+        paths.append(QString(MOSS_SOURCE_ROOT)+"/.local/build-audio/bin/"+executable);
     if(!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
-        paths.append(QString(MOSS_SOURCE_ROOT)+(name.startsWith("sd-cli")?"/.local/build-engine/bin/":"/build/workers/")+name);
+        paths.append(QString(MOSS_SOURCE_ROOT)+(name=="sd-cli"?"/.local/build-engine/bin/":"/build/workers/")+executable);
     for(auto p:paths)if(QFileInfo(p).isExecutable())return QDir::cleanPath(p);
     return {};
 }
@@ -341,14 +368,20 @@ bool Studio::voiceReady()const{return !engine("moss-voice").isEmpty()&&m_modelMa
 bool Studio::sfxReady()const{return !engine("sa3-generate").isEmpty()&&m_modelManager.ready("sfx");}
 void Studio::setPortrait(QString s){m_portrait=ownedWorkerInput(s);if(m_portrait.isEmpty())m_error="无法导入人像，请重新选择文件";emit changed();}
 void Studio::setAudio(QString s){m_audio=ownedWorkerInput(s);if(m_audio.isEmpty())m_error="无法导入音频，请重新选择文件";emit changed();}
-void Studio::fail(QString s){m_error=s;m_status="操作未完成";if(!m_busy)m_audioPipeline=false;emit changed();}
+void Studio::fail(QString s){DiagnosticLog::instance().record("error","operation-error",{{"message",s}});m_error=s;m_status="操作未完成";if(!m_busy)m_audioPipeline=false;emit changed();}
 void Studio::start(QString exe,QStringList args,QString kind){
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
     m_remoteJob=false;
     m_kind=kind;m_cancelled=false;m_busy=true;m_progress=0;m_backend="正在检测";m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();
     m_status=kind=="voice"?"正在合成页面配音…":kind=="sfx"?"正在生成音效…":kind=="page-video"?"正在检测画面并准备配音…":kind=="timeline"?"正在导出时间轴…":kind=="avatar"?"正在准备 Ditto…":"正在加载 MOSS-Image…";
+    auto diagnosticParameters=readJson(m_jobDir+"/job.json");
+    diagnosticParameters["imageQuant"]=m_imageQuant;
+    diagnosticParameters["offloadToCpu"]=args.contains("--offload-to-cpu");
+    diagnosticParameters["vaeTiling"]=args.contains("--vae-tiling");
+    m_diagnostics.begin(kind,QFileInfo(exe).fileName(),false,diagnosticParameters);
     m_jobLog.setFileName(m_jobDir+"/engine.log");
     if(!m_jobLog.open(QIODevice::WriteOnly)){
+        m_diagnostics.finish(false,false,-1,false,m_jobLog.errorString());
         m_busy=false;fail("无法写入任务日志，请检查作品目录的空间和权限");emit jobFinished(false);return;
     }
     auto env=QProcessEnvironment::systemEnvironment();
@@ -368,10 +401,12 @@ void Studio::start(QString exe,QStringList args,QString kind){
 }
 void Studio::startRemote(QStringList args,QString kind){
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
-    m_remoteJob=true;m_kind=kind;m_busy=true;m_cancelled=false;m_progress=0;m_backend="CUDA · 远程 GPU";
+    m_remoteJob=true;m_kind=kind;m_busy=true;m_cancelled=false;m_progress=0;m_backend="正在检测";
     m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();m_timer.start();
+    m_diagnostics.begin(kind,"sd-cli",true,readJson(m_jobDir+"/job.json"));
     m_jobLog.setFileName(m_jobDir+"/remote-stream.log");
     if(!m_jobLog.open(QIODevice::WriteOnly)){
+        m_diagnostics.finish(false,false,-1,false,m_jobLog.errorString());
         m_busy=false;m_remoteJob=false;fail("无法保存远程任务日志");emit jobFinished(false);return;
     }
     persist();
@@ -405,8 +440,9 @@ void Studio::resumeRemoteImage(){
         }
     }
     m_imageDevice="remote";m_jobDir=directory;m_kind=job["kind"].toString();
-    m_remoteJob=true;m_busy=true;m_cancelled=false;m_progress=0;m_backend="CUDA · 远程 GPU";
+    m_remoteJob=true;m_busy=true;m_cancelled=false;m_progress=0;m_backend="正在检测";
     m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();m_timer.start();
+    m_diagnostics.begin(m_kind,"sd-cli-resumed",true,job);
     m_jobLog.setFileName(m_jobDir+"/remote-stream.log");
     if(!m_jobLog.open(QIODevice::WriteOnly|QIODevice::Append)||!m_remote.resume(directory)){
         m_workerError="无法恢复远程任务";finished(1,QProcess::NormalExit);return;
@@ -596,8 +632,8 @@ void Studio::advanceAudioPipeline(){
             const auto worker=engine("sa3-generate");const auto models=m_models+"/sound-effects";
             if(!ensureModels({"sfx"}))return;
             if(!newJob("sfx")){fail("无法创建音效任务目录");return;}
-            writeJson(m_jobDir+"/job.json",{{"kind","sfx"},{"prompt",settings["sfxPrompt"].toString()},{"duration",settings["sfxDuration"].toInt()}});
-            start(worker,{"--model","small-sfx","--models-dir",models,"--prompt",settings["sfxPrompt"].toString(),
+            writeJson(m_jobDir+"/job.json",{{"kind","sfx"},{"engine","stable-audio-3-medium-f16"},{"prompt",settings["sfxPrompt"].toString()},{"duration",settings["sfxDuration"].toInt()}});
+            start(worker,{"--model","medium","--models-dir",models,"--prompt",settings["sfxPrompt"].toString(),
                 "--duration",QString::number(settings["sfxDuration"].toInt()),"--steps","40","--seed",QString::number(m_seed),
                 "--out",m_jobDir+"/sfx.wav"},"sfx");return;
         }
@@ -712,12 +748,16 @@ void Studio::readOutput(){
 }
 void Studio::consumeOutput(QByteArray bytes){
     if(bytes.isEmpty())return;
+    m_diagnostics.consume(bytes);
     if(m_jobLog.isOpen()){m_jobLog.write(bytes);m_jobLog.flush();}
     const auto text=QString::fromUtf8(bytes);m_log=(m_log+text).right(18000);m_pending+=text;
-    if(!m_remoteJob&&(m_log.contains("Metal")||m_log.contains("METAL")))m_backend="Metal · Apple GPU";
-    if(m_log.contains("CoreML")||m_log.contains("coreml"))m_backend="Core ML · Ditto";
-    if(m_log.contains("DirectML GPU"))m_backend="DirectML · Ditto";
-    if(m_log.contains("ggml_vulkan")||m_log.contains("Using Vulkan"))m_backend="Vulkan · GPU";
+    QStringList backendNames;
+    const auto observed=m_diagnostics.summary()["components"].toObject();
+    for(const auto &component:observed){
+        const auto name=component.toObject()["backend"].toString();
+        if(!name.isEmpty()&&!backendNames.contains(name))backendNames.append(name);
+    }
+    if(!backendNames.isEmpty())m_backend=backendNames.join(" / ")+(m_remoteJob?" · 远程":"");
     if(m_log.contains("generating image"))m_status="正在生成图像…";
     if(m_log.contains("decoding"))m_status="正在解码图像…";
     const QRegularExpression step(m_kind=="sfx"?R"(step\s+(\d+)\s*/\s*(\d+))":R"((\d+)\s*/\s*(\d+)\s*[-|])");
@@ -733,22 +773,10 @@ void Studio::consumeOutput(QByteArray bytes){
         if(j["event"]=="page-route"){
             m_narrationRoute=j["route"].toString();
             m_status=m_narrationRoute=="portrait"?"检测到人像，正在生成说话视频…":"未检测到人像，正在合成画面配音…";
-#ifdef Q_OS_WIN
-            m_backend=m_narrationRoute=="portrait"?"正在检测":"Media Foundation · 图像配音";
-#else
-            m_backend=m_narrationRoute=="portrait"?"Core ML · Ditto":"VideoToolbox · 图像配音";
-#endif
         }
         if(j["event"]=="progress"){
             QString stage=j["stage"].toString();auto total=j["total"].toDouble();
             if(total>0)m_progress=j["done"].toDouble()/total;
-            if(stage=="voice-load")m_backend="正在检测";
-            if(stage=="timeline-video")
-#ifdef Q_OS_WIN
-                m_backend="Media Foundation · 时间轴合成";
-#else
-                m_backend="VideoToolbox · 时间轴合成";
-#endif
             m_status=stage=="timeline-video"?"正在导出时间轴视频…":stage.startsWith("voice")?(m_kind=="voice-design"?"正在设计语音…":"正在合成配音文案…"):stage=="page-video"?"正在合成图像配音视频…":stage=="render"?"正在生成数字人画面…":stage=="ditto-mouth-calibration"?"正在校准人物嘴形（首次使用）…":stage=="ditto-audio"?"正在提取语音特征…":stage=="ditto-motion"?"正在生成表情动作…":"正在加载数字人模型…";
         }
     }
@@ -821,6 +849,7 @@ void Studio::finished(int code,QProcess::ExitStatus state){
     if(success){m_status=QString("已完成 · %1 秒").arg(job["elapsedSeconds"].toDouble(),0,'f',1);m_progress=1;refreshHistory();}
     else if(m_cancelled){m_status="任务已取消";m_progress=0;}
     else{m_error=m_workerError.isEmpty()?"图像或媒体引擎未完成任务，请展开运行日志查看原因。":m_workerError;m_status="生成失败";}
+    m_diagnostics.finish(success,m_cancelled,code,state==QProcess::CrashExit,m_error,readJson(m_jobDir+"/result.json"));
     m_remoteJob=false;
     if(success&&m_audioPipeline&&m_kind!="page-video"){
         persist();advanceAudioPipeline();

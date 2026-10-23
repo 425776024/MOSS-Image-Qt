@@ -58,6 +58,16 @@ ApplicationWindow {
     }
     function showHome(target) { if(target === "models"){settings.section=1;destination="settings"}else destination=target === "works" ? "chat" : target || "chat" }
     function openInspector(context) { showEditor(context) }
+    function mcpControl(a) {
+        function fail(message) { return {ok:false,error:{code:"UI_ACTION_FAILED",message:message}} }
+        if(a.action === "settings" || a.action === "models") { settings.section=a.action==="models" ? 1 : 0;destination="settings";return {ok:true,data:{destination:destination}} }
+        if(a.action === "voices") { destination="voices";return {ok:true,data:{destination:destination}} }
+        if(!a.workId || !studio.creationPages.some(p=>p.id===a.workId))return fail("A valid workId is required")
+        if(["edit","pack","parameters"].includes(a.action) && studio.busy)return fail("Creation is busy")
+        openWork(a.workId)
+        if(!activeView)return fail("Conversation view is unavailable")
+        return activeView.mcpControl(a)
+    }
     function openWork(id) { home.contentItem.forceActiveFocus();destination="chat";studio.openConversation(id);showConversation() }
     function openAvatar(url) { studio.newConversation();studio.conversation.task="avatar";studio.conversation.importMedia(url,"target");showEditor("") }
     function createAvatarVideo(source,audio,tts,text,voiceId) {
@@ -129,6 +139,7 @@ ApplicationWindow {
                     SidebarRow { objectName: "homeTemplates"; text: HomeTheme.t("构图模板"); shortText: HomeTheme.t("构图"); glyph: "grid"; active: home.destination === "templates"; onClicked: home.destination="templates" }
                     Item { Layout.fillHeight: true }
                     SidebarRow { objectName: "homeRestore"; visible: studio.canRestorePage; text: HomeTheme.t("恢复上次移除"); shortText: HomeTheme.t("恢复"); glyph: "undo"; enabled: !studio.busy; onClicked: studio.restoreDeletedPage() }
+                    SidebarRow { objectName: "homeMcpButton"; text: "MCP"; glyph: "server"; active: home.destination === "mcp"; onClicked: home.destination="mcp" }
                     SidebarRow { objectName: "homeModelsButton"; text: HomeTheme.t("模型资源"); shortText: HomeTheme.t("资源"); glyph: "model"; active: home.destination === "settings" && settings.section===1; onClicked: {settings.section=1;home.destination="settings"} }
                     SidebarRow { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" && ![1,5,6].includes(settings.section); onClicked: {settings.section=0;home.destination="settings"} }
                     SidebarRow { objectName: "homeAbout"; text: HomeTheme.t("关于"); glyph: "info"; active: home.destination === "about" || (home.destination === "settings" && settings.section===5); onClicked: {settings.section=5;home.destination="settings"} }
@@ -217,7 +228,7 @@ ApplicationWindow {
                 Item { id: threadHost; anchors.fill: parent; visible: home.destination === "chat" }
                 StackLayout {
                     anchors.fill: parent; visible: home.destination !== "chat"
-                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5,createVoice:6})[home.destination] || 0
+                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5,createVoice:6,mcp:7})[home.destination] || 0
                     HomeAvatars { onUseAvatar: url=>home.openAvatar(url); onCreateAvatar: home.destination="createAvatar" }
                     HomeVoices { id: voicesLibrary; onCreateVoice: mode=>{voiceCreator.mode=mode;home.destination="createVoice"}; onUseVoice: id=>{studio.conversation.voiceId=id;studio.conversation.voiceOptions={emotion:studio.sound.settings.emotion,dialect:studio.sound.settings.dialect};home.showEditor("voice")} }
                     HomeAvatarCreator { onOpenLibrary: home.destination="avatars"; onCreateVideo: (source,audio,tts,text,voiceId)=>home.createAvatarVideo(source,audio,tts,text,voiceId) }
@@ -225,6 +236,7 @@ ApplicationWindow {
                     HomeSettings { id: settings; objectName: "homeSettings"; onOpenEditor: home.showEditor("") }
                     HomeTemplates { onTemplateUsed: home.showEditor("") }
                     HomeVoiceCreator { id: voiceCreator; onOpenLibrary: home.destination="voices"; onVoiceSaved: {voicesLibrary.builtin=false;home.destination="voices"} }
+                    HomeMcp { }
                 }
             }
             }

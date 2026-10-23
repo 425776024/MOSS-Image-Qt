@@ -29,7 +29,7 @@
     {
       "id": "sfx",
       "title": "Stable Audio · 音效",
-      "description": "Small SFX、T5Gemma 和音频解码组件"
+      "description": "Medium、T5Gemma 和音频解码组件"
     }
   ],
   "files": [
@@ -40,7 +40,8 @@
       "revision": "238daf423f0de65316207453591f275407aac9a7",
       "file": "MOSS-Image-SFT-Q4_K.gguf",
       "sha256": "902dbb0364d8b313cd91792b3cfe7c87b987386f0c5414986f3f1027b82b2225",
-      "bytes": 3327400800
+      "bytes": 3327400800,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/leejet/MOSS-Image-SFT-GGUF/repo?Revision=e6aae398dafd89e244f966fad565ec1e8f8c0d54&FilePath=MOSS-Image-SFT-Q4_K.gguf"
     },
     {
       "group": "image-q8",
@@ -49,7 +50,8 @@
       "revision": "238daf423f0de65316207453591f275407aac9a7",
       "file": "MOSS-Image-SFT-Q8_0.gguf",
       "sha256": "740040af6492ae5f951d5b7a8cb56927c1a02e64696f4bd4bd124bb798ce5635",
-      "bytes": 5705571168
+      "bytes": 5705571168,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/leejet/MOSS-Image-SFT-GGUF/repo?Revision=e6aae398dafd89e244f966fad565ec1e8f8c0d54&FilePath=MOSS-Image-SFT-Q8_0.gguf"
     },
     {
       "group": "image-shared",
@@ -58,7 +60,8 @@
       "revision": "3885219b6810b007914f3a7950a8d1b469d598a5",
       "file": "Qwen3.5-9B-Q4_K_M.gguf",
       "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
-      "bytes": 5680522464
+      "bytes": 5680522464,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/unsloth/Qwen3.5-9B-GGUF/repo?Revision=ae90f0d1c1be2b9250b0ef68265615f6fe3c777b&FilePath=Qwen3.5-9B-Q4_K_M.gguf"
     },
     {
       "group": "image-shared",
@@ -67,7 +70,8 @@
       "revision": "ee64003102c8470ee32501cf883419235db81884",
       "file": "vae/flux2-vae_small.safetensors",
       "sha256": "d8d52ba036475f5fb07c8b435e176d3d97ebfa82f0d1a1c317f9cc1e25bd013b",
-      "bytes": 249521340
+      "bytes": 249521340,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/Comfy-Org/MOSS-Image/repo?Revision=3b6958fde4d8ecd98c25c2973ef13df54fb0c4de&FilePath=vae%2Fflux2-vae_small.safetensors"
     },
     {
       "group": "image-shared",
@@ -76,16 +80,18 @@
       "revision": "85975793d8b3d432f1b6e27f352abaa4c2a4c0d3",
       "file": "tokenizer/tokenizer.json",
       "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
-      "bytes": 19989325
+      "bytes": 19989325,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/openmoss/MOSS-Image-Base/repo?Revision=33bba8f79c15bc6b866b42b0e790520f3dd29e0e&FilePath=tokenizer%2Ftokenizer.json"
     },
     {
       "group": "ditto",
       "path": "ditto-original/hubert.onnx",
       "repo": "digital-avatar/ditto-talkinghead",
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
-      "file": "ditto_pytorch/aux_models/hubert_streaming_fix_kv.onnx",
-      "sha256": "04cd6c7c388aaf99cdea8d4599cefede9930e60d6051abd5a33c791aeb931697",
-      "bytes": 1460740880
+      "file": "ditto_onnx/hubert.onnx",
+      "sha256": "327a5b90c0bfb9df251c9af91d0bea5e6284dbb0a4d02814f1d3ace6b4c2b5aa",
+      "bytes": 1458714493,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fhubert.onnx"
     },
     {
       "group": "ditto",
@@ -94,7 +100,8 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_pytorch/aux_models/landmark203.onnx",
       "sha256": "31d22a5041326c31f19b78886939a634a5aedcaa5ab8b9b951a1167595d147db",
-      "bytes": 114666491
+      "bytes": 114666491,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/KwaiVGI/LivePortrait/repo?Revision=25fbc57619b720ff058bb13f1bcfdf7e6c600ea4&FilePath=liveportrait%2Flandmark.onnx"
     },
     {
       "group": "ditto",
@@ -103,7 +110,8 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_onnx/lmdm_v0.4_hubert.onnx",
       "sha256": "ea6664518746a1c2e13db496ffe97216da715742be83e069a02cc86873c6dcfc",
-      "bytes": 192453963
+      "bytes": 192453963,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Flmdm_v0.4_hubert.onnx"
     },
     {
       "group": "ditto",
@@ -112,7 +120,8 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_onnx/appearance_extractor.onnx",
       "sha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6",
-      "bytes": 3355896
+      "bytes": 3355896,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fappearance_extractor.onnx"
     },
     {
       "group": "ditto",
@@ -121,7 +130,8 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_onnx/motion_extractor.onnx",
       "sha256": "91bd0c05e9fa2cb4918d32cfe547db1d3f3fbbf79713ffbe207670f422e069a1",
-      "bytes": 112610626
+      "bytes": 112610626,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fmotion_extractor.onnx"
     },
     {
       "group": "ditto",
@@ -130,7 +140,8 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_onnx/stitch_network.onnx",
       "sha256": "d3629a08268f1125d60c194e6dbd495126424e8de1112f2fc368170660dde043",
-      "bytes": 185542
+      "bytes": 185542,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fstitch_network.onnx"
     },
     {
       "group": "ditto",
@@ -139,16 +150,21 @@
       "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
       "file": "ditto_onnx/decoder.onnx",
       "sha256": "94fca15fe5b67885edebfacbcadcac29e79238ac0d9ffbf0d688391cefb890be",
-      "bytes": 221530139
+      "bytes": 221530139,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fdecoder.onnx"
     },
     {
       "group": "ditto",
       "path": "ditto-original/warp.onnx",
-      "repo": "voxta/ditto-talkinghead-onnx",
-      "revision": "930ae658ab5247e6209b21c4265cecf2a5b45610",
-      "file": "warp_network_opset20.onnx",
+      "repo": "digital-avatar/ditto-talkinghead",
+      "revision": "e4a2f60328ee7c32af585ac4b3cce299e4c8e254",
+      "file": "ditto_onnx/warp_network_ori.onnx",
       "sha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099",
-      "bytes": 199684279
+      "bytes": 199684279,
+      "downloadBytes": 199684283,
+      "downloadSha256": "132e9cdbf0e208159d4fcea006272c3f24d7db9e5831e91e9b97fe16afcd40d5",
+      "conversion": "warp-opset20",
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/thewintersun/ditto-talkinghead/repo?Revision=b8c7e6643790ec40d724b4497415baf963f12028&FilePath=ditto_onnx%2Fwarp_network_ori.onnx"
     },
     {
       "group": "voice",
@@ -157,34 +173,38 @@
       "revision": "2eb8d37c7f10672e69c8aa33091baa04c461b66c",
       "file": "ming-3.0-tts-0.5b-q8_0.gguf",
       "sha256": "fcf2aa25e8e9cf2065a936e506581735c64d6255fb7869f09fbb61a2dde09aa1",
-      "bytes": 1742280896
+      "bytes": 1742280896,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/audio-cpp/Ming-3.0-TTS-0.5B-GGUF/repo?Revision=0ce5db089fe05a50baac62c87340591ddafe05bb&FilePath=ming-3.0-tts-0.5b-q8_0.gguf"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-small-sfx-dit-0.5B-v1.0-F16.gguf",
-      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
-      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
-      "file": "stable-audio-3-small-sfx-dit-0.5B-v1.0-F16.gguf",
-      "sha256": "5927385381d7d675839f27923705bb536638d45c95e344309136d88a93b30436",
-      "bytes": 919265984
+      "path": "sound-effects/stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf",
+      "repo": "thepatch/stable-audio-3-medium-GGUF",
+      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
+      "file": "stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf",
+      "sha256": "3f49edcbc724815339166323ca58a85bdb21215c5dee0237e396231b1c3ee50f",
+      "bytes": 2908081472,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=e0ea49f46e17a9c0cb66090e8bde2d5bcd4f1f3d&FilePath=stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
-      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
-      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
-      "file": "stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
-      "sha256": "c4f253c47d8feadb236619b2fe72a5df9c6a99751382738ed4b96be7ad1bc517",
-      "bytes": 793184
+      "path": "sound-effects/stable-audio-3-medium-conditioner-v1.0-F32.gguf",
+      "repo": "thepatch/stable-audio-3-medium-GGUF",
+      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
+      "file": "stable-audio-3-medium-conditioner-v1.0-F32.gguf",
+      "sha256": "8482cc42559f665db517fd469e0dd073de36071ebbdbe0ef4d38b5392fe6c724",
+      "bytes": 793184,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=88076517086245d49414aa36d9b801d9c48b1f9c&FilePath=stable-audio-3-medium-conditioner-v1.0-F32.gguf"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
-      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
-      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
-      "file": "stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
-      "sha256": "e1854b7045a059f355639e0b92dd52a5f8701becb4a8a599035adb43124f4c89",
-      "bytes": 216721696
+      "path": "sound-effects/stable-audio-3-medium-same-l-v1.0-F16.gguf",
+      "repo": "thepatch/stable-audio-3-medium-GGUF",
+      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
+      "file": "stable-audio-3-medium-same-l-v1.0-F16.gguf",
+      "sha256": "78d0592a7e1c6bce72d8177b2d291b820f6aafa4a428d5d61ada53286df1fc86",
+      "bytes": 1705121536,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=5ff393d7f94caaca56eb64b77cae14b12c052038&FilePath=stable-audio-3-medium-same-l-v1.0-F16.gguf"
     },
     {
       "group": "sfx",
@@ -193,7 +213,8 @@
       "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
       "file": "t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf",
       "sha256": "23868718e395c555608e33128994c39a23d509281011e52173ff28a64ab6c43c",
-      "bytes": 1126329120
+      "bytes": 1126329120,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=3b80a197c83bc547e8cff07bf2b6c9a2d7d873c6&FilePath=t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf"
     },
     {
       "group": "sfx",
@@ -202,7 +223,8 @@
       "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
       "file": "t5gemma-b-b-ul2-v1.0-vocab.gguf",
       "sha256": "d58ef75568789d5d394a67231c853803bd24778d136aa0d1990210bcdd485d32",
-      "bytes": 13838496
+      "bytes": 13838496,
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=f3ae1538ab36401c190025a6267b49d613fe0db6&FilePath=t5gemma-b-b-ul2-v1.0-vocab.gguf"
     },
     {
       "group": "ditto",
@@ -223,7 +245,7 @@
       "path": "ditto-original/manifest.json",
       "resource": ":/models/config/ditto-original/manifest.json",
       "bytes": 2074,
-      "sha256": "8611084a85818ae46438c5635c451c6d991793382d17f8eb1e4907328cf86f17"
+      "sha256": "231d377db931cef6e0df0a65835589c94b586c51b6b9ac3b9d1dc8b87a3d428c"
     },
     {
       "group": "ditto",
@@ -232,7 +254,8 @@
       "revision": "d4938dfc9d4ec5d098bfa33e98b3f3345a236586",
       "file": "models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
       "bytes": 232589,
-      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/FlynnDu/novaber-privacy-redaction-yunet/repo?Revision=b300dcfedffa3e02facc8e7d7b99fc3d116e8b41&FilePath=face_detection_yunet_2023mar.onnx"
     }
   ]
 }

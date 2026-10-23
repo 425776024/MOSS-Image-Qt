@@ -10,7 +10,8 @@ Column {
     property bool expanded: false
     property bool compact: false
     property bool allowExpand: true
-    onAssetChanged: {player.stop();player.source=""}
+    property real pendingSeek: -1
+    onAssetChanged: {player.stop();player.source="";pendingSeek=-1}
     signal expandRequested()
     signal interacted()
     readonly property bool playing: player.playbackState === MediaPlayer.PlayingState
@@ -22,6 +23,15 @@ Column {
         else {if(player.source.toString() !== asset.url.toString())player.source=asset.url;if(player.duration>0&&player.position>=player.duration-50)player.position=0;player.play()}
     }
     function time(value) { const s=Math.floor(Math.max(0,value));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0") }
+    function control(action,seconds) {
+        if(action === "pause")player.pause()
+        else {if(player.source.toString() !== asset.url.toString())player.source=asset.url;if(action === "seek"){pendingSeek=Math.max(0,seconds);applySeek()}else player.play()}
+    }
+    function applySeek() {
+        if(pendingSeek >= 0 && player.seekable && player.duration > 0) {
+            player.position=Math.round(Math.min(pendingSeek*1000,player.duration));pendingSeek=-1
+        }
+    }
     onActiveChanged: if(!active)player.pause()
     Rectangle {
         id: stage; objectName: "inlineVideoStage"
@@ -56,5 +66,10 @@ Column {
         }
     }
     Text { visible: player.error !== MediaPlayer.NoError; width: parent.width; text: player.errorString; color: HomeTheme.danger; wrapMode: Text.Wrap; font.pixelSize: 11 }
-    MediaPlayer { id: player; audioOutput: AudioOutput { } videoOutput: output }
+    MediaPlayer {
+        id: player; audioOutput: AudioOutput { } videoOutput: output
+        onSeekableChanged: root.applySeek()
+        onDurationChanged: root.applySeek()
+        onMediaStatusChanged: if(mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)root.applySeek()
+    }
 }

@@ -23,7 +23,7 @@ in this repository; build instructions are in `docs/build.md`.
 
 ## Sound effects
 
-Powered by Stability AI. Stable Audio 3 Small SFX is distributed under the
+Powered by Stability AI. Stable Audio 3 Medium is distributed under the
 Stability AI Community License; T5Gemma uses the Gemma Terms of Use, including
 its Section 3.2 use restrictions. These models are not covered by the inference
 engine's MIT license. Full terms and attribution are bundled in
@@ -105,7 +105,7 @@ community license and T5Gemma's terms still apply.
 Public model repositories: https://huggingface.co/digital-avatar/ditto-talkinghead,
 https://huggingface.co/voxta/ditto-talkinghead-onnx,
 https://huggingface.co/audio-cpp/Ming-3.0-TTS-0.5B-GGUF,
-https://huggingface.co/thepatch/stable-audio-3-small-sfx-GGUF,
+https://modelscope.cn/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF,
 https://huggingface.co/thepatch/t5gemma-b-b-ul2-GGUF.
 Downloading through hf-mirror.com changes the endpoint, not the pinned identities
 or applicable upstream terms. In particular, bundled upstream auxiliary models

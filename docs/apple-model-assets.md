@@ -2,15 +2,17 @@
 
 ## 发行渠道
 
-- 普通构建（GitHub/DMG）：新安装默认 `https://hf-mirror.com`，保留用户已选的 Hugging Face 来源。
-- `-DMOSS_APP_STORE=ON`：默认 `apple-assets`，独立设置键 `storeModelEndpoint`，不继承站外版来源。用户可明确选择镜像或 Hugging Face；失败不会自动切换来源。
+- 普通构建（GitHub/DMG）：新安装默认“自动选择”，在 Hugging Face 与 hf-mirror 间测速；保留已保存的手动选择。
+- `-DMOSS_APP_STORE=ON`：默认 `apple-assets`，独立设置键 `storeModelEndpoint`，不继承站外版来源。用户可明确选择 HTTP 自动选源、镜像或 Hugging Face；Apple 渠道失败不会擅自转到 HTTP。Apple-only 模型始终走 Apple。
 - App Store 正式版最低系统为 macOS 26，面向 18 岁及以上用户。GitHub/DMG 的系统要求独立维护。
 
 ## 固定版本与安装
 
-`config/models.json` 是唯一模型清单。每个外部文件对应一个按需资源包，ID 为 `model-<完整 SHA-256>`；内置 JSON 配置仍从应用资源安装。模型升级应使用新哈希和新资源包，避免 Apple 更新旧版本资源时破坏旧 App 的固定文件校验。
+`config/models.json` 是社区版基础清单；App Store 构建再应用 `config/models-store.json` 的固定覆盖项。上传商店资源清单须使用 `inventory --app-store`，其中 focused-05000 和 Face Landmarker 只能通过 Apple 下载。每个外部文件对应一个按需资源包，ID 为 `model-<完整 SHA-256>`；内置 JSON 配置仍从应用资源安装。模型升级应使用新哈希和新资源包，避免 Apple 更新旧版本资源时破坏旧 App 的固定文件校验。
 
-原生 Objective-C++ 桥接调用 BackgroundAssets，通过指定资源包的文件描述符读取文件，分块复制进应用容器 `.part`，保存随包提供的 `NOTICE.txt`，再由现有 ModelManager 做 SHA-256 校验和原子安装。暂存的系统资源包会移除，避免长期保留两套大模型；安装后的模型与许可文件保存在应用容器。磁盘预检额外计入一个最大模型文件的临时空间。
+原生 Objective-C++ 桥接调用 BackgroundAssets，通过指定资源包的文件描述符读取文件，分块复制进应用容器 `.part`，保存随包提供的 `NOTICE.txt`，再由现有 ModelManager 做 SHA-256 校验和原子安装。最多同时准备三个资源包，使用统一的 BackgroundAssets 进度代理按资源包 ID 分发，避免并发任务覆盖彼此的代理。网络分段、调度和网络断点由 macOS BackgroundAssets 管理，应用不对 Apple 资源包另发 HTTP Range。取消使用系统提供的 NSProgress 取消接口；重试请求同一个固定资源包 ID，不主动删除失败或取消任务的系统缓存。
+
+资源包已落地后的容器复制也支持断点：验证 `.part` 前缀与资源包一致后，从断点继续；前缀不符时重新复制。成功复制并保存许可后才移除暂存系统包，避免长期保留两套大模型；取消或复制失败保留系统包以供恢复。磁盘预检额外计入最大的三个待下载 Apple 文件的临时空间。网络层到底保留多少断点数据、实际并发数量和速度由系统决定，仍须 TestFlight 实机验证。
 
 当前仅共享主 App 与下载扩展的协调目录，并未实现跨独立 App 的模型缓存。
 
