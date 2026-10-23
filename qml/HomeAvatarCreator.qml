@@ -30,18 +30,21 @@ Rectangle {
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 20
-        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("制作数字人")
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("设计数字人")
             HomeButton { text: HomeTheme.t("返回形象库"); iconName: "person"; quiet: true; onClicked: root.openLibrary() }
         }
         ScrollView {
             id: scroll; Layout.fillWidth: true; Layout.fillHeight: true; contentWidth: availableWidth; clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             RowLayout {
-                width: Math.min(1100,scroll.availableWidth); spacing: 16
+                id: creatorPanels; objectName: "avatarCreatorPanels"
+                width: scroll.availableWidth; spacing: 16
+                height: Math.max(portraitPanel.implicitHeight,audioPanel.implicitHeight)
                 HomeSection {
-                    Layout.fillWidth: true; Layout.preferredWidth: 360; Layout.alignment: Qt.AlignTop; title: HomeTheme.t("人像"); iconName: "person"
+                    id: portraitPanel; objectName: "avatarPortraitPanel"
+                    stretchContents: true; Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 360; title: HomeTheme.t("人像"); iconName: "person"
                     AbstractButton {
-                        Layout.fillWidth: true; implicitHeight: Math.min(360,root.height*.49); Accessible.name: HomeTheme.t(root.sourceUrl ? HomeTheme.t("更换图片") : HomeTheme.t("选择人像")); hoverEnabled: true
+                        Layout.fillWidth: true; Layout.fillHeight: true; implicitHeight: Math.min(360,root.height*.49); Accessible.name: HomeTheme.t(root.sourceUrl ? HomeTheme.t("更换图片") : HomeTheme.t("选择人像")); hoverEnabled: true
                         onClicked: portraitDialog.open()
                         background: Rectangle { radius: 8; color: HomeTheme.preview; border.color: parent.visualFocus ? HomeTheme.accent : HomeTheme.outline }
                         contentItem: Item {
@@ -56,7 +59,8 @@ Rectangle {
                     }
                 }
                 HomeSection {
-                    Layout.fillWidth: true; Layout.preferredWidth: 460; Layout.alignment: Qt.AlignTop; title: HomeTheme.t("配音"); iconName: "audio"
+                    id: audioPanel; objectName: "avatarAudioPanel"
+                    stretchContents: true; Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 460; title: HomeTheme.t("配音"); iconName: "audio"
                     RowLayout { Layout.fillWidth: true; spacing: 8
                         HomeChoiceCard { Layout.fillWidth: true; title: HomeTheme.t("合成语音"); iconName: "text"; selected: root.tts; onClicked: root.tts=true }
                         HomeChoiceCard { Layout.fillWidth: true; title: HomeTheme.t("导入音频"); iconName: "audio"; selected: !root.tts; onClicked: root.tts=false }
@@ -66,10 +70,11 @@ Rectangle {
                         model: studio.sound.voices; cellWidth: width/2; cellHeight: 36; ScrollBar.vertical: ScrollBar { }
                         delegate: HomeChoiceCard { required property var modelData; width: voices.cellWidth-6; height: 32; padding: 6; title: modelData.name; iconName: "audio"; selected: root.voiceId===modelData.id; onClicked: root.voiceId=modelData.id }
                     }
-                    InputArea { id: script; visible: root.tts; Layout.fillWidth: true; implicitHeight: 160; radius: 8; label: HomeTheme.t("配音文案"); placeholder: HomeTheme.t("输入数字人要说的话…"); onEdited: editedText=>value=editedText }
+                    InputArea { id: script; visible: root.tts; Layout.fillWidth: true; Layout.fillHeight: true; implicitHeight: 160; radius: 8; label: HomeTheme.t("配音文案"); placeholder: HomeTheme.t("输入数字人要说的话…"); onEdited: editedText=>value=editedText }
                     HomeChoiceCard { visible: !root.tts; Layout.fillWidth: true; title: root.audioUrl ? decodeURIComponent(root.audioUrl.split("/").pop()) : HomeTheme.t("选择配音"); detail: root.audioUrl ? HomeTheme.t("点击更换音频") : "WAV、MP3、M4A"; iconName: "audio"; selected: !!root.audioUrl; onClicked: audioDialog.open() }
                     ConversationAudio { visible: !root.tts && !!root.audioUrl; Layout.fillWidth: true; source: root.audioUrl; active: root.visible && !root.tts }
                     Text { visible: !!root.notice && !saveDialog.opened; Layout.fillWidth: true; text: root.notice; color: HomeTheme.danger; font.pixelSize: 12; wrapMode: Text.Wrap }
+                    Item { visible: !root.tts; Layout.fillHeight: true }
                     HomeButton {
                         objectName: "homeCreateAvatarVideo"; Layout.alignment: Qt.AlignRight; text: HomeTheme.t("制作数字人视频"); primary: true; iconName: "play"
                         enabled: !studio.busy && !!root.sourceUrl && (root.tts ? !!script.value.trim() && !!root.voiceId : !!root.audioUrl)

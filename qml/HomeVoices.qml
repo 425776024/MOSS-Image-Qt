@@ -18,15 +18,15 @@ Rectangle {
     function time(milliseconds) { const seconds=Math.floor(Math.max(0,milliseconds)/1000);return Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0") }
     readonly property var entries: studio.sound.voices.filter(row => !!row.builtin === builtin && row.name.toLowerCase().includes(search.text.trim().toLowerCase()))
     signal useVoice(string id)
+    signal createVoice(int mode)
     function stopPreview() { player.stop(); playingId = "" }
     function preview(row) {
         if(studio.busy || !row.id)return
         if(playingId === row.id)stopPreview()
         else { player.stop();studio.sound.set("voiceId",row.id);studio.sound.set("voiceSource","tts");playingId=row.id;player.source="file://"+row.reference;player.play() }
     }
-    function designVoice() { designDialog.open() }
-    VoiceDesignDialog { id: designDialog; onVoiceSaved: { root.builtin=false;root.notice="" } }
-    function importVoice() { editDialog.voiceId = ""; voiceName.text = ""; root.audioUrl = ""; transcript.text = ""; notice = ""; editDialog.open() }
+    function designVoice() { root.createVoice(0) }
+    function importVoice() { root.createVoice(1) }
     function editVoice(row) { editDialog.voiceId = row.id; voiceName.text = row.name; root.audioUrl = "file://" + row.reference; transcript.text = row.transcript; notice = ""; editDialog.open() }
     function saveVoice() {
         notice = editDialog.voiceId ? studio.sound.updateVoice(editDialog.voiceId, voiceName.text, transcript.text) : studio.sound.createVoice(voiceName.text, root.audioUrl, transcript.text)
@@ -64,7 +64,7 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
         HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置音色" : "我的音色"); detail: String(root.entries.length)
-            HomeButton { text: HomeTheme.t("语音设计"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
+            HomeButton { text: HomeTheme.t("设计声音"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
             HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importVoice() }
         }
         RowLayout { Layout.fillWidth: true; spacing: 12
@@ -79,13 +79,13 @@ Rectangle {
                 HomeEmpty { title: search.text ? HomeTheme.t("没有匹配的音色") : HomeTheme.t("还没有音色"); description: search.text ? "" : HomeTheme.t("导入录音或用文字设计一个新声音。"); iconName: "audio" }
                 RowLayout { visible: !search.text; Layout.alignment: Qt.AlignHCenter
                     HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; onClicked: root.importVoice() }
-                    HomeButton { text: HomeTheme.t("语音设计"); onClicked: root.designVoice() }
+                    HomeButton { text: HomeTheme.t("设计声音"); onClicked: root.designVoice() }
                     HomeButton { visible: !root.builtin; text: HomeTheme.t("内置音色"); quiet: true; onClicked: root.builtin=true }
                 }
             }
             GridView {
-                id: list; anchors.fill: parent; model: root.entries; clip: true
-                cellWidth: width/Math.max(1,Math.floor(width/270)); cellHeight: 74
+                id: list; objectName: "voiceLibraryGrid"; anchors.fill: parent; model: root.entries; clip: true
+                cellWidth: width/Math.max(1,Math.floor(width/270)); cellHeight: 54
                 ScrollBar.vertical: ScrollBar { }
                 delegate: AbstractButton {
                     id: row; required property var modelData; readonly property bool chosen: studio.sound.settings.voiceId===modelData.id
@@ -95,17 +95,13 @@ Rectangle {
                     onClicked: if(!studio.busy){studio.sound.set("voiceId",modelData.id);studio.sound.set("voiceSource","tts")}
                     onDoubleClicked: if(!studio.busy)root.useVoice(modelData.id)
                     background: Rectangle { radius: 6; color: HomeTheme.field; border.color: row.chosen || row.visualFocus ? HomeTheme.accent : row.hovered ? HomeTheme.outline : HomeTheme.line }
-                    contentItem: ColumnLayout { spacing: 4
-                        RowLayout { Layout.fillWidth: true; spacing: 7
-                            IconButton { glyph: root.playingId===row.modelData.id ? "pause" : "play"; hint: HomeTheme.t("试听")+" "+row.modelData.name; enabled: !studio.busy; iconColor: HomeTheme.accent; onClicked: root.preview(row.modelData) }
-                            Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: row.modelData.name; elide: Text.ElideRight; font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text }
-                            StudioIcon { visible: row.chosen; name: "check"; ink: HomeTheme.accent; Layout.preferredWidth: 14; Layout.preferredHeight: 14 }
-                            IconButton { visible: !root.builtin; glyph: "more"; hint: HomeTheme.t("操作"); enabled: !studio.busy; onClicked: {actions.target=row.modelData;const at=row.mapToItem(root,row.width-actions.width,row.height+4);actions.popup(at.x,at.y)} }
-                        }
-                        Text { Layout.fillWidth: true; text: row.modelData.transcript; elide: Text.ElideRight; font.pixelSize: 11; color: HomeTheme.muted }
-
+                    contentItem: RowLayout { spacing: 7
+                        IconButton { glyph: root.playingId===row.modelData.id ? "pause" : "play"; hint: HomeTheme.t("试听")+" "+row.modelData.name; enabled: !studio.busy; iconColor: HomeTheme.accent; onClicked: root.preview(row.modelData) }
+                        Text { id: cardVoiceName; Layout.fillWidth: true; Layout.minimumWidth: 0; text: row.modelData.name; elide: Text.ElideRight; font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text }
+                        StudioIcon { visible: row.chosen; name: "check"; ink: HomeTheme.accent; Layout.preferredWidth: 14; Layout.preferredHeight: 14 }
+                        IconButton { visible: !root.builtin; glyph: "more"; hint: HomeTheme.t("操作"); enabled: !studio.busy; onClicked: {actions.target=row.modelData;const at=row.mapToItem(root,row.width-actions.width,row.height+4);actions.popup(at.x,at.y)} }
                     }
-                    ToolTip.visible: hovered; ToolTip.delay: 750; ToolTip.text: modelData.name+"\n"+modelData.transcript
+                    ToolTip.visible: hovered && cardVoiceName.truncated; ToolTip.delay: 750; ToolTip.text: modelData.name
                 }
             }
         }

@@ -131,6 +131,7 @@ Item {
         SplitView.minimumWidth: root.minimumChatWidth; SplitView.fillWidth: true; spacing: 0
         Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 44; color: HomeTheme.surface
+            WindowDragArea { anchors.fill: parent }
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: root.railMargin; anchors.rightMargin: root.railMargin; spacing: 12
                 Text { Layout.fillWidth: true; text: root.projectTitle; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium }

@@ -111,7 +111,7 @@ ApplicationWindow {
             objectName: "homeTitleStrip"
             visible: !home.nativeTitleBar
             Layout.fillWidth: true; Layout.preferredHeight: 32; color: HomeTheme.sidebar
-            MouseArea { anchors.fill: parent; onPressed: home.startSystemMove(); onDoubleClicked: home.visibility === Window.Maximized ? home.showNormal() : home.showMaximized() }
+            WindowDragArea { anchors.fill: parent }
             Text { anchors.centerIn: parent; text: workspace.appName; color: HomeTheme.secondary; font.pixelSize: 12; font.weight: Font.Medium }
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: VideoCutTheme.hairline; color: HomeTheme.line }
         }
@@ -122,12 +122,10 @@ ApplicationWindow {
                 Rectangle { anchors.right: parent.right; width: VideoCutTheme.hairline; height: parent.height; color: HomeTheme.line }
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 8; spacing: 2
-                    SidebarSection { text: HomeTheme.t("资料库"); Layout.topMargin: 4 }
+                    SidebarSection { text: HomeTheme.t("工作区"); Layout.topMargin: 4 }
                     SidebarRow { text: HomeTheme.t("作品"); glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
-                    SidebarRow { text: HomeTheme.t("形象"); glyph: "person"; active: home.destination === "avatars"; onClicked: home.destination="avatars" }
-                    SidebarRow { text: HomeTheme.t("声音"); glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
-                    SidebarSection { text: HomeTheme.t("创作") }
-                    SidebarRow { objectName: "homeCreateAvatar"; text: HomeTheme.t("制作数字人"); glyph: "spark"; active: home.destination === "createAvatar"; onClicked: home.destination="createAvatar" }
+                    SidebarRow { objectName: "homeAvatars"; text: HomeTheme.t("数字人"); glyph: "person"; active: ["avatars","createAvatar"].includes(home.destination); onClicked: home.destination="avatars" }
+                    SidebarRow { objectName: "homeVoices"; text: HomeTheme.t("声音"); glyph: "audio"; active: ["voices","createVoice"].includes(home.destination); onClicked: home.destination="voices" }
                     SidebarRow { objectName: "homeTemplates"; text: HomeTheme.t("构图模板"); shortText: HomeTheme.t("构图"); glyph: "grid"; active: home.destination === "templates"; onClicked: home.destination="templates" }
                     Item { Layout.fillHeight: true }
                     SidebarRow { objectName: "homeRestore"; visible: studio.canRestorePage; text: HomeTheme.t("恢复上次移除"); shortText: HomeTheme.t("恢复"); glyph: "undo"; enabled: !studio.busy; onClicked: studio.restoreDeletedPage() }
@@ -151,6 +149,7 @@ ApplicationWindow {
                 SplitView.minimumWidth: 160
                 SplitView.maximumWidth: Math.max(160,Math.min(300,home.width*.22,home.width*.5-322))
                 SplitView.preferredWidth: home.worksWidth; color: HomeTheme.sidebar
+                WindowDragArea { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 12 }
                 ColumnLayout {
                     anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.topMargin: 12; anchors.bottomMargin: 10; spacing: 10
                     RowLayout { Layout.fillWidth: true; spacing: 10
@@ -214,16 +213,18 @@ ApplicationWindow {
             Item {
                 id: rightPane; objectName: "conversationPane"; SplitView.fillWidth: true
                 SplitView.minimumWidth: home.destination === "chat" ? Math.min(home.width*.5+(home.activeView && home.activeView.inspectorOpen ? 261 : 0),workspaceSplit.width-161) : 0
+                WindowDragArea { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: home.destination === "chat" ? 0 : 22 }
                 Item { id: threadHost; anchors.fill: parent; visible: home.destination === "chat" }
                 StackLayout {
                     anchors.fill: parent; visible: home.destination !== "chat"
-                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5})[home.destination] || 0
+                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5,createVoice:6})[home.destination] || 0
                     HomeAvatars { onUseAvatar: url=>home.openAvatar(url); onCreateAvatar: home.destination="createAvatar" }
-                    HomeVoices { onUseVoice: id=>{studio.conversation.voiceId=id;studio.conversation.voiceOptions={emotion:studio.sound.settings.emotion,dialect:studio.sound.settings.dialect};home.showEditor("voice")} }
+                    HomeVoices { id: voicesLibrary; onCreateVoice: mode=>{voiceCreator.mode=mode;home.destination="createVoice"}; onUseVoice: id=>{studio.conversation.voiceId=id;studio.conversation.voiceOptions={emotion:studio.sound.settings.emotion,dialect:studio.sound.settings.dialect};home.showEditor("voice")} }
                     HomeAvatarCreator { onOpenLibrary: home.destination="avatars"; onCreateVideo: (source,audio,tts,text,voiceId)=>home.createAvatarVideo(source,audio,tts,text,voiceId) }
                     HomeContact { }
                     HomeSettings { id: settings; objectName: "homeSettings"; onOpenEditor: home.showEditor("") }
                     HomeTemplates { onTemplateUsed: home.showEditor("") }
+                    HomeVoiceCreator { id: voiceCreator; onOpenLibrary: home.destination="voices"; onVoiceSaved: {voicesLibrary.builtin=false;home.destination="voices"} }
                 }
             }
             }

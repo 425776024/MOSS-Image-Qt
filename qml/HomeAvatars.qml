@@ -61,7 +61,7 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
         HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置形象" : "我的形象"); detail: String(root.entries.length)
-            HomeButton { text: HomeTheme.t("制作数字人"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
+            HomeButton { text: HomeTheme.t("设计数字人"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
             HomeButton { text: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
             HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
         }
@@ -81,7 +81,7 @@ Rectangle {
                 }
             }
             GridView {
-                id: list; anchors.fill: parent; clip: true; model: root.entries
+                id: list; objectName: "avatarLibraryGrid"; anchors.fill: parent; clip: true; model: root.entries
                 cellWidth: width/Math.max(1,Math.floor(width/190)); cellHeight: 236
                 ScrollBar.vertical: ScrollBar { }
                 delegate: AbstractButton {

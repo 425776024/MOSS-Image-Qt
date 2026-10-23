@@ -2,6 +2,15 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "声音模板": "Voice templates",
+    "搜索模板": "Search templates",
+    "没有匹配的模板": "No matching templates",
+    "工作区": "Workspace",
+    "设计数字人": "Design avatar",
+    "设计声音": "Design voice",
+    "返回音色库": "Voice library",
+    "文字设计": "Describe a voice",
+    "导入录音": "Import recording",
     "资料库": "Library",
     "创作": "Create",
     "资源": "Resources",

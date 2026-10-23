@@ -110,6 +110,15 @@ int main(int argc,char **argv){
     QObject::connect(app.styleHints(),&QStyleHints::colorSchemeChanged,&app,updateAppearance);
 #endif
     if(mainWindow) mainWindow->show();
+    if(args.contains("--trace-window-moves")||qEnvironmentVariableIsSet("MOSS_TRACE_WINDOW_MOVES")){
+        if(!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")||!qEnvironmentVariableIsSet("MOSS_EVIDENCE_ROOT"))return 5;
+        auto moves=std::make_shared<QJsonArray>();
+        const auto record=[homeWindow,moves]{
+            moves->append(QJsonObject{{"x",homeWindow->x()},{"y",homeWindow->y()},{"width",homeWindow->width()},{"height",homeWindow->height()}});
+            const auto root=qEnvironmentVariable("MOSS_EVIDENCE_ROOT");QDir().mkpath(root);QFile file(root+"/window-moves.json");if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(*moves).toJson());
+        };
+        QObject::connect(homeWindow,&QWindow::xChanged,&app,record);QObject::connect(homeWindow,&QWindow::yChanged,&app,record);record();
+    }
     // Offer setup only after the real home window is shown. Automated captures
     // opt in explicitly so existing startup and inference checks stay isolated.
     if(!backgroundTest||args.contains("--check-initial-setup"))
@@ -223,6 +232,11 @@ int main(int argc,char **argv){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         if(!args.contains("--preserve-preview")&&!args.contains("--home-smoke"))studio.document()->example();
         if(args.contains("--home-smoke")){
+            if(args.contains("--cycle-library-pages")){
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT"))return 5;
+                const QStringList pages={"avatars","voices","settings","avatars","createVoice","voices","avatars",argument("--home-page","voices")};
+                for(int i=0;i<pages.size();++i)QTimer::singleShot(200*(i+1),&app,[homeWindow,page=pages[i]]{homeWindow->setProperty("destination",page);});
+            }
             if(args.contains("--check-library-defaults"))QTimer::singleShot(600,&app,[&]{
                 if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
                 auto voices=homeWindow->findChild<QObject *>("homeVoiceLibrary");
@@ -356,6 +370,28 @@ int main(int argc,char **argv){
                 studio.conversation()->importMedia(source,"target");
                 const auto assets=studio.conversation()->assets();
                 if(!assets.isEmpty())studio.exportConversationAsset(assets.last().toMap()["id"].toString(),QUrl::fromLocalFile(dir+"/dialog-export.png"));
+            });
+            if(args.contains("--capture-voice-source")||args.contains("--capture-voice-description")){
+                if(!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT"))return 5;
+                auto creator=homeWindow->findChild<QObject *>("homeVoiceCreator");if(!creator)return 5;
+                const bool importing=args.contains("--capture-voice-source");
+                creator->setProperty("mode",importing?1:0);
+                if(importing)creator->setProperty("audioUrl",QUrl::fromLocalFile(argument("--capture-voice-source",{})).toString());
+                auto name=creator->findChild<QObject *>("createdVoiceName");if(name)name->setProperty("text",argument("--voice-name","Imported voice"));
+                auto description=creator->findChild<QObject *>("createdVoiceDescription");if(description)description->setProperty("value",argument("--capture-voice-description",{}));
+                auto transcript=creator->findChild<QObject *>("createdVoiceTranscript");if(transcript)transcript->setProperty("value",argument("--voice-transcript",{}));
+            }
+            if(args.contains("--voice-template-query")){
+                auto search=homeWindow->findChild<QObject *>("voicePresetSearch");if(search)search->setProperty("text",argument("--voice-template-query",{}));
+            }
+            if(args.contains("--check-voice-template"))QTimer::singleShot(1100,&app,[&,argument]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
+                auto creator=homeWindow->findChild<QObject *>("homeVoiceCreator");if(!creator){app.exit(5);return;}
+                const QStringList fields={"createdVoiceName","createdVoiceDescription","createdVoiceText"};
+                const QStringList values={argument("--expected-voice-name",{}),argument("--expected-voice-description",{}),argument("--expected-voice-text",{})};
+                for(int i=0;i<fields.size();++i){auto field=creator->findChild<QObject *>(fields[i]);if(!field||values[i].isEmpty()||field->property(i==0?"text":"value").toString()!=values[i]){app.exit(5);return;}}
+                if(studio.busy()||!studio.voiceDesignAudio().isEmpty()||studio.models()->busy()){app.exit(5);return;}
+                qInfo("Voice template: name, description and script filled; no audio generation or download started");
             });
             if(args.contains("--capture-voice-edit")){
                 if(auto voices=homeWindow->findChild<QObject *>("homeVoiceLibrary"))
@@ -523,14 +559,15 @@ int main(int argc,char **argv){
                 if(value.metaType().id()==QMetaType::QString && !value.toString().isEmpty())visibleUiText.append(value.toString());
                 for(auto child:item->childItems())collectUiText(child);
             };collectUiText(win->contentItem());
-            QJsonArray truncatedButtons;
+            QJsonArray truncatedButtons,pageHeaders;
             std::function<void(QQuickItem *)> inspectButtons=[&](QQuickItem *item){
+                if(item->isVisible()&&item->objectName()=="homePageHeader"){const auto p=item->mapToScene(QPointF());pageHeaders.append(QJsonObject{{"x",p.x()},{"y",p.y()},{"width",item->width()},{"height",item->height()}});}
                 if(item->isVisible()&&item->objectName()=="appButtonLabel"&&item->property("truncated").toBool())truncatedButtons.append(item->property("text").toString());
                 for(auto child:item->childItems())inspectButtons(child);
             };inspectButtons(homeWindow->contentItem());
             QFile geometry(dir+"/"+captureName+"-geometry.json");
             QJsonObject panels;
-            for(const auto &name:{"navigationRail","worksPane","conversationChatPanel","conversationInspector","conversationHistory","conversationComposer"}){
+            for(const auto &name:{"navigationRail","worksPane","conversationChatPanel","conversationInspector","conversationHistory","conversationComposer","avatarCreatorPanels","avatarPortraitPanel","avatarAudioPanel","voiceSearch","avatarSearch","voiceLibraryGrid","avatarLibraryGrid","voiceTemplatePane","voiceDesignEditor","voicePresetList"}){
                 auto item=QString(name).startsWith("conversation")&&active?active->findChild<QQuickItem *>(name):homeWindow->findChild<QQuickItem *>(name);
                 if(item){const auto p=item->mapToScene(QPointF());panels[name]=QJsonObject{{"x",p.x()},{"y",p.y()},{"width",item->width()},{"height",item->height()},{"visible",item->isVisible()}};}
             }
@@ -553,7 +590,7 @@ int main(int argc,char **argv){
                 if(!dialog)dialog=homeWindow->findChild<QObject *>(captureDialog);
                 if(dialog)for(const auto key:{"x","y","width","height","visible","modal","activeFocus"})popup[key]=QJsonValue::fromVariant(dialog->property(key));
             }
-            if(geometry.open(QIODevice::WriteOnly))geometry.write(QJsonDocument(QJsonObject{{"platform",app.platformName()},{"language",workspace.language()},{"visibleUiText",visibleUiText},{"backgroundTest",backgroundTest},{"windowWidth",win->width()},{"windowHeight",win->height()},{"portraitPreview",portraitPreview},{"popup",popup},{"cards",cards},{"requests",requests},{"waveforms",waveforms},{"panels",panels},{"truncatedButtons",truncatedButtons}}).toJson());
+            if(geometry.open(QIODevice::WriteOnly))geometry.write(QJsonDocument(QJsonObject{{"platform",app.platformName()},{"language",workspace.language()},{"visibleUiText",visibleUiText},{"backgroundTest",backgroundTest},{"windowWidth",win->width()},{"windowHeight",win->height()},{"portraitPreview",portraitPreview},{"popup",popup},{"cards",cards},{"requests",requests},{"waveforms",waveforms},{"panels",panels},{"truncatedButtons",truncatedButtons},{"pageHeaders",pageHeaders}}).toJson());
             app.exit(ok?0:3);
         });
     }

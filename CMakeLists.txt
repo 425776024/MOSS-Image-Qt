@@ -50,13 +50,13 @@ if(APPLE)
 endif()
 set_source_files_properties(qml/HomeTheme.qml qml/StudioTheme.qml qml/VideoCutTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
-    RESOURCES qml/Translations.js
+    RESOURCES qml/Translations.js qml/VoiceDesignPresets.js
     QML_FILES qml/GenerationAvatar.qml qml/AvatarDesignDialog.qml qml/VoiceStyleControls.qml qml/VoiceDesignDialog.qml
     QML_FILES qml/ModelDownloadDialog.qml qml/HomeSection.qml qml/HomeChoiceCard.qml qml/CanvasSizePicker.qml qml/HomeDialog.qml qml/HomeNoticeDialog.qml qml/HomeImagePreview.qml qml/HomeMenu.qml
     QML_FILES qml/VideoCutTheme.qml qml/Glyph.qml qml/AppButton.qml qml/IconButton.qml qml/AppSlider.qml qml/AppCheckBox.qml qml/CardSurface.qml qml/AppSelect.qml qml/AppInputSurface.qml qml/AppMenuItem.qml qml/ConversationMessage.qml qml/ConversationVideo.qml
     QML_FILES qml/ConversationView.qml qml/ConversationInspector.qml qml/ConversationImageEditor.qml qml/ConversationAudio.qml qml/ConversationTimeline.qml qml/HomeTemplates.qml
-    QML_FILES qml/EditorWindow.qml qml/HomeTheme.qml qml/HomeButton.qml qml/HomeField.qml qml/HomeHeader.qml qml/HomeTabs.qml qml/HomeEmpty.qml qml/HomeWorks.qml qml/HomeAvatars.qml qml/HomeVoices.qml qml/HomeAvatarCreator.qml qml/HomeSettings.qml qml/HomeModels.qml qml/HomeRemoteGpuSettings.qml qml/HomeCombo.qml qml/HomeContact.qml
-    QML_FILES qml/FrostedPanel.qml
+    QML_FILES qml/EditorWindow.qml qml/HomeTheme.qml qml/HomeButton.qml qml/HomeField.qml qml/HomeHeader.qml qml/HomeTabs.qml qml/HomeEmpty.qml qml/HomeWorks.qml qml/HomeAvatars.qml qml/HomeVoices.qml qml/HomeVoiceCreator.qml qml/HomeAvatarCreator.qml qml/HomeSettings.qml qml/HomeModels.qml qml/HomeRemoteGpuSettings.qml qml/HomeCombo.qml qml/HomeContact.qml
+    QML_FILES qml/WindowDragArea.qml qml/FrostedPanel.qml
     QML_FILES qml/RemoteGpuSettings.qml qml/CanvasObjectSettings.qml
     QML_FILES qml/Main.qml qml/StudioButton.qml qml/StudioField.qml qml/LayoutCanvas.qml qml/RepaintCanvas.qml qml/RepaintSettings.qml qml/NarrationCanvas.qml qml/NarrationSettings.qml qml/CreationPage.qml qml/TrackTimeline.qml qml/TrackPreview.qml qml/BackgroundSettings.qml qml/InputArea.qml qml/StudioCombo.qml qml/CompositionPage.qml qml/StudioTheme.qml qml/StudioIcon.qml qml/TemplateCard.qml qml/CreationPages.qml qml/StudioSlider.qml qml/StudioSpinBox.qml qml/StudioCheckBox.qml
     SOURCES src/AudioWaveform.h src/AudioWaveform.cpp src/EditDocument.h src/EditDocument.cpp src/MaskCanvas.h src/MaskCanvas.cpp src/LayerDocument.h src/LayerDocument.cpp src/LayerCanvas.h src/LayerCanvas.cpp)

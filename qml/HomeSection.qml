@@ -5,6 +5,7 @@ CardSurface {
     id: root
     property string title: ""
     property string iconName: ""
+    property bool stretchContents: false
     property int padding: 16
     property int contentSpacing: 12
     default property alias body: contents.data
@@ -13,6 +14,7 @@ CardSurface {
     ColumnLayout {
         id: contents
         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+        anchors.bottom: root.stretchContents ? parent.bottom : undefined
         anchors.margins: root.padding; spacing: root.contentSpacing
         RowLayout {
             visible: !!root.title; Layout.fillWidth: true; spacing: 7
