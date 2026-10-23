@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('preview', Path(__file__).resolve().parents[1] / 'scripts/publish_preview.py')
 preview = importlib.util.module_from_spec(spec)
@@ -18,16 +19,35 @@ class PreviewPublicationTests(unittest.TestCase):
                     conclusion='success', head_repository={'full_name': preview.REPO},
                     path='.github/workflows/macos.yml', head_sha=SHA)
 
-    def mac_artifact(self, root):
+    def mac_artifact(self, root, notarized=False):
         entries = {}
         for suffix in ('app.zip', 'dmg'):
-            name = f'Moss-Studio-0.1.0-macOS-arm64-unsigned.{suffix}'
+            kind = 'notarized' if notarized else 'unsigned'
+            name = f'Moss-Studio-0.1.0-macOS-arm64-{kind}.{suffix}'
             (root / name).write_bytes(b'test artifact')
             entries[name] = hashlib.sha256(b'test artifact').hexdigest()
         (root / 'SHA256SUMS.txt').write_text(''.join(f'{digest}  {name}\n' for name, digest in entries.items()))
         (root / 'release-manifest.json').write_text(json.dumps(dict(
-            commit=SHA, notarized=False, modelWeightsIncluded=False, sha256=entries)))
+            commit=SHA, notarized=notarized, modelWeightsIncluded=False, sha256=entries,
+            notarySubmissionIds=['app-receipt', 'dmg-receipt'] if notarized else [])))
         return entries
+
+    def test_mac_ci_publication_stops_until_local_notarization(self):
+        with patch.object(preview, 'api', return_value=self.run_info()), patch.object(preview, 'gh') as gh:
+            preview.publish(123)
+            gh.assert_not_called()
+
+    def test_signed_assets_require_receipts_for_both_app_and_dmg(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.mac_artifact(root, notarized=True)
+            self.assertEqual(len(preview.verified_assets(root, 'macos', 'SHA256SUMS.txt', SHA, notarized=True)), 4)
+            path = root / 'release-manifest.json'
+            manifest = json.loads(path.read_text())
+            manifest['notarySubmissionIds'] = ['app-only']
+            path.write_text(json.dumps(manifest))
+            with self.assertRaises(ValueError):
+                preview.verified_assets(root, 'macos', 'SHA256SUMS.txt', SHA, notarized=True)
 
     def test_only_trusted_successful_push_builds_are_publishable(self):
         self.assertEqual(preview.validate_run(self.run_info())[0], 'macos')
