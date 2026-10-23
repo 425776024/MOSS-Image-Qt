@@ -58,7 +58,7 @@ class LocalMacOSReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             archive = Path(tmp) / 'app.zip'
             for target, allowed in (('Versions/Current/QtCore', True), ('/tmp/escape', False),
-                                    ('../../../../../../escape', False)):
+                                    ('../../../..', False), ('../../../../../../escape', False)):
                 with zipfile.ZipFile(archive, 'w') as z:
                     link = zipfile.ZipInfo('Moss Studio.app/Contents/Frameworks/QtCore.framework/QtCore')
                     link.create_system = 3

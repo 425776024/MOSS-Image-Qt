@@ -78,7 +78,7 @@ def validate_archive(archive):
             if stat.S_ISLNK(item.external_attr >> 16):
                 target = package.read(item).decode('utf-8')
                 resolved = PurePosixPath(posixpath.normpath(posixpath.join(str(path.parent), target)))
-                if target.startswith('/') or resolved.parts[0] != 'Moss Studio.app':
+                if target.startswith('/') or not resolved.parts or resolved.parts[0] != 'Moss Studio.app':
                     raise ValueError('App ZIP 含指向应用外部的符号链接。')
 
 
