@@ -19,6 +19,12 @@
 | Agent / MCP | 本机或局域网连接 Agent，管理作品、生成内容、上传和读取媒体、查询任务与资源 |
 | 桌面体验 | 中英文、深浅主题、可调整的三面板工作区、诊断日志导出 |
 
+## 界面预览
+
+| 作品与图像创作 | 声音设计与模板 |
+| --- | --- |
+| [<img src="assets/screenshots/zh-Hans/studio.png" alt="作品与图像创作" width="420" />](assets/screenshots/zh-Hans/studio.png) | [<img src="assets/screenshots/zh-Hans/voice-design.png" alt="声音设计与模板" width="420" />](assets/screenshots/zh-Hans/voice-design.png) |
+
 ## 下载
 
 [**前往 Releases 下载安装包、查看更新与校验和**](https://github.com/425776024/MOSS-Image-Qt/releases)

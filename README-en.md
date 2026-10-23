@@ -19,6 +19,12 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 | Agents / MCP | Connect local or LAN agents to manage works, generate content, upload/read media, and inspect tasks and resources |
 | Desktop | Chinese/English, light/dark appearance, adjustable three-panel workspace, and diagnostic-log export |
 
+## Screenshots
+
+| Projects and images | Voice design and templates |
+| --- | --- |
+| [<img src="assets/screenshots/en/studio.png" alt="Projects and images" width="420" />](assets/screenshots/en/studio.png) | [<img src="assets/screenshots/en/voice-design.png" alt="Voice design and templates" width="420" />](assets/screenshots/en/voice-design.png) |
+
 ## Download
 
 [**Get installers, release notes, and checksums**](https://github.com/425776024/MOSS-Image-Qt/releases)

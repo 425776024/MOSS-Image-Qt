@@ -74,7 +74,11 @@ private slots:
         QVERIFY(!QFileInfo::exists(ModelHttpDownload::journalPath(root.filePath("model.part"))));
     }
     void fastestSourceAndCache() {
-        QTemporaryDir root;HttpFixture s;s.handler=[&](auto socket,auto r){s.respond(socket,r,r.path=="/a"?80:2);};
+        QTemporaryDir root;HttpFixture s;s.handler=[&](auto socket,auto r){
+            // Only B answers the probe; timer coalescing must not decide the fixture's winner.
+            if(r.path=="/a"&&r.end-r.begin<=4096)return;
+            s.respond(socket,r,2);
+        };
         ModelHttpDownload d;QSignalSpy selected(&d,&ModelHttpDownload::sourceSelected),done(&d,&ModelHttpDownload::completed);
         start(d,root,s,true);QTRY_COMPARE(done.size(),1);QCOMPARE(selected[0][0].toUrl(),s.url("b"));QCOMPARE(read(root.filePath("model.part")),s.payload);
         QTemporaryDir secondRoot;int previous=s.requests.size();ModelHttpDownload second;QSignalSpy secondDone(&second,&ModelHttpDownload::completed);start(second,secondRoot,s,true);
@@ -82,9 +86,12 @@ private slots:
         for(int i=previous;i<s.requests.size();++i){QCOMPARE(s.requests[i].path,QString("/b"));QVERIFY(s.requests[i].end-s.requests[i].begin>4096);}
     }
     void failureSwitchesSourceAndResumes() {
-        QTemporaryDir root;HttpFixture s;s.handler=[&](auto socket,auto r){s.respond(socket,r,r.path=="/a"?1:15,4096,false,false,r.path=="/a"&&r.end-r.begin>4096?8192:-1);};
+        QTemporaryDir root;HttpFixture s;s.handler=[&](auto socket,auto r){
+            if(r.path=="/b"&&r.end-r.begin<=4096)return;
+            s.respond(socket,r,r.path=="/a"?1:15,4096,false,false,r.path=="/a"&&r.end-r.begin>4096?8192:-1);
+        };
         ModelHttpDownload d;QSignalSpy selected(&d,&ModelHttpDownload::sourceSelected),done(&d,&ModelHttpDownload::completed);start(d,root,s,true);
-        QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,6000);QVERIFY2(done[0][0].toString().isEmpty(),qPrintable(done[0][0].toString()));QVERIFY(selected.size()>=2);QCOMPARE(selected.last()[0].toUrl(),s.url("b"));
+        QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,6000);QVERIFY2(done[0][0].toString().isEmpty(),qPrintable(done[0][0].toString()));QVERIFY(selected.size()>=2);QCOMPARE(selected.first()[0].toUrl(),s.url("a"));QCOMPARE(selected.last()[0].toUrl(),s.url("b"));
         bool offset=false;for(auto r:s.requests)if(r.path=="/b"&&r.end-r.begin>4096)offset|=r.begin%65536>0;QVERIFY(offset);QCOMPARE(read(root.filePath("model.part")),s.payload);
     }
     void ignoredRangeFallsBackWithoutCorruption() {
@@ -168,21 +175,23 @@ private slots:
         for(auto r:s.requests)if(r.path=="/storage")QVERIFY(r.range);
     }
     void slowTransferReassesses() {
-        QTemporaryDir root;HttpFixture s;int probesA=0;
-        s.handler=[&](auto socket,auto r){bool probe=r.end-r.begin<=4096;
-            if(r.path=="/a"){if(probe)++probesA;s.respond(socket,r,probe?(probesA==1?1:100):200,probe?4096:512);}
-            else s.respond(socket,r,probe?10:1);
+        QTemporaryDir root;HttpFixture s;
+        s.handler=[&](auto socket,auto r){const bool probe=r.end-r.begin<=4096;
+            if(r.path=="/b"&&probe)return; // Start on A without racing short probe timers.
+            s.respond(socket,r,r.path=="/a"?(probe?1:200):1,probe?4096:(r.path=="/a"?512:4096));
         };
-        ModelHttpDownload d;auto p=policy();p.slowMs=500;p.cooldownMs=500;p.slowBytesPerSecond=1024*1024;d.setPolicy(p);
+        // Keep the threshold between fixture rates, including shared-runner timer coalescing.
+        ModelHttpDownload d;auto p=policy();p.slowMs=500;p.cooldownMs=500;p.slowBytesPerSecond=64*1024;d.setPolicy(p);
         QSignalSpy selected(&d,&ModelHttpDownload::sourceSelected),done(&d,&ModelHttpDownload::completed);
         d.start(root.filePath("model.part"),s.payload.size(),"hash",{s.url("a"),s.url("b")},"slow",true);
-        QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,8000);QVERIFY(done[0][0].toString().isEmpty());QVERIFY(selected.size()>=2);QCOMPARE(selected.last()[0].toUrl(),s.url("b"));QCOMPARE(read(root.filePath("model.part")),s.payload);
+        QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,8000);QVERIFY(done[0][0].toString().isEmpty());QVERIFY(selected.size()>=2);QCOMPARE(selected.first()[0].toUrl(),s.url("a"));QCOMPARE(selected.last()[0].toUrl(),s.url("b"));QCOMPARE(read(root.filePath("model.part")),s.payload);
     }
     void allSlowSourcesChooseFastestWithoutPingPong() {
         QTemporaryDir root;HttpFixture s;
         s.handler=[&](auto socket,auto r){
             const bool probe=r.end-r.begin<=4096;
-            s.respond(socket,r,probe?(r.path=="/a"?1:15):(r.path=="/a"?40:100),probe?4096:1024);
+            if(r.path=="/b"&&probe)return;
+            s.respond(socket,r,probe?1:(r.path=="/a"?40:200),probe||r.path=="/a"?4096:1024);
         };
         ModelHttpDownload d;auto p=policy();p.connections=1;p.slowMs=500;p.cooldownMs=5000;
         p.slowBytesPerSecond=1000000;d.setPolicy(p);
