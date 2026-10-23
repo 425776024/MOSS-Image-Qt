@@ -29,6 +29,11 @@ class ModelManagerTests:public QObject {
     }
     QByteArray read(QString path) {QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return f.readAll();}
 private slots:
+    void smallestImageModelIsDefaultAndExplicitChoicePersists() {
+        ModelManager first(nullptr,catalog());QCOMPARE(first.imageQuant(),QString("Q4_K"));
+        first.setImageQuant("Q8_0");ModelManager restored(nullptr,catalog());QCOMPARE(restored.imageQuant(),QString("Q8_0"));
+        QSettings().setValue("imageQuant","invalid");ModelManager invalid(nullptr,catalog());QCOMPARE(invalid.imageQuant(),QString("Q4_K"));
+    }
     void firstLaunchOffersMultipleResourcesOnceWithoutDownloading() {
         QTemporaryDir root;ModelManager manager(nullptr,catalog());manager.setRoot(root.path());
         QSignalSpy offered(&manager,&ModelManager::downloadRequested);

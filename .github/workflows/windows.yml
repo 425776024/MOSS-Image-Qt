@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 180
     env:
       BUILD_JOBS: '3'
+      PYTHONUTF8: '1'
       QT_QPA_PLATFORM: offscreen
       QT_QUICK_BACKEND: software
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.local/vcpkg-bincache,readwrite

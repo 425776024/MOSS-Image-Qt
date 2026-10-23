@@ -103,7 +103,7 @@ private:
     void transfer(ModelAsset asset);
     void checkFile(ModelAsset asset,QString path,bool install);
     void advance();
-    QString m_root,m_endpoint,m_quant="Q8_0",m_status,m_error;
+    QString m_root,m_endpoint,m_quant="Q4_K",m_status,m_error;
     QStringList m_requested;
     QList<ModelAsset> m_assets,m_queue;
     QVariantList m_groups;

@@ -239,7 +239,7 @@ private:
     ModelManager m_modelManager;
     QFile m_jobLog;
     QString m_models,m_outputRoot,m_status="准备创作",m_error,m_log,m_image,m_video,m_portrait,m_audio,m_backend="待运行";
-    QString m_imageQuant="Q8_0";
+    QString m_imageQuant="Q4_K";
     QString m_imageDevice="local";
     bool m_remoteJob=false;
     QString m_jobDir,m_kind,m_pending;

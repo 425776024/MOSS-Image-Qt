@@ -73,9 +73,8 @@ ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport
     m_endpoint=settings.value("modelEndpoint","https://hf-mirror.com").toString();
 #endif
     if(!sourceValues().contains(m_endpoint))m_endpoint=sourceValues().first();
-    m_quant=qEnvironmentVariable("MOSS_IMAGE_QUANT",settings.value("imageQuant","Q8_0").toString());
-    if(m_quant!="Q4_K"&&m_quant!="Q8_0")m_quant="Q8_0";
-    if(!settings.contains("imageQuant")&&!qEnvironmentVariableIsSet("MOSS_IMAGE_QUANT")&&ready("image-q4")&&!ready("image-q8"))m_quant="Q4_K";
+    m_quant=qEnvironmentVariable("MOSS_IMAGE_QUANT",settings.value("imageQuant","Q4_K").toString());
+    if(m_quant!="Q4_K"&&m_quant!="Q8_0")m_quant="Q4_K";
 }
 ModelManager::~ModelManager() {
     if(m_reply){m_reply->disconnect(this);m_reply->abort();}
