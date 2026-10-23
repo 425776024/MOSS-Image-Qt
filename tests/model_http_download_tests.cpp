@@ -42,7 +42,7 @@ public:
     QUrl url(QString name="file")const {return QUrl(QString("http://127.0.0.1:%1/%2").arg(server.serverPort()).arg(name));}
     void respond(QTcpSocket *s,Request r,int delay=1,int chunk=4096,bool ignore=false,bool badRange=false,int dropAfter=-1) {
         if(ignore){r.begin=0;r.end=payload.size();}
-        QByteArray header=ignore||!r.range?"HTTP/1.1 200 OK\r\n":"HTTP/1.1 206 Partial Content\r\nContent-Range: bytes "+QByteArray::number(r.begin)+"-"+QByteArray::number(r.end-1)+"/"+QByteArray::number(payload.size()+(badRange?1:0))+"\r\n";
+        QByteArray header=ignore||!r.range?QByteArrayLiteral("HTTP/1.1 200 OK\r\n"):"HTTP/1.1 206 Partial Content\r\nContent-Range: bytes "+QByteArray::number(r.begin)+"-"+QByteArray::number(r.end-1)+"/"+QByteArray::number(payload.size()+(badRange?1:0))+"\r\n";
         s->write(header+"Content-Length: "+QByteArray::number(r.end-r.begin)+"\r\nConnection: close\r\n\r\n");
         auto timer=new QTimer(s);timer->setInterval(delay);
         connect(timer,&QTimer::timeout,s,[this,s,r,chunk,dropAfter,timer,offset=r.begin]()mutable{
