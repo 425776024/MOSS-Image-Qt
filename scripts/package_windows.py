@@ -87,18 +87,34 @@ def check_installer(installer, destination, test_root, env):
         cwd=test_root, env=installed_env, timeout=30, capture_output=True, text=True)
     if public.stdout.strip() != 'MOSS_PUBLIC_LOCAL_ONLY_V1':
         raise ValueError('Installed XAvatar did not pass the public binary check')
-    run('powershell.exe', '-NoProfile', '-Command', '''
+    shortcuts = run('powershell.exe', '-NoProfile', '-Command', '''
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $exe = Join-Path $env:XAVATAR_INSTALL_TEST_ROOT 'XAvatar.exe'
 $metadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
 if ($metadata.OriginalFilename -ne 'XAvatar.exe' -or $metadata.ProductName -ne 'XAvatar') { throw 'Incorrect application branding' }
-$shell = New-Object -ComObject WScript.Shell
+$shell = New-Object -ComObject Shell.Application
 $links = @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'XAvatar.lnk'),
     (Join-Path ([Environment]::GetFolderPath('Programs')) 'XAvatar/XAvatar.lnk'))
-foreach ($link in $links) {
-    if (!(Test-Path $link) -or $shell.CreateShortcut($link).TargetPath -ne $exe) { throw "Invalid shortcut: $link" }
+$results = foreach ($link in $links) {
+    if (!(Test-Path -LiteralPath $link)) { throw "Missing shortcut: $link" }
+    $folder = $shell.NameSpace([IO.Path]::GetDirectoryName($link))
+    $item = $folder.ParseName([IO.Path]::GetFileName($link))
+    [PSCustomObject]@{link = $link; target = $item.ExtendedProperty('System.Link.TargetParsingPath')}
 }
-''', env=dict(installed_env, XAVATAR_INSTALL_TEST_ROOT=str(installed.resolve())), timeout=30)
+ConvertTo-Json -InputObject @($results) -Compress
+''', env=dict(installed_env, XAVATAR_INSTALL_TEST_ROOT=str(installed.resolve())),
+        timeout=30, capture_output=True, text=True, encoding='utf-8')
+    # Shell targets may use a short path. Compare the actual file identity and
+    # read the Unicode shell property rather than WScript's text conversion.
+    import json
+    links = json.loads(shortcuts.stdout)
+    (test_root / 'shortcut-check.json').write_text(json.dumps(links, ensure_ascii=False, indent=2), encoding='utf-8')
+    for index, link in enumerate(links):
+        shutil.copy2(link['link'], test_root / f'shortcut-{index}.lnk')
+        target = link.get('target')
+        if not target or not Path(target).is_file() or not os.path.samefile(target, installed / 'XAvatar.exe'):
+            raise ValueError(f'Incorrect shortcut target: {link!r}; expected {installed / "XAvatar.exe"}')
     run(installed / 'XAvatar.exe', '--home-smoke', '--minimum-window', '--check-initial-setup',
         '--ui-language', 'zh', cwd=test_root, env=installed_env, timeout=90)
     # Test uninstall without deleting files owned by the user.
