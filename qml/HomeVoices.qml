@@ -9,13 +9,21 @@ Rectangle {
     id: root; objectName: "homeVoiceLibrary"
     color: HomeTheme.sidebar
     property string audioUrl: ""
-    property bool builtin: false
+    readonly property bool hasCustomVoices: studio.sound.voices.some(row=>!row.builtin)
+    property bool builtin: !hasCustomVoices
     property string notice: ""
     property string playingId: ""
+    readonly property var selectedVoice: studio.sound.voices.find(row=>row.id===studio.sound.settings.voiceId) || ({})
+    readonly property var playingVoice: studio.sound.voices.find(row=>row.id===playingId) || ({})
+    function time(milliseconds) { const seconds=Math.floor(Math.max(0,milliseconds)/1000);return Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0") }
     readonly property var entries: studio.sound.voices.filter(row => !!row.builtin === builtin && row.name.toLowerCase().includes(search.text.trim().toLowerCase()))
     signal useVoice(string id)
     function stopPreview() { player.stop(); playingId = "" }
-    function preview(row) { if(playingId === row.id)stopPreview(); else { player.stop(); playingId = row.id; player.source = "file://" + row.reference; player.play() } }
+    function preview(row) {
+        if(studio.busy || !row.id)return
+        if(playingId === row.id)stopPreview()
+        else { player.stop();studio.sound.set("voiceId",row.id);studio.sound.set("voiceSource","tts");playingId=row.id;player.source="file://"+row.reference;player.play() }
+    }
     function designVoice() { designDialog.open() }
     VoiceDesignDialog { id: designDialog; onVoiceSaved: { root.builtin=false;root.notice="" } }
     function importVoice() { editDialog.voiceId = ""; voiceName.text = ""; root.audioUrl = ""; transcript.text = ""; notice = ""; editDialog.open() }
@@ -24,9 +32,9 @@ Rectangle {
         notice = editDialog.voiceId ? studio.sound.updateVoice(editDialog.voiceId, voiceName.text, transcript.text) : studio.sound.createVoice(voiceName.text, root.audioUrl, transcript.text)
         if(!notice) { builtin = false; editDialog.close() }
     }
-    onVisibleChanged: if(!visible)stopPreview()
+    onVisibleChanged: {if(!visible)stopPreview();else if(!hasCustomVoices)builtin=true}
     Connections { target: studio; function onChanged() { if(studio.busy)root.stopPreview() } }
-    MediaPlayer { id: player; audioOutput: AudioOutput {}
+    MediaPlayer { id: player; objectName: "libraryVoicePlayer"; audioOutput: AudioOutput {}
          onMediaStatusChanged: if(mediaStatus === MediaPlayer.EndOfMedia)root.playingId = ""; onErrorOccurred: { root.notice = errorString; root.playingId = "" } }
     FileDialog { id: audioDialog; title: HomeTheme.t("选择录音"); nameFilters: ["WAV audio (*.wav)"]; onAccepted: root.audioUrl = selectedFile.toString() }
     HomeDialog {
@@ -55,7 +63,7 @@ Rectangle {
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
-        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("我的声音"); detail: String(root.entries.length)
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置音色" : "我的音色"); detail: String(root.entries.length)
             HomeButton { text: HomeTheme.t("语音设计"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
             HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importVoice() }
         }
@@ -77,33 +85,44 @@ Rectangle {
             }
             GridView {
                 id: list; anchors.fill: parent; model: root.entries; clip: true
-                cellWidth: width/Math.max(1,Math.floor(width/270)); cellHeight: 120
+                cellWidth: width/Math.max(1,Math.floor(width/270)); cellHeight: 74
                 ScrollBar.vertical: ScrollBar { }
                 delegate: AbstractButton {
                     id: row; required property var modelData; readonly property bool chosen: studio.sound.settings.voiceId===modelData.id
-                    width: list.cellWidth-12; height: list.cellHeight-12; padding: 12; hoverEnabled: true
+                    objectName: "voiceCard-"+modelData.id
+                    width: list.cellWidth-12; height: list.cellHeight-10; padding: 10; hoverEnabled: true
                     Accessible.name: modelData.name; Accessible.selected: chosen
                     onClicked: if(!studio.busy){studio.sound.set("voiceId",modelData.id);studio.sound.set("voiceSource","tts")}
                     onDoubleClicked: if(!studio.busy)root.useVoice(modelData.id)
-                    background: Rectangle { radius: 10; color: HomeTheme.field; border.color: row.chosen || row.visualFocus ? HomeTheme.accent : row.hovered ? HomeTheme.outline : HomeTheme.line }
-                    contentItem: ColumnLayout { spacing: 6
+                    background: Rectangle { radius: 6; color: HomeTheme.field; border.color: row.chosen || row.visualFocus ? HomeTheme.accent : row.hovered ? HomeTheme.outline : HomeTheme.line }
+                    contentItem: ColumnLayout { spacing: 4
                         RowLayout { Layout.fillWidth: true; spacing: 7
-                            IconButton { glyph: root.playingId===row.modelData.id ? "pause" : "play"; hint: HomeTheme.t("试听")+" "+row.modelData.name; iconColor: HomeTheme.accent; onClicked: root.preview(row.modelData) }
+                            IconButton { glyph: root.playingId===row.modelData.id ? "pause" : "play"; hint: HomeTheme.t("试听")+" "+row.modelData.name; enabled: !studio.busy; iconColor: HomeTheme.accent; onClicked: root.preview(row.modelData) }
                             Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: row.modelData.name; elide: Text.ElideRight; font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text }
                             StudioIcon { visible: row.chosen; name: "check"; ink: HomeTheme.accent; Layout.preferredWidth: 14; Layout.preferredHeight: 14 }
                             IconButton { visible: !root.builtin; glyph: "more"; hint: HomeTheme.t("操作"); enabled: !studio.busy; onClicked: {actions.target=row.modelData;const at=row.mapToItem(root,row.width-actions.width,row.height+4);actions.popup(at.x,at.y)} }
                         }
                         Text { Layout.fillWidth: true; text: row.modelData.transcript; elide: Text.ElideRight; font.pixelSize: 11; color: HomeTheme.muted }
-                        AudioWaveform { Layout.fillWidth: true; Layout.fillHeight: true; source: "file://"+row.modelData.reference; active: root.visible && row.visible; progress: root.playingId===row.modelData.id ? player.position/Math.max(1,player.duration) : 0; waveColor: Qt.alpha(HomeTheme.secondary,.4); playedColor: HomeTheme.accent }
+
                     }
-                    ToolTip.visible: hovered; ToolTip.delay: 750; ToolTip.text: modelData.name
+                    ToolTip.visible: hovered; ToolTip.delay: 750; ToolTip.text: modelData.name+"\n"+modelData.transcript
                 }
             }
         }
-        HomeSection { visible: root.entries.some(v=>v.id===studio.sound.settings.voiceId); Layout.fillWidth: true; padding: 10
+        HomeSection { objectName: "voicePreviewBar"; visible: !!root.playingId || root.entries.some(v=>v.id===studio.sound.settings.voiceId); Layout.fillWidth: true; padding: 10
             RowLayout { Layout.fillWidth: true; spacing: 10
-                StudioIcon { name: "audio"; ink: HomeTheme.secondary; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
-                Text { Layout.fillWidth: true; text: (root.entries.find(v=>v.id===studio.sound.settings.voiceId)||{}).name || ""; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 12 }
+                IconButton { glyph: root.playingId ? "pause" : "play"; hint: HomeTheme.t("试听"); iconColor: HomeTheme.accent; enabled: !studio.busy; onClicked: root.preview(root.selectedVoice) }
+                Text { Layout.fillWidth: !root.playingId; Layout.maximumWidth: root.playingId ? 180 : Infinity; text: root.selectedVoice.name || ""; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 12 }
+                Loader {
+                    objectName: "voicePreviewWaveform"; Layout.fillWidth: true; Layout.preferredHeight: 24
+                    visible: active; active: root.visible && !!root.playingId
+                    sourceComponent: AudioWaveform {
+                        source: "file://"+root.playingVoice.reference
+                        progress: player.position/Math.max(1,player.duration)
+                        waveColor: Qt.alpha(HomeTheme.secondary,.4); playedColor: HomeTheme.accent
+                    }
+                }
+                Text { visible: !!root.playingId; text: root.time(player.position)+" / "+root.time(player.duration); color: HomeTheme.secondary; font.pixelSize: 11 }
                 HomeButton { text: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useVoice(studio.sound.settings.voiceId) }
             }
         }

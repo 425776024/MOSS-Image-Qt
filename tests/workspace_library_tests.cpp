@@ -7,11 +7,25 @@
 #include <QDir>
 #include <QDataStream>
 #include <QSettings>
+#include <QCryptographicHash>
 
 class WorkspaceLibraryTest : public QObject {
     Q_OBJECT
     QTemporaryDir m_settings;
 private slots:
+    void builtinPortraitsAreReadableAndRemainSeparateFromUserAvatars() {
+        QTemporaryDir root;WorkspaceLibrary library(root.path());
+        const auto portraits=library.builtinAvatars();QCOMPARE(portraits.size(),17);QSet<QString> ids;
+        for(const auto &value:portraits){
+            const auto row=value.toMap();const auto id=row["id"].toString();QVERIFY(!ids.contains(id));ids.insert(id);
+            QVERIFY(row["builtin"].toBool());const auto path=QUrl(row["url"].toString()).toLocalFile();
+            QVERIFY(!QImage(path).isNull());QFile file(path);QVERIFY(file.open(QIODevice::ReadOnly));
+            QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256).toHex()),row["sha256"].toString());
+            QVERIFY(!library.removeAvatar(id).isEmpty());QVERIFY(!library.renameAvatar(id,"changed").isEmpty());
+        }
+        QVERIFY(library.avatars().isEmpty());QCOMPARE(library.builtinAvatars().size(),17);
+        library.setSessionLanguage("en");QVERIFY(library.builtinAvatars().first().toMap()["name"].toString().startsWith("Lin Yue"));
+    }
     void quickStartCompletionSurvivesRestart() {
         QTemporaryDir root;QSettings().remove("home/quickStartVersion");
         WorkspaceLibrary first(root.path());QVERIFY(first.quickStartPending());

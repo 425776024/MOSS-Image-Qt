@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "portraits": [
+    {
+      "id": "builtin-female-relaxed",
+      "name": "林悦 · 轻松口播",
+      "nameEn": "Lin Yue · Presenter",
+      "file": "female-relaxed.png",
+      "sha256": "29088be51397e49abf9d65ac0e85e6c0d2549ace0c0a88278f15e708da24da06",
+      "source": "assets/models/ditto-female-relaxed/source/portrait.png",
+      "generatedBy": "OpenAI image_gen (source provenance.json)"
+    },
+    {
+      "id": "builtin-male-relaxed",
+      "name": "陈知 · 轻松口播",
+      "nameEn": "Chen Zhi · Presenter",
+      "file": "male-relaxed.png",
+      "sha256": "b62211652eeae3a0bb368fb4cc6ba831f55a194cdea5ded036ee5fea4ccadbf8",
+      "source": "assets/models/ditto-male-relaxed/source/portrait.png",
+      "generatedBy": "OpenAI image_gen (source provenance.json)"
+    },
+    {
+      "id": "builtin-real_female_presenter-standing",
+      "name": "林悦 · 站立",
+      "nameEn": "Lin Yue · Standing",
+      "file": "real_female_presenter_standing.png",
+      "sha256": "371473671a7994a78f0fbe8ba03f112e74c4c78749e78abce8e062400754bdb5",
+      "source": "assets/builtin/image_avatars/real_female_presenter_standing.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_female_presenter-desk",
+      "name": "林悦 · 桌前",
+      "nameEn": "Lin Yue · At desk",
+      "file": "real_female_presenter_desk.png",
+      "sha256": "1d954f738d96837cbd5e408b387070913359076fb4a9bdf68caf28c2280a658e",
+      "source": "assets/builtin/image_avatars/real_female_presenter_desk.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_female_presenter-chair",
+      "name": "林悦 · 坐姿",
+      "nameEn": "Lin Yue · Seated",
+      "file": "real_female_presenter_chair.png",
+      "sha256": "b3d0939ea9200b08d08e065bd61496f8191377307e4c9723fb653f790048455a",
+      "source": "assets/builtin/image_avatars/real_female_presenter_chair.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_male_teacher-standing",
+      "name": "陈知 · 站立",
+      "nameEn": "Chen Zhi · Standing",
+      "file": "real_male_teacher_standing.png",
+      "sha256": "58a3457c8035152a9e5528f8b31533c5d422909e89cd4d4be7c0f50bbefc6e05",
+      "source": "assets/builtin/image_avatars/real_male_teacher_standing.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_male_teacher-desk",
+      "name": "陈知 · 桌前",
+      "nameEn": "Chen Zhi · At desk",
+      "file": "real_male_teacher_desk.png",
+      "sha256": "d1e2b267a11cc8e83eb068402b6d7256fc5bad8bc331e444815c2b8f29732401",
+      "source": "assets/builtin/image_avatars/real_male_teacher_desk.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_male_teacher-chair",
+      "name": "陈知 · 坐姿",
+      "nameEn": "Chen Zhi · Seated",
+      "file": "real_male_teacher_chair.png",
+      "sha256": "cdeceb0bcabbb72b156518bf1b196479b882a153fa0b219eadac90cdaf74e2dc",
+      "source": "assets/builtin/image_avatars/real_male_teacher_chair.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_mature_consultant-standing",
+      "name": "苏岚 · 站立",
+      "nameEn": "Su Lan · Standing",
+      "file": "real_mature_consultant_standing.png",
+      "sha256": "45bc9dda96b2b4531e63477dcdc3c38724babff02c339efc5ad3fe2a38c7f795",
+      "source": "assets/builtin/image_avatars/real_mature_consultant_standing.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_mature_consultant-desk",
+      "name": "苏岚 · 桌前",
+      "nameEn": "Su Lan · At desk",
+      "file": "real_mature_consultant_desk.png",
+      "sha256": "6b36c9983fc36b0d7ace65a23d87a40dc2ab7c7673f3fda8ee1df35037bd63e9",
+      "source": "assets/builtin/image_avatars/real_mature_consultant_desk.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-real_mature_consultant-chair",
+      "name": "苏岚 · 坐姿",
+      "nameEn": "Su Lan · Seated",
+      "file": "real_mature_consultant_chair.png",
+      "sha256": "fc83f92f158fb07409e351ecbd4fb1401904db2db364d11abbba7be69d3a9880",
+      "source": "assets/builtin/image_avatars/real_mature_consultant_chair.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_female_anchor-standing",
+      "name": "小宁 · 站立",
+      "nameEn": "Xiao Ning · Standing",
+      "file": "stylized_female_anchor_standing.png",
+      "sha256": "4f5d2c0325a1c76425c0088d11e48f68c1e4917c81ff7cf415ca96bcff7788f3",
+      "source": "assets/builtin/image_avatars/stylized_female_anchor_standing.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_female_anchor-desk",
+      "name": "小宁 · 桌前",
+      "nameEn": "Xiao Ning · At desk",
+      "file": "stylized_female_anchor_desk.png",
+      "sha256": "219a2d84d215dec691a713ae83a39408cf65d977ff5b16446dd0673e19c28042",
+      "source": "assets/builtin/image_avatars/stylized_female_anchor_desk.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_female_anchor-chair",
+      "name": "小宁 · 坐姿",
+      "nameEn": "Xiao Ning · Seated",
+      "file": "stylized_female_anchor_chair.png",
+      "sha256": "5d6283e2940c70a5a04c10ca873d4fd568232e8a97e6df4e42559906b8608116",
+      "source": "assets/builtin/image_avatars/stylized_female_anchor_chair.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_male_explainer-standing",
+      "name": "阿睿 · 站立",
+      "nameEn": "A Rui · Standing",
+      "file": "stylized_male_explainer_standing.png",
+      "sha256": "b128f6622614c6a3a2f4ccec7c11df6313942413e0a84a3d1db6d09d86678fe5",
+      "source": "assets/builtin/image_avatars/stylized_male_explainer_standing.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_male_explainer-desk",
+      "name": "阿睿 · 桌前",
+      "nameEn": "A Rui · At desk",
+      "file": "stylized_male_explainer_desk.png",
+      "sha256": "0e42c29a7e66a28fdb5d50b9b1513c56b3d2c4bf7be63be75aefeae88f8564c7",
+      "source": "assets/builtin/image_avatars/stylized_male_explainer_desk.png",
+      "generatedBy": "built-in image_gen"
+    },
+    {
+      "id": "builtin-stylized_male_explainer-chair",
+      "name": "阿睿 · 坐姿",
+      "nameEn": "A Rui · Seated",
+      "file": "stylized_male_explainer_chair.png",
+      "sha256": "cb9a309f3d559a667cf9fccd0435124b48efbc62e8c9af582d1174fde824a602",
+      "source": "assets/builtin/image_avatars/stylized_male_explainer_chair.png",
+      "generatedBy": "built-in image_gen"
+    }
+  ]
+}

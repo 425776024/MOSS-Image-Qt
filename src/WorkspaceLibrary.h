@@ -9,6 +9,7 @@
 class WorkspaceLibrary : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList avatars READ avatars NOTIFY avatarsChanged)
+    Q_PROPERTY(QVariantList builtinAvatars READ builtinAvatars NOTIFY preferencesChanged)
     Q_PROPERTY(QString appearanceMode READ appearanceMode WRITE setAppearanceMode NOTIFY preferencesChanged)
     Q_PROPERTY(QString themePreset READ themePreset WRITE setThemePreset NOTIFY preferencesChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY preferencesChanged)
@@ -21,6 +22,7 @@ class WorkspaceLibrary : public QObject {
 public:
     explicit WorkspaceLibrary(QString outputRoot, QObject *parent = nullptr);
     QVariantList avatars() const { return m_avatars; }
+    QVariantList builtinAvatars() const;
     QString root() const { return m_root; }
     QString version() const { return QStringLiteral("0.1.0"); }
     QString appearanceMode() const { return m_appearance; }

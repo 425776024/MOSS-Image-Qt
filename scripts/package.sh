@@ -44,7 +44,7 @@ cp docs/model-terms.md "$app/Contents/Resources/licenses/Sound-Model-Terms.md"
 cp .local/build-engine/bin/sd-cli "$build_dir/workers/moss-ditto" \
     "$build_dir/workers/moss-voice" "${MOSS_SFX_PATH:-.local/build-audio/bin/sa3-generate}" "$app/Contents/Helpers/"
 mkdir -p "$app/Contents/Resources/assets"
-cp -R assets/voices "$app/Contents/Resources/assets/"
+cp -R assets/voices assets/avatars "$app/Contents/Resources/assets/"
 cp -R vendor/videocut-voice/licenses "$app/Contents/Resources/licenses/audio"
 ming_root="${MOSS_MING_ROOT:-$(sed -n 's/^MOSS_MING_ROOT:PATH=//p' "$build_dir/CMakeCache.txt")}"
 cp -R "$ming_root/licenses" "$app/Contents/Resources/licenses/audio/ming-runtime"

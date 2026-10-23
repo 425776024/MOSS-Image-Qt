@@ -168,7 +168,7 @@ public:
     Q_INVOKABLE void generateAvatar(double limitSeconds=0);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE void saveProject(QUrl url);
-    Q_INVOKABLE void loadProject(QUrl url);
+    void loadProject(QUrl url);
     Q_INVOKABLE void exportResult(QUrl url, bool video=false);
     Q_INVOKABLE void exportEditResult(QUrl url);
     Q_INVOKABLE void selectHistory(int index);

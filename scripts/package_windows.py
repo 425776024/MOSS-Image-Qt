@@ -124,8 +124,8 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     run(qt / 'bin/windeployqt.exe', '--release', '--qmldir', ROOT / 'qml',
         '--no-compiler-runtime', '--include-plugins', 'qoffscreen',
         '--dir', destination, destination / 'XAvatar.exe')
-    # windeployqt bundles a VC installer for release builds. A portable ZIP
-    # instead needs the redistributable DLLs beside its executables.
+    # Bundle app-local VC DLLs so the per-user installer needs no separate
+    # runtime installation or administrator privileges.
     deploy_msvc_runtime(destination, Path(os.environ['VCToolsRedistDir']))
     # Dependencies loaded at runtime (ORT providers and Vulkan) are not all
     # visible to windeployqt. Ship the pinned release DLLs and their notices.
@@ -139,6 +139,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
                 raise ValueError(f'DLL collision: {dll.name}')
             shutil.copy2(dll, target)
     shutil.copytree(ROOT / 'assets/voices', destination / 'assets/voices')
+    shutil.copytree(ROOT / 'assets/avatars', destination / 'assets/avatars')
     licenses = destination / 'licenses'
     shutil.copytree(native / 'licenses', licenses)
     for notice in (prefix / 'share').rglob('*'):
@@ -196,6 +197,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         for language in ('zh', 'en'):
             for theme in ('light', 'dark'):
                 run(destination / 'XAvatar.exe', '--home-smoke', '--minimum-window',
+                    '--home-page', 'avatars', '--check-builtin-library', '--check-library-defaults',
                     '--ui-language', language, '--ui-theme', theme, env=env, timeout=90)
         run(destination / 'sd-cli.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
         # The pinned sa3 CLI has no --help branch: no model arguments print

@@ -8,13 +8,15 @@ Rectangle {
     color: HomeTheme.sidebar
     property string selectedId: ""
     property string notice: ""
+    property bool builtin: workspace.avatars.length===0
     property url pendingAvatarSource
-    readonly property var entries: workspace.avatars.filter(row => row.name.toLowerCase().includes(search.text.trim().toLowerCase()))
+    readonly property var entries: (builtin ? workspace.builtinAvatars : workspace.avatars).filter(row => row.name.toLowerCase().includes(search.text.trim().toLowerCase()))
     readonly property var selected: entries.find(row => row.id === selectedId) || entries[0] || ({})
+    onVisibleChanged: if(visible && workspace.avatars.length===0)builtin=true
     signal useAvatar(string url)
     signal createAvatar()
     function designAvatar() { designDialog.open() }
-    AvatarDesignDialog { id: designDialog; onAvatarSaved: { root.selectedId=workspace.avatars[0].id;root.notice="" } }
+    AvatarDesignDialog { id: designDialog; onAvatarSaved: { root.builtin=false;root.selectedId=workspace.avatars[0].id;root.notice="" } }
     function importAvatar() { imageDialog.open() }
     function previewAvatar(source) {
         pendingAvatarSource=source
@@ -42,7 +44,7 @@ Rectangle {
             Text { visible: root.notice !== ""; text: root.notice; color: HomeTheme.danger; wrapMode: Text.Wrap; Layout.fillWidth: true }
             RowLayout { Layout.alignment: Qt.AlignRight
                 HomeButton { text: HomeTheme.t("取消"); onClicked: importDialog.close() }
-                HomeButton { id: importSave; objectName: "homeAvatarImportSave"; text: HomeTheme.t("保存"); primary: true; enabled: !importDialog.saving && nameInput.text.trim() !== "" && importPreview.ready; onClicked: {if(!enabled)return;importDialog.saving=true;root.notice=workspace.importAvatar(root.pendingAvatarSource,nameInput.text);if(!root.notice)importDialog.close();else importDialog.saving=false} }
+                HomeButton { id: importSave; objectName: "homeAvatarImportSave"; text: HomeTheme.t("保存"); primary: true; enabled: !importDialog.saving && nameInput.text.trim() !== "" && importPreview.ready; onClicked: {if(!enabled)return;importDialog.saving=true;root.notice=workspace.importAvatar(root.pendingAvatarSource,nameInput.text);if(!root.notice){root.builtin=false;importDialog.close()}else importDialog.saving=false} }
             }
         }
     }
@@ -58,14 +60,15 @@ Rectangle {
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
-        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("我的形象"); detail: String(root.entries.length)
+        HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置形象" : "我的形象"); detail: String(root.entries.length)
             HomeButton { text: HomeTheme.t("制作数字人"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
             HomeButton { text: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
             HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
         }
         RowLayout { Layout.fillWidth: true
-            HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索形象"); Accessible.name: placeholderText }
+            HomeTabs { labels: [HomeTheme.t("我的形象"),HomeTheme.t("内置形象")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.builtin=index===1;root.selectedId=""} }
             Item { Layout.fillWidth: true }
+            HomeField { id: search; Layout.preferredWidth: 240; search: true; placeholderText: HomeTheme.t("搜索形象"); Accessible.name: placeholderText }
             IconButton { glyph: "folder"; hint: HomeTheme.t("打开目录"); onClicked: workspace.openDirectory(workspace.root+"/avatars") }
         }
         Item {
@@ -83,6 +86,7 @@ Rectangle {
                 ScrollBar.vertical: ScrollBar { }
                 delegate: AbstractButton {
                     id: row; required property var modelData
+                    objectName: "avatarCard-"+modelData.id
                     width: list.cellWidth-12; height: list.cellHeight-12; padding: 8; hoverEnabled: true
                     readonly property bool chosen: root.selected.id===modelData.id
                     Accessible.name: modelData.name; Accessible.selected: chosen
@@ -95,7 +99,7 @@ Rectangle {
                         }
                         RowLayout { Layout.fillWidth: true; spacing: 4
                             Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: row.modelData.name; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium }
-                            IconButton { glyph: "more"; hint: HomeTheme.t("操作"); onClicked: {actions.target=row.modelData;const at=row.mapToItem(root,row.width-actions.width,row.height+4);actions.popup(at.x,at.y)} }
+                            IconButton { visible: !row.modelData.builtin; glyph: "more"; hint: HomeTheme.t("操作"); onClicked: {actions.target=row.modelData;const at=row.mapToItem(root,row.width-actions.width,row.height+4);actions.popup(at.x,at.y)} }
                         }
                     }
                     ToolTip.visible: hovered; ToolTip.delay: 700; ToolTip.text: modelData.name
@@ -107,7 +111,7 @@ Rectangle {
             RowLayout { Layout.fillWidth: true; spacing: 10
                 StudioIcon { name: "person"; Layout.preferredWidth: 18; Layout.preferredHeight: 18; ink: HomeTheme.secondary }
                 Text { Layout.fillWidth: true; text: root.selected.name || ""; elide: Text.ElideRight; font.pixelSize: 12; color: HomeTheme.text }
-                HomeButton { text: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useAvatar(root.selected.url) }
+                HomeButton { objectName: "useLibraryAvatar"; text: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useAvatar(root.selected.url) }
             }
         }
         RowLayout { visible: !!root.notice || workspace.canRestoreAvatar; Layout.fillWidth: true

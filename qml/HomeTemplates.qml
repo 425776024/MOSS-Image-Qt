@@ -9,6 +9,7 @@ Rectangle {
     property string message: ""
     property string selectedId: ""
     readonly property var selected: studio.layoutTemplates.find(t=>t.id===selectedId) || studio.layoutTemplates[0] || ({})
+    function templateName(row) { return HomeTheme.english && row.nameEn ? row.nameEn : HomeTheme.t(row.name || "") }
     function useTemplate(id) { if(!studio.busy){studio.useLayoutTemplate(id);root.templateUsed()} }
     FileDialog { id: importer; title: HomeTheme.t("导入构图模板"); nameFilters: [HomeTheme.t("Moss 工程或构图 JSON (*.json)")]; onAccepted: root.message=studio.importLayoutTemplate(selectedFile) }
     ColumnLayout {
@@ -45,7 +46,7 @@ Rectangle {
                     }
                     RowLayout { Layout.fillWidth: true
                         ColumnLayout { Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 3
-                            Text { Layout.fillWidth: true; text: tile.modelData.name; color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium; elide: Text.ElideRight }
+                            Text { Layout.fillWidth: true; text: root.templateName(tile.modelData); color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium; elide: Text.ElideRight }
                             Text { text: tile.modelData.document.width+" × "+tile.modelData.document.height; color: HomeTheme.muted; font.pixelSize: 10 }
                         }
                         IconButton { visible: !tile.modelData.builtin; glyph: "trash"; hint: HomeTheme.t("移除模板（源文件保留）"); onClicked: studio.removeLayoutTemplate(tile.modelData.id) }
@@ -56,8 +57,8 @@ Rectangle {
         HomeSection { visible: !!root.selected.id; Layout.fillWidth: true; padding: 10
             RowLayout { Layout.fillWidth: true; spacing: 10
                 StudioIcon { Layout.preferredWidth: 18; Layout.preferredHeight: 18; name: "grid"; ink: HomeTheme.secondary }
-                Text { Layout.fillWidth: true; text: root.selected.name || ""; font.pixelSize: 12; color: HomeTheme.text }
-                HomeButton { text: HomeTheme.t("使用模板"); primary: true; iconName: "arrow"; enabled: !studio.busy; onClicked: root.useTemplate(root.selected.id) }
+                Text { Layout.fillWidth: true; text: root.templateName(root.selected); font.pixelSize: 12; color: HomeTheme.text }
+                HomeButton { objectName: "useLibraryTemplate"; text: HomeTheme.t("使用模板"); primary: true; iconName: "arrow"; enabled: !studio.busy; onClicked: root.useTemplate(root.selected.id) }
             }
         }
     }

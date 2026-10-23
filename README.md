@@ -16,6 +16,8 @@ Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 V
 
 对话生成图像，用原图和提示词进行图生图，或涂抹局部编辑，拖动对象控制构图；设计或克隆音色，驱动人像说话，生成环境音效，再组合素材导出 MP4。
 
+内置 17 张图片数字人形象和 21 套可编辑构图模板；图像创作默认选择下载体积更小的 Q4 版本。
+
 | 图像创作 | 图像涂抹 | 布局构图 |
 | --- | --- | --- |
 | <a href="assets/screenshots/zh-Hans/studio.png"><img src="assets/screenshots/zh-Hans/studio.png" alt="图像创作" width="270" /></a> | <a href="assets/screenshots/zh-Hans/image-edit.png"><img src="assets/screenshots/zh-Hans/image-edit.png" alt="图像涂抹" width="270" /></a> | <a href="assets/screenshots/zh-Hans/layout.png"><img src="assets/screenshots/zh-Hans/layout.png" alt="布局构图" width="270" /></a> |

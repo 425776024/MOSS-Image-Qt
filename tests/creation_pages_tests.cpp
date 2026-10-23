@@ -17,6 +17,25 @@ private:
         file.write(QJsonDocument(value).toJson());
     }
 private slots:
+    void everyBuiltinLayoutIsEditableAndSurvivesReopen() {
+        QTemporaryDir root;qputenv("MOSS_OUTPUT_ROOT",root.path().toUtf8());QString finalId,finalPrompt;
+        {
+            Studio studio;const auto layouts=studio.layoutTemplates();QCOMPARE(layouts.size(),21);QSet<QString> ids;
+            for(const auto &value:layouts){
+                const auto row=value.toMap();const auto id=row["id"].toString();QVERIFY(!ids.contains(id));ids.insert(id);
+                Document expected;QString error;QVERIFY2(expected.load(QJsonObject::fromVariantMap(row["document"].toMap()),&error),qPrintable(error));
+                QVERIFY(expected.layout());QVERIFY2(expected.validationError().isEmpty(),qPrintable(expected.validationError()));
+                studio.useLayoutTemplate(id);QVERIFY(studio.prepareConversationSettings());
+                const auto normalized=[](QJsonObject value){
+                    auto regions=value["regions"].toArray();for(int i=0;i<regions.size();++i){auto row=regions[i].toObject();row.remove("id");regions[i]=row;}value["regions"]=regions;return value;
+                };
+                QCOMPARE(normalized(studio.document()->json()),normalized(expected.json()));
+                finalPrompt=expected.prompt()+" edited";studio.document()->setPrompt(finalPrompt);studio.flushWorkspace();finalId=studio.conversation()->id();
+            }
+        }
+        Studio reopened;reopened.openConversation(finalId);QVERIFY(reopened.prepareConversationSettings());
+        QCOMPARE(reopened.document()->prompt(),finalPrompt);QVERIFY(reopened.document()->layout());
+    }
     void unownedMediaTraversalStopsAtFilesystemRoot(){
         QTemporaryDir directory;QVERIFY(directory.isValid());
         const auto path=directory.filePath("unowned.png");
@@ -244,12 +263,12 @@ private slots:
         QCOMPARE(saved.count(),2);QVERIFY(saved.last()[0].toBool());QCOMPARE(saved.last()[1].toString(),path);
         QFile f(path);QVERIFY(f.open(QIODevice::ReadOnly));auto json=QJsonDocument::fromJson(f.readAll()).object();QVERIFY(json["conversation"].isObject());QVERIFY(json["layout"].toBool());
         s.loadProject(QUrl::fromLocalFile(path));QCOMPARE(s.conversation()->draft(),draft);
-        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
-        const auto custom=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(custom);QCOMPARE(s.layoutTemplates().size(),3);
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),22);
+        const auto custom=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(custom);QCOMPARE(s.layoutTemplates().size(),21);
         // Replacing an existing catalog must also work with Windows file sharing.
-        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
-        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),5);
-        const auto second=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(second);QCOMPARE(s.layoutTemplates().size(),4);
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),22);
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),23);
+        const auto second=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(second);QCOMPARE(s.layoutTemplates().size(),22);
     }
     void mouthAdaptationPersistsAndInvalidatesOnlyRenderedVideo() {
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());

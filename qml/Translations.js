@@ -2,6 +2,15 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "资料库": "Library",
+    "创作": "Create",
+    "资源": "Resources",
+    "联系": "Contact",
+    "恢复": "Restore",
+    "内置形象": "Built-in avatars",
+    "春日海报": "Spring poster",
+    "手写便签": "Handwritten note",
+    "物品构图": "Object layout",
     "选择创作功能": "Choose a creative task",
     "从下方菜单选择功能，再输入内容并发送。": "Choose a task below, then enter your idea and send it.",
     "选择功能": "Choose task",

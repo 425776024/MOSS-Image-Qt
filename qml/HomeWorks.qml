@@ -9,7 +9,6 @@ Item {
     property bool sortByName: false
     property string selectedId: ""
     signal openEditor()
-    signal importProject()
     signal renameRequested(int index, string name)
     readonly property var entries: {
         const source = history ? studio.history : studio.creationPages
@@ -31,7 +30,6 @@ Item {
         anchors.fill: parent; anchors.leftMargin: root.width < 1000 ? 20 : 30; anchors.rightMargin: root.width < 1000 ? 20 : 30; anchors.topMargin: 22; anchors.bottomMargin: 14; spacing: 0
         HomeHeader {
             Layout.fillWidth: true; title: HomeTheme.t("我的作品"); detail: HomeTheme.count(root.history ? studio.history.length : studio.creationPages.length, HomeTheme.t("作品"))
-            HomeButton { text: HomeTheme.t("导入工程"); iconName: "folder"; enabled: !studio.busy; onClicked: root.importProject() }
             HomeButton { objectName: "homeCreateProject"; text: HomeTheme.t("新建作品"); iconName: "plus"; primary: true; enabled: !studio.busy; onClicked: root.createProject() }
         }
         RowLayout {

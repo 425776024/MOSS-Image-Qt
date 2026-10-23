@@ -9,6 +9,7 @@
 #include <memory>
 #include "Studio.h"
 #include "WorkspaceLibrary.h"
+#include "AudioWaveform.h"
 #include <QStyleHints>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -81,6 +82,13 @@ int main(int argc,char **argv){
     app.setApplicationDisplayName(workspace.appName());
     QObject::connect(&workspace,&WorkspaceLibrary::preferencesChanged,&app,[&]{app.setApplicationDisplayName(workspace.appName());});
     const auto args=app.arguments();
+    if(args.contains("--check-builtin-library")){
+        const auto portraits=workspace.builtinAvatars();
+        if(portraits.size()!=17){qWarning()<<"Missing built-in portraits"<<portraits.size();return 5;}
+        for(const auto &value:portraits)if(QImage(QUrl(value.toMap()["url"].toString()).toLocalFile()).isNull())return 5;
+        if(studio.layoutTemplates().size()<21){qWarning("Missing built-in layouts");return 5;}
+        qInfo("Built-in portraits decoded and 21 layouts available");
+    }
     const int languageAt=args.indexOf("--ui-language");
     if(languageAt>=0&&languageAt+1<args.size())workspace.setSessionLanguage(args[languageAt+1]);
     const int themeAt=args.indexOf("--ui-theme");
@@ -215,6 +223,64 @@ int main(int argc,char **argv){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         if(!args.contains("--preserve-preview")&&!args.contains("--home-smoke"))studio.document()->example();
         if(args.contains("--home-smoke")){
+            if(args.contains("--check-library-defaults"))QTimer::singleShot(600,&app,[&]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
+                auto voices=homeWindow->findChild<QObject *>("homeVoiceLibrary");
+                auto avatars=homeWindow->findChild<QObject *>("homeAvatarLibrary");
+                const bool custom=args.contains("--expect-custom-libraries");
+                if(!voices||!avatars||voices->property("hasCustomVoices").toBool()!=custom||workspace.avatars().isEmpty()==custom||voices->property("builtin").toBool()==custom||avatars->property("builtin").toBool()==custom){app.exit(5);return;}
+                if(!custom){
+                    for(const auto &entry:QList<QPair<QString,QObject *>>{{"voices",voices},{"avatars",avatars}}){
+                        homeWindow->setProperty("destination",entry.first);entry.second->setProperty("builtin",false);
+                        homeWindow->setProperty("destination","chat");homeWindow->setProperty("destination",entry.first);
+                        if(!entry.second->property("builtin").toBool()){app.exit(5);return;}
+                    }
+                }
+                qInfo()<<"Library defaults and empty-library reentry passed; custom libraries:"<<custom;
+            });
+            if(args.contains("--profile-voices")){
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT"))return 5;
+                struct VoiceProbe { QElapsedTimer clock; qint64 last=0,gap=0; int initialDecodes=0; };
+                auto probe=std::make_shared<VoiceProbe>();probe->clock.start();probe->initialDecodes=WaveformCache::instance()->decodeCount();
+                auto heartbeat=new QTimer(&app);heartbeat->setInterval(16);
+                QObject::connect(heartbeat,&QTimer::timeout,&app,[probe]{const auto now=probe->clock.elapsed();probe->gap=std::max(probe->gap,now-probe->last);probe->last=now;});heartbeat->start();
+                QTimer::singleShot(200,&app,[&]{
+                    homeWindow->setProperty("destination","voices");
+                    if(args.contains("--check-voice-preview")){
+                        auto library=homeWindow->findChild<QObject *>("homeVoiceLibrary");
+                        auto player=library?library->findChild<QObject *>("libraryVoicePlayer"):nullptr;
+                        auto output=player?qvariant_cast<QObject *>(player->property("audioOutput")):nullptr;
+                        if(!library||!output||studio.sound()->voices().isEmpty()){app.exit(5);return;}
+                        output->setProperty("muted",true);
+                        QMetaObject::invokeMethod(library,"preview",Q_ARG(QVariant,studio.sound()->voices().first()));
+                    }
+                });
+                QTimer::singleShot(1650,&app,[&,probe,heartbeat]{
+                    heartbeat->stop();
+                    if(args.contains("--check-voice-preview")){
+                        auto player=homeWindow->findChild<QObject *>("libraryVoicePlayer");
+                        if(!player||player->property("duration").toLongLong()<=0||player->property("position").toLongLong()<=0||WaveformCache::instance()->decodeCount()-probe->initialDecodes!=1){app.exit(5);return;}
+                        auto preview=homeWindow->findChild<QObject *>("voicePreviewWaveform");
+                        auto waveform=preview?qvariant_cast<QObject *>(preview->property("item")):nullptr;
+                        if(!waveform||!waveform->property("ready").toBool()){app.exit(5);return;}
+                        qInfo("Muted voice preview: playback advanced and only the selected waveform decoded");
+                    }
+                    const auto root=qEnvironmentVariable("MOSS_EVIDENCE_ROOT");QDir().mkpath(root);QFile file(root+"/voice-entry-profile.json");
+                    if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(QJsonObject{{"platform",app.platformName()},{"windowMs",probe->clock.elapsed()},{"maxEventGapMs",probe->gap},{"waveformDecodes",WaveformCache::instance()->decodeCount()-probe->initialDecodes},{"voiceCount",studio.sound()->voices().size()}}).toJson());
+                });
+            }
+            if(args.contains("--check-navigation"))QTimer::singleShot(1100,&app,[&]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
+                auto templates=homeWindow->findChild<QQuickItem *>("homeTemplates");
+                auto resources=homeWindow->findChild<QQuickItem *>("homeModelsButton");
+                if(!templates||!resources||homeWindow->findChild<QObject *>("homeImport")||studio.metaObject()->indexOfMethod("loadProject(QUrl)")>=0){app.exit(5);return;}
+                const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                templates->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                if(homeWindow->property("destination")!="templates"){app.exit(5);return;}
+                key(Qt::Key_Tab);key(Qt::Key_Space);
+                if(homeWindow->property("destination")!="settings"){app.exit(5);return;}
+                qInfo("Navigation labels: keyboard page changes passed; project import is absent");
+            });
             if(args.contains("--check-quick-start")||args.contains("--capture-task-menu"))QTimer::singleShot(1200,&app,[&]{
                 if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
                 auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));

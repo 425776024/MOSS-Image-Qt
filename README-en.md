@@ -16,6 +16,8 @@ The Windows test preview targets **Windows 10 1903+ / Windows 11, x64**, with Vu
 
 Generate images through conversation, transform an existing image with a prompt, paint over selected areas to edit, and drag objects to guide composition. Design or clone a voice, animate a portrait, generate sound effects, then combine media and export an MP4.
 
+Includes 17 portrait avatars and 21 editable layout presets. Image creation defaults to the smaller Q4 model.
+
 | Image generation | Brush inpainting | Layout composition |
 | --- | --- | --- |
 | <a href="assets/screenshots/en/studio.png"><img src="assets/screenshots/en/studio.png" alt="Image generation" width="270" /></a> | <a href="assets/screenshots/en/image-edit.png"><img src="assets/screenshots/en/image-edit.png" alt="Brush inpainting" width="270" /></a> | <a href="assets/screenshots/en/layout.png"><img src="assets/screenshots/en/layout.png" alt="Layout composition" width="270" /></a> |

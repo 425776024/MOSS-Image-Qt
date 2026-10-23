@@ -32,7 +32,6 @@ ApplicationWindow {
     palette.light: StudioTheme.hover; palette.mid: StudioTheme.line; palette.dark: StudioTheme.background; palette.placeholderText: StudioTheme.faint
     Shortcut { sequences: [StandardKey.Save]; enabled: win.visible; onActivated: saveDialog.open() }
     FileDialog { id: saveDialog; title: HomeTheme.t("保存工程"); fileMode: FileDialog.SaveFile; nameFilters: [HomeTheme.t("Moss 工程 (*.moss.json)")]; onAccepted: studio.saveProject(selectedFile) }
-    FileDialog { id: openDialog; title: HomeTheme.t("打开工程"); nameFilters: [HomeTheme.t("Moss 工程 (*.json)")]; onAccepted: {studio.loadProject(selectedFile); win.selectMode(studio.pageVideoUrl ? "av" : "image")} }
     FileDialog { id: exportDialog; title: HomeTheme.t("导出整页视频"); fileMode: FileDialog.SaveFile; nameFilters: [HomeTheme.t("MP4 视频 (*.mp4)")]; onAccepted: studio.exportTimeline(selectedFile) }
     ColumnLayout {
         anchors.fill: parent; spacing: 0
@@ -67,7 +66,6 @@ ApplicationWindow {
                         MenuItem { text: HomeTheme.t("蓝色"); checkable: true; checked: workspace.themePreset === "blue"; onTriggered: workspace.themePreset = "blue" }
                     }
                 }
-                StudioButton { iconName: "folder"; text: HomeTheme.t("打开"); quiet: true; enabled: !studio.busy; onClicked: openDialog.open() }
                 StudioButton { iconName: "save"; text: HomeTheme.t("保存"); quiet: true; onClicked: saveDialog.open() }
                 StudioButton { iconName: "more"; quiet: true; hint: HomeTheme.t("更多操作"); onClicked: moreMenu.popup()
                     Menu { id: moreMenu

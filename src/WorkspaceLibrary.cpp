@@ -1,5 +1,6 @@
 #include "WorkspaceLibrary.h"
 #include <QDir>
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
@@ -36,6 +37,24 @@ void WorkspaceLibrary::setAppearanceMode(QString value) {
     QSettings().setValue("home/appearance", value); m_appearance = value; emit preferencesChanged();
 }
 bool WorkspaceLibrary::quickStartPending() const { return QSettings().value("home/quickStartVersion",0).toInt()<1; }
+QVariantList WorkspaceLibrary::builtinAvatars() const {
+    QString root=QCoreApplication::applicationDirPath()+"/../Resources/assets/avatars";
+#ifdef Q_OS_WIN
+    root=QCoreApplication::applicationDirPath()+"/assets/avatars";
+#endif
+    if(!QFileInfo::exists(root+"/catalog.json")&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
+        root=QString(MOSS_SOURCE_ROOT)+"/assets/avatars";
+    QFile file(root+"/catalog.json");QVariantList rows;
+    if(!file.open(QIODevice::ReadOnly))return rows;
+    for(const auto &value:QJsonDocument::fromJson(file.readAll()).object()["portraits"].toArray()) {
+        auto row=value.toObject().toVariantMap();const auto name=row["file"].toString();
+        if(name!=QFileInfo(name).fileName()||!QFileInfo::exists(root+"/"+name))continue;
+        if(m_language=="en")row["name"]=row["nameEn"];
+        row["url"]=QUrl::fromLocalFile(QDir(root).absoluteFilePath(name)).toString();row["builtin"]=true;row["kind"]="image";
+        rows.append(row);
+    }
+    return rows;
+}
 void WorkspaceLibrary::completeQuickStart() {
     QSettings().setValue("home/quickStartVersion",1);emit preferencesChanged();
 }

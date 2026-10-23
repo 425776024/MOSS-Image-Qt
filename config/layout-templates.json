@@ -1,0 +1,1031 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "product-portrait",
+      "name": "新品主图 · 竖版",
+      "nameEn": "Product spotlight · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "哑光米白背景的高端护肤品广告，深绿色玻璃瓶，真实柔光摄影，布局清晰。",
+        "negativePrompt": "",
+        "style": "极简商业摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "product-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "焕新每一天",
+            "x": 82,
+            "y": 77,
+            "width": 860,
+            "height": 192,
+            "color": "#5878E8"
+          },
+          {
+            "id": "product-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一只深绿色护肤品玻璃瓶与新鲜叶片，精致自然的产品摄影",
+            "text": "",
+            "x": 123,
+            "y": 346,
+            "width": 778,
+            "height": 550,
+            "color": "#55A58A"
+          },
+          {
+            "id": "product-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "天然配方 · 温和呵护",
+            "x": 102,
+            "y": 998,
+            "width": 819,
+            "height": 154,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "product-landscape",
+      "name": "新品主图 · 横版",
+      "nameEn": "Product spotlight · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "哑光米白背景的高端护肤品广告，深绿色玻璃瓶，真实柔光摄影，布局清晰。",
+        "negativePrompt": "",
+        "style": "极简商业摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "product-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "焕新每一天",
+            "x": 77,
+            "y": 108,
+            "width": 538,
+            "height": 173,
+            "color": "#5878E8"
+          },
+          {
+            "id": "product-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一只深绿色护肤品玻璃瓶与新鲜叶片，精致自然的产品摄影",
+            "text": "",
+            "x": 704,
+            "y": 72,
+            "width": 486,
+            "height": 562,
+            "color": "#55A58A"
+          },
+          {
+            "id": "product-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "天然配方 · 温和呵护",
+            "x": 77,
+            "y": 446,
+            "width": 538,
+            "height": 101,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "course-portrait",
+      "name": "课程封面 · 竖版",
+      "nameEn": "Course cover · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "奶油色教育课程封面，留白充足，亲切专业的讲师与整齐信息区。",
+        "negativePrompt": "",
+        "style": "现代教育编辑设计",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "course-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "让知识更有趣",
+            "x": 82,
+            "y": 102,
+            "width": 553,
+            "height": 230,
+            "color": "#5878E8"
+          },
+          {
+            "id": "course-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位微笑的专业讲师，干净半身肖像，与背景自然融合",
+            "text": "",
+            "x": 655,
+            "y": 320,
+            "width": 287,
+            "height": 742,
+            "color": "#55A58A"
+          },
+          {
+            "id": "course-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "每周三晚 · 一起学习",
+            "x": 82,
+            "y": 474,
+            "width": 492,
+            "height": 384,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "course-landscape",
+      "name": "课程封面 · 横版",
+      "nameEn": "Course cover · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "奶油色教育课程封面，留白充足，亲切专业的讲师与整齐信息区。",
+        "negativePrompt": "",
+        "style": "现代教育编辑设计",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "course-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "让知识更有趣",
+            "x": 90,
+            "y": 86,
+            "width": 640,
+            "height": 173,
+            "color": "#5878E8"
+          },
+          {
+            "id": "course-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位微笑的专业讲师，干净半身肖像，与背景自然融合",
+            "text": "",
+            "x": 819,
+            "y": 72,
+            "width": 371,
+            "height": 576,
+            "color": "#55A58A"
+          },
+          {
+            "id": "course-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "每周三晚 · 一起学习",
+            "x": 90,
+            "y": 374,
+            "width": 602,
+            "height": 187,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-portrait",
+      "name": "活动海报 · 竖版",
+      "nameEn": "Event poster · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "温暖珊瑚色的周末创意市集海报，纸艺花束与克制的装饰，文字清晰。",
+        "negativePrompt": "",
+        "style": "现代展览海报",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "event-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "一起遇见美好",
+            "x": 82,
+            "y": 90,
+            "width": 860,
+            "height": 230,
+            "color": "#5878E8"
+          },
+          {
+            "id": "event-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一束自然舒展的纸艺花，奶油白与珊瑚色，质感柔和",
+            "text": "",
+            "x": 184,
+            "y": 410,
+            "width": 655,
+            "height": 461,
+            "color": "#55A58A"
+          },
+          {
+            "id": "event-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "周末创意市集 · 14:00",
+            "x": 133,
+            "y": 998,
+            "width": 758,
+            "height": 141,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-landscape",
+      "name": "活动海报 · 横版",
+      "nameEn": "Event poster · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "温暖珊瑚色的周末创意市集海报，纸艺花束与克制的装饰，文字清晰。",
+        "negativePrompt": "",
+        "style": "现代展览海报",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "event-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "一起遇见美好",
+            "x": 77,
+            "y": 130,
+            "width": 589,
+            "height": 202,
+            "color": "#5878E8"
+          },
+          {
+            "id": "event-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一束自然舒展的纸艺花，奶油白与珊瑚色，质感柔和",
+            "text": "",
+            "x": 755,
+            "y": 94,
+            "width": 410,
+            "height": 518,
+            "color": "#55A58A"
+          },
+          {
+            "id": "event-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "周末创意市集 · 14:00",
+            "x": 77,
+            "y": 482,
+            "width": 589,
+            "height": 86,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quote-portrait",
+      "name": "人物金句 · 竖版",
+      "nameEn": "Portrait quote · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "浅灰米白背景的人物访谈金句卡，细腻自然光，优雅的编辑排版。",
+        "negativePrompt": "",
+        "style": "人物杂志风格",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "quote-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "把热爱写进生活",
+            "x": 102,
+            "y": 166,
+            "width": 819,
+            "height": 410,
+            "color": "#5878E8"
+          },
+          {
+            "id": "quote-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位自然微笑的受访者半身肖像，衣着简洁，柔和自然光",
+            "text": "",
+            "x": 696,
+            "y": 742,
+            "width": 236,
+            "height": 358,
+            "color": "#55A58A"
+          },
+          {
+            "id": "quote-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "与每一个认真生活的人对话",
+            "x": 102,
+            "y": 922,
+            "width": 512,
+            "height": 166,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quote-landscape",
+      "name": "人物金句 · 横版",
+      "nameEn": "Portrait quote · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "浅灰米白背景的人物访谈金句卡，细腻自然光，优雅的编辑排版。",
+        "negativePrompt": "",
+        "style": "人物杂志风格",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "quote-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "把热爱写进生活",
+            "x": 90,
+            "y": 122,
+            "width": 717,
+            "height": 252,
+            "color": "#5878E8"
+          },
+          {
+            "id": "quote-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位自然微笑的受访者半身肖像，衣着简洁，柔和自然光",
+            "text": "",
+            "x": 934,
+            "y": 130,
+            "width": 256,
+            "height": 475,
+            "color": "#55A58A"
+          },
+          {
+            "id": "quote-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "与每一个认真生活的人对话",
+            "x": 90,
+            "y": 504,
+            "width": 704,
+            "height": 79,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "menu-portrait",
+      "name": "咖啡菜单 · 竖版",
+      "nameEn": "Coffee menu · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "暖米色咖啡店菜单，俯拍咖啡与甜点，轻柔日光和木纹，清楚的文字区。",
+        "negativePrompt": "",
+        "style": "温暖生活方式摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "menu-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "今日慢一点",
+            "x": 82,
+            "y": 77,
+            "width": 860,
+            "height": 179,
+            "color": "#5878E8"
+          },
+          {
+            "id": "menu-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一杯手冲咖啡与一块可颂，浅木托盘，真实食物摄影",
+            "text": "",
+            "x": 82,
+            "y": 371,
+            "width": 379,
+            "height": 563,
+            "color": "#55A58A"
+          },
+          {
+            "id": "menu-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "手冲咖啡 · 新鲜烘焙",
+            "x": 532,
+            "y": 448,
+            "width": 399,
+            "height": 333,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "menu-landscape",
+      "name": "咖啡菜单 · 横版",
+      "nameEn": "Coffee menu · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "暖米色咖啡店菜单，俯拍咖啡与甜点，轻柔日光和木纹，清楚的文字区。",
+        "negativePrompt": "",
+        "style": "温暖生活方式摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "menu-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "今日慢一点",
+            "x": 77,
+            "y": 86,
+            "width": 538,
+            "height": 130,
+            "color": "#5878E8"
+          },
+          {
+            "id": "menu-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一杯手冲咖啡与一块可颂，浅木托盘，真实食物摄影",
+            "text": "",
+            "x": 717,
+            "y": 108,
+            "width": 486,
+            "height": 504,
+            "color": "#55A58A"
+          },
+          {
+            "id": "menu-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "手冲咖啡 · 新鲜烘焙",
+            "x": 77,
+            "y": 346,
+            "width": 512,
+            "height": 187,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "travel-portrait",
+      "name": "旅行手记 · 竖版",
+      "nameEn": "Travel journal · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "蓝绿色海岸旅行手记，安静海边与晴朗天空，纸质旅行杂志质感。",
+        "negativePrompt": "",
+        "style": "清新旅行摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "travel-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "去看更远的风景",
+            "x": 82,
+            "y": 794,
+            "width": 860,
+            "height": 166,
+            "color": "#5878E8"
+          },
+          {
+            "id": "travel-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "阳光下的安静海岸，细白沙滩，蓝绿色海水，宽阔天空，旅行摄影",
+            "text": "",
+            "x": 51,
+            "y": 64,
+            "width": 922,
+            "height": 627,
+            "color": "#55A58A"
+          },
+          {
+            "id": "travel-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "海边散步 · 一日旅行",
+            "x": 82,
+            "y": 1037,
+            "width": 860,
+            "height": 128,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "travel-landscape",
+      "name": "旅行手记 · 横版",
+      "nameEn": "Travel journal · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "蓝绿色海岸旅行手记，安静海边与晴朗天空，纸质旅行杂志质感。",
+        "negativePrompt": "",
+        "style": "清新旅行摄影",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "travel-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "去看更远的风景",
+            "x": 77,
+            "y": 130,
+            "width": 486,
+            "height": 180,
+            "color": "#5878E8"
+          },
+          {
+            "id": "travel-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "阳光下的安静海岸，细白沙滩，蓝绿色海水，宽阔天空，旅行摄影",
+            "text": "",
+            "x": 640,
+            "y": 43,
+            "width": 576,
+            "height": 634,
+            "color": "#55A58A"
+          },
+          {
+            "id": "travel-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "海边散步 · 一日旅行",
+            "x": 77,
+            "y": 446,
+            "width": 486,
+            "height": 94,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "release-portrait",
+      "name": "产品发布 · 竖版",
+      "nameEn": "Product launch · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "深蓝色科技产品发布视觉，精致便携耳机，柔和蓝色侧光，克制的科技感。",
+        "negativePrompt": "",
+        "style": "精致科技产品广告",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "release-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "让声音自由",
+            "x": 82,
+            "y": 102,
+            "width": 860,
+            "height": 230,
+            "color": "#5878E8"
+          },
+          {
+            "id": "release-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一副造型简洁的无线耳机，深蓝背景中细腻的蓝色边缘光",
+            "text": "",
+            "x": 154,
+            "y": 422,
+            "width": 717,
+            "height": 486,
+            "color": "#55A58A"
+          },
+          {
+            "id": "release-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "新品发布 · 即刻体验",
+            "x": 123,
+            "y": 1037,
+            "width": 778,
+            "height": 128,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "release-landscape",
+      "name": "产品发布 · 横版",
+      "nameEn": "Product launch · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "深蓝色科技产品发布视觉，精致便携耳机，柔和蓝色侧光，克制的科技感。",
+        "negativePrompt": "",
+        "style": "精致科技产品广告",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "release-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "让声音自由",
+            "x": 77,
+            "y": 115,
+            "width": 602,
+            "height": 180,
+            "color": "#5878E8"
+          },
+          {
+            "id": "release-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一副造型简洁的无线耳机，深蓝背景中细腻的蓝色边缘光",
+            "text": "",
+            "x": 781,
+            "y": 101,
+            "width": 397,
+            "height": 518,
+            "color": "#55A58A"
+          },
+          {
+            "id": "release-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "新品发布 · 即刻体验",
+            "x": 77,
+            "y": 461,
+            "width": 589,
+            "height": 86,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "report-portrait",
+      "name": "成果汇报 · 竖版",
+      "nameEn": "Progress report · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "淡绿色年度成果报告封面，规则的几何信息图与简洁标题，可信赖的商业设计。",
+        "negativePrompt": "",
+        "style": "现代商业信息设计",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "report-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "把进步看得见",
+            "x": 82,
+            "y": 102,
+            "width": 860,
+            "height": 218,
+            "color": "#5878E8"
+          },
+          {
+            "id": "report-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "三个整齐递增的绿色几何柱体与柔和的圆形元素，干净的立体信息图",
+            "text": "",
+            "x": 102,
+            "y": 435,
+            "width": 819,
+            "height": 410,
+            "color": "#55A58A"
+          },
+          {
+            "id": "report-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "年度回顾 · 向新而行",
+            "x": 102,
+            "y": 998,
+            "width": 819,
+            "height": 141,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "report-landscape",
+      "name": "成果汇报 · 横版",
+      "nameEn": "Progress report · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "淡绿色年度成果报告封面，规则的几何信息图与简洁标题，可信赖的商业设计。",
+        "negativePrompt": "",
+        "style": "现代商业信息设计",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "report-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "把进步看得见",
+            "x": 77,
+            "y": 108,
+            "width": 550,
+            "height": 180,
+            "color": "#5878E8"
+          },
+          {
+            "id": "report-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "三个整齐递增的绿色几何柱体与柔和的圆形元素，干净的立体信息图",
+            "text": "",
+            "x": 730,
+            "y": 151,
+            "width": 461,
+            "height": 410,
+            "color": "#55A58A"
+          },
+          {
+            "id": "report-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "年度回顾 · 向新而行",
+            "x": 77,
+            "y": 468,
+            "width": 550,
+            "height": 86,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "avatar-portrait",
+      "name": "数字人讲解 · 竖版",
+      "nameEn": "Avatar explainer · Portrait",
+      "document": {
+        "version": 1,
+        "width": 1024,
+        "height": 1280,
+        "layout": true,
+        "prompt": "浅蓝白色的数字人知识讲解封面，讲师靠右，左侧清晰标题和说明，亲切自然。",
+        "negativePrompt": "",
+        "style": "明亮的讲解视频封面",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "avatar-portrait-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "三分钟学会新知识",
+            "x": 82,
+            "y": 102,
+            "width": 522,
+            "height": 256,
+            "color": "#5878E8"
+          },
+          {
+            "id": "avatar-portrait-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位面向镜头的亲切讲师，腰部以上人像，姿态自然，服装整洁，柔光照明",
+            "text": "",
+            "x": 645,
+            "y": 269,
+            "width": 287,
+            "height": 806,
+            "color": "#55A58A"
+          },
+          {
+            "id": "avatar-portrait-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "从一个问题开始 · 每天一点进步",
+            "x": 82,
+            "y": 538,
+            "width": 461,
+            "height": 371,
+            "color": "#D97790"
+          }
+        ]
+      }
+    },
+    {
+      "id": "avatar-landscape",
+      "name": "数字人讲解 · 横版",
+      "nameEn": "Avatar explainer · Landscape",
+      "document": {
+        "version": 1,
+        "width": 1280,
+        "height": 720,
+        "layout": true,
+        "prompt": "浅蓝白色的数字人知识讲解封面，讲师靠右，左侧清晰标题和说明，亲切自然。",
+        "negativePrompt": "",
+        "style": "明亮的讲解视频封面",
+        "layoutMeta": [
+          "clean composition",
+          "readable text",
+          "balanced spacing"
+        ],
+        "regions": [
+          {
+            "id": "avatar-landscape-0",
+            "type": "text",
+            "name": "标题",
+            "caption": "清晰的主标题，按指定原文排版，保持完整字符。",
+            "text": "三分钟学会新知识",
+            "x": 77,
+            "y": 101,
+            "width": 627,
+            "height": 166,
+            "color": "#5878E8"
+          },
+          {
+            "id": "avatar-landscape-1",
+            "type": "object",
+            "name": "主体",
+            "caption": "一位面向镜头的亲切讲师，腰部以上人像，姿态自然，服装整洁，柔光照明",
+            "text": "",
+            "x": 858,
+            "y": 86,
+            "width": 333,
+            "height": 547,
+            "color": "#55A58A"
+          },
+          {
+            "id": "avatar-landscape-2",
+            "type": "text",
+            "name": "说明",
+            "caption": "小号信息文字，清晰、完整，留有呼吸空间。",
+            "text": "从一个问题开始 · 每天一点进步",
+            "x": 77,
+            "y": 367,
+            "width": 614,
+            "height": 180,
+            "color": "#D97790"
+          }
+        ]
+      }
+    }
+  ]
+}

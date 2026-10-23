@@ -185,6 +185,12 @@ QVariantList Studio::layoutTemplates() const {
         Document document;document.loadTemplate(key);
         rows.append(QVariantMap{{"id",key},{"name",QString(key)=="poster"?"春日海报":QString(key)=="note"?"手写便签":"物品构图"},{"builtin",true},{"document",document.json().toVariantMap()}});
     }
+    QFile builtin(":/layouts/config/layout-templates.json");
+    if(builtin.open(QIODevice::ReadOnly))for(const auto &value:QJsonDocument::fromJson(builtin.readAll()).object()["templates"].toArray()) {
+        auto row=value.toObject().toVariantMap();Document document;
+        if(!document.load(QJsonObject::fromVariantMap(row["document"].toMap()),nullptr)||!document.layout())continue;
+        row["builtin"]=true;rows.append(row);
+    }
     QFile file(m_outputRoot+"/library/layout-templates.json");if(file.open(QIODevice::ReadOnly))rows+=QJsonDocument::fromJson(file.readAll()).object()["templates"].toArray().toVariantList();
     return rows;
 }

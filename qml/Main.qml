@@ -7,7 +7,8 @@ ApplicationWindow {
     ModelDownloadDialog { onSetupFinished: home.showQuickStart() }
     id: home
     objectName: "homeWindow"
-    width: 1080; height: 720; minimumWidth: 960; minimumHeight: 640
+    width: Math.min(1200,Screen.desktopAvailableWidth); height: Math.min(800,Screen.desktopAvailableHeight-40)
+    minimumWidth: 1040; minimumHeight: 680
     visible: false; topPadding: 0
     title: workspace.appName; color: HomeTheme.surface
     property bool nativeTitleBar: Qt.platform.os !== "osx"
@@ -69,23 +70,30 @@ ApplicationWindow {
     onDestinationChanged: if(activeView)activeView.visible=destination === "chat"
     Component.onCompleted: showConversation()
     Component { id: threadComponent; ConversationView { anchors.fill: parent; visible: false; quickStartActive: home.quickStartActive; minimumChatWidth: Math.min(home.width*.5, Math.max(400, threadHost.width-261)); preferredInspectorWidth: home.inspectorWidth; maximumInspectorWidth: home.width*.34; onInspectorWidthAdjusted: width => home.inspectorWidth=width } }
-    component RailButton: AbstractButton {
+    component SidebarRow: AbstractButton {
         id: button
         property string glyph: "document"
+        property string shortText: text
         property bool active: false
         focusPolicy: Qt.StrongFocus
         activeFocusOnTab: true
         Layout.fillWidth: true
-        implicitWidth: 36; implicitHeight: 40; hoverEnabled: true
+        implicitWidth: 140; implicitHeight: 34; hoverEnabled: true
+        leftPadding: 10; rightPadding: 10; topPadding: 7; bottomPadding: 7
         opacity: enabled ? 1 : .4
         Accessible.name: text; Accessible.selected: active
-        ToolTip.visible: hovered; ToolTip.text: text; ToolTip.delay: 700
-        background: Rectangle { radius: 9; color: button.active ? Qt.alpha(HomeTheme.text,HomeTheme.dark ? .10 : .065) : button.hovered ? HomeTheme.hover : "transparent"; border.color: button.visualFocus ? HomeTheme.accent : "transparent" }
-        contentItem: Item {
-            StudioIcon { anchors.centerIn: parent; width: 20; height: 20; name: button.glyph; ink: button.active ? HomeTheme.text : HomeTheme.secondary }
+        ToolTip.visible: hovered && button.text !== button.shortText; ToolTip.text: text; ToolTip.delay: 700
+        background: Rectangle { radius: 6; color: button.active ? Qt.alpha(HomeTheme.text,HomeTheme.dark ? .10 : .07) : button.hovered ? HomeTheme.hover : "transparent"; border.color: button.visualFocus ? HomeTheme.accent : "transparent"; border.width: VideoCutTheme.hairline }
+        contentItem: RowLayout {
+            spacing: 10
+            StudioIcon { Layout.preferredWidth: 16; Layout.preferredHeight: 16; name: button.glyph; ink: button.active ? HomeTheme.text : HomeTheme.secondary }
+            Text { Layout.fillWidth: true; text: button.shortText; color: button.active ? HomeTheme.text : HomeTheme.secondary; font.pixelSize: 13; font.weight: button.active ? Font.Medium : Font.Normal; elide: Text.ElideRight }
         }
     }
-    FileDialog { id: openDialog; title: HomeTheme.t("导入作品工程"); nameFilters: [HomeTheme.t("Moss 工程 (*.json)")]; onAccepted: {studio.loadProject(selectedFile);home.showEditor("")} }
+    component SidebarSection: Label {
+        Layout.fillWidth: true; Layout.leftMargin: 10; Layout.topMargin: 12; Layout.bottomMargin: 4
+        color: HomeTheme.faint; font.pixelSize: 11; font.weight: Font.Medium
+    }
     HomeDialog {
         id: renameDialog; objectName: "homeProjectRenameDialog"; property int targetIndex: -1; title: HomeTheme.t("重命名作品"); modal: true; width: 380; anchors.centerIn: Overlay.overlay
         ColumnLayout { width: parent.width; spacing: 14
@@ -109,22 +117,23 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 0
             Rectangle {
-                objectName: "navigationRail"; Layout.preferredWidth: 52; Layout.fillHeight: true; color: HomeTheme.sidebar
+                objectName: "navigationRail"; Layout.preferredWidth: HomeTheme.english ? 168 : 148; Layout.fillHeight: true; color: HomeTheme.sidebar
                 Rectangle { anchors.right: parent.right; width: VideoCutTheme.hairline; height: parent.height; color: HomeTheme.line }
                 ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 8; spacing: 4
-                    RailButton { text: HomeTheme.t("作品"); glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
-                    RailButton { text: HomeTheme.t("形象"); glyph: "person"; active: home.destination === "avatars"; onClicked: home.destination="avatars" }
-                    RailButton { text: HomeTheme.t("声音"); glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
-                    RailButton { objectName: "homeImport"; text: HomeTheme.t("导入工程"); glyph: "document"; enabled: !studio.busy; onClicked: openDialog.open() }
-                    RailButton { objectName: "homeCreateAvatar"; text: HomeTheme.t("制作数字人"); glyph: "spark"; active: home.destination === "createAvatar"; onClicked: home.destination="createAvatar" }
-                    RailButton { objectName: "homeTemplates"; text: HomeTheme.t("构图模板"); glyph: "grid"; active: home.destination === "templates"; onClicked: home.destination="templates" }
-                    RailButton { objectName: "homeModelsButton"; text: HomeTheme.t("模型资源"); glyph: "model"; active: home.destination === "settings" && settings.section===1; onClicked: {settings.section=1;home.destination="settings"} }
-                    RailButton { objectName: "homeAbout"; text: HomeTheme.t("关于"); glyph: "info"; active: home.destination === "about" || (home.destination === "settings" && settings.section===5); onClicked: {settings.section=5;home.destination="settings"} }
-                    RailButton { objectName: "homeContact"; text: HomeTheme.t("联系我们"); glyph: "contact"; active: home.destination === "contact" || (home.destination === "settings" && settings.section===6); onClicked: home.destination="contact" }
-                    RailButton { objectName: "homeRestore"; text: HomeTheme.t("恢复上次移除"); glyph: "undo"; enabled: studio.canRestorePage && !studio.busy; onClicked: studio.restoreDeletedPage() }
-                    RailButton { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" && ![1,5,6].includes(settings.section); onClicked: {settings.section=0;home.destination="settings"} }
+                    anchors.fill: parent; anchors.margins: 8; spacing: 2
+                    SidebarSection { text: HomeTheme.t("资料库"); Layout.topMargin: 4 }
+                    SidebarRow { text: HomeTheme.t("作品"); glyph: "folder"; active: home.destination === "chat"; onClicked: home.showEditor("") }
+                    SidebarRow { text: HomeTheme.t("形象"); glyph: "person"; active: home.destination === "avatars"; onClicked: home.destination="avatars" }
+                    SidebarRow { text: HomeTheme.t("声音"); glyph: "audio"; active: home.destination === "voices"; onClicked: home.destination="voices" }
+                    SidebarSection { text: HomeTheme.t("创作") }
+                    SidebarRow { objectName: "homeCreateAvatar"; text: HomeTheme.t("制作数字人"); glyph: "spark"; active: home.destination === "createAvatar"; onClicked: home.destination="createAvatar" }
+                    SidebarRow { objectName: "homeTemplates"; text: HomeTheme.t("构图模板"); shortText: HomeTheme.t("构图"); glyph: "grid"; active: home.destination === "templates"; onClicked: home.destination="templates" }
                     Item { Layout.fillHeight: true }
+                    SidebarRow { objectName: "homeRestore"; visible: studio.canRestorePage; text: HomeTheme.t("恢复上次移除"); shortText: HomeTheme.t("恢复"); glyph: "undo"; enabled: !studio.busy; onClicked: studio.restoreDeletedPage() }
+                    SidebarRow { objectName: "homeModelsButton"; text: HomeTheme.t("模型资源"); shortText: HomeTheme.t("资源"); glyph: "model"; active: home.destination === "settings" && settings.section===1; onClicked: {settings.section=1;home.destination="settings"} }
+                    SidebarRow { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" && ![1,5,6].includes(settings.section); onClicked: {settings.section=0;home.destination="settings"} }
+                    SidebarRow { objectName: "homeAbout"; text: HomeTheme.t("关于"); glyph: "info"; active: home.destination === "about" || (home.destination === "settings" && settings.section===5); onClicked: {settings.section=5;home.destination="settings"} }
+                    SidebarRow { objectName: "homeContact"; text: HomeTheme.t("联系我们"); shortText: HomeTheme.t("联系"); glyph: "contact"; active: home.destination === "contact" || (home.destination === "settings" && settings.section===6); onClicked: home.destination="contact" }
                 }
             }
             SplitView {

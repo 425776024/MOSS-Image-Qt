@@ -5,7 +5,7 @@ import QtQuick.Dialogs
 
 Rectangle {
     id: root; objectName: "homeAvatarCreator"; color: HomeTheme.sidebar
-    property string sourceUrl: ""
+    property string sourceUrl: workspace.builtinAvatars.length ? workspace.builtinAvatars[0].url : ""
     property string audioUrl: ""
     property string voiceId: studio.sound.settings.voiceId
     property bool tts: true

@@ -60,7 +60,7 @@ jobs:
           export MOSS_OUTPUT_ROOT="$RUNNER_TEMP/moss-smoke/works"
           export MOSS_SETTINGS_ROOT="$RUNNER_TEMP/moss-smoke/settings"
           python3 scripts/public_release.py app 'dist/Moss Studio.app'
-          'dist/Moss Studio.app/Contents/MacOS/MossStudio' --home-smoke
+          'dist/Moss Studio.app/Contents/MacOS/MossStudio' --home-smoke --home-page avatars --check-builtin-library --check-library-defaults
       - name: Upload unsigned test packages (not a notarized release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -136,7 +136,7 @@ jobs:
           export MOSS_OUTPUT_ROOT="$RUNNER_TEMP/moss-signed-smoke/works"
           export MOSS_SETTINGS_ROOT="$RUNNER_TEMP/moss-signed-smoke/settings"
           python3 scripts/public_release.py app 'dist/Moss Studio.app'
-          'dist/Moss Studio.app/Contents/MacOS/MossStudio' --home-smoke
+          'dist/Moss Studio.app/Contents/MacOS/MossStudio' --home-smoke --home-page avatars --check-builtin-library --check-library-defaults
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: macOS-arm64-notarized

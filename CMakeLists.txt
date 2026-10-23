@@ -160,6 +160,7 @@ moss_add_qt_test(audio_waveform audio_waveform_tests)
 foreach(model_target MossStudio creation_pages_tests)
     qt_add_resources(${model_target} model_resources PREFIX "/models" FILES
         config/models.json config/ditto-original/config.json config/ditto-original/schedule.json config/ditto-original/manifest.json)
+    qt_add_resources(${model_target} ${model_target}_layout_templates PREFIX "/layouts" FILES config/layout-templates.json)
 endforeach()
 qt_add_executable(model_manager_tests tests/model_manager_tests.cpp src/ModelManager.cpp src/ModelManager.h)
 target_include_directories(model_manager_tests PRIVATE src)
