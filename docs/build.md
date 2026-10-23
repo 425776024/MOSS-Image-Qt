@@ -3,6 +3,9 @@
 GitHub 托管 Mac 的自动构建、App/DMG 下载、Developer ID 签名与 Apple 公证配置，见
 [macOS 自动发布](macos-release.md)。完整 CI 依赖从公开上游下载，不使用开发者的本地 SDK 路径。
 
+Windows 10/11 x64 的 Vulkan / DirectML 构建、便携包与 RTX 3090 实机验收步骤，见
+[Windows 构建与验收](windows-release.md)。该通路仍待首次 Windows CI 和实机验证。
+
 
 目标平台为 Apple Silicon macOS。需要 Xcode/Metal、CMake、Ninja、Qt 6.10.2，
 以及 ONNX Runtime、OpenCV、OpenSSL、FFmpeg、nlohmann/json、MediaPipe C API，

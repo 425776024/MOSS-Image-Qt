@@ -51,7 +51,9 @@ private slots:
     void realLongDecodeKeepsFullDuration(){
         QTemporaryDir dir;const auto path=dir.filePath("long.wav");wave(path,16000*181+117);
         WaveformCache cache;const auto url=QUrl::fromLocalFile(path);cache.request(url);
-        QTRY_VERIFY_WITH_TIMEOUT(cache.get(cache.key(url)),15000);
+        // Hosted Windows runners take about 16 seconds for this 181-second
+        // fixture. Keep full-duration/tail validation without a 15-second race.
+        QTRY_VERIFY_WITH_TIMEOUT(cache.get(cache.key(url)),30000);
         const auto result=cache.get(cache.key(url));QVERIFY(result->error.isEmpty());QVERIFY(result->peaks.size()<=4096);
         QVERIFY(result->seconds()>181&&result->seconds()<182);QVERIFY(result->bars(160).last()>.7);QCOMPARE(result->bars(160)[80],0.f);
     }

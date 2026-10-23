@@ -16,13 +16,44 @@ find_path(JSON_INCLUDE nlohmann/json.hpp PATHS "${XINSHEN_SOURCE}/native/vendor"
 set(MOSS_MEDIAPIPE_ROOT "${CMAKE_SOURCE_DIR}/.local/mediapipe" CACHE PATH "MediaPipe C API for Ditto source eye conditioning")
 find_path(MOSS_MEDIAPIPE_INCLUDE mediapipe/tasks/c/vision/face_landmarker/face_landmarker.h PATHS "${MOSS_MEDIAPIPE_ROOT}/include" REQUIRED NO_DEFAULT_PATH)
 find_library(MOSS_MEDIAPIPE_LIBRARY mediapipe PATHS "${MOSS_MEDIAPIPE_ROOT}" REQUIRED NO_DEFAULT_PATH)
-add_executable(moss-ditto worker.cpp timeline_render.cpp page_face.mm avatar_runtime.cpp media_io.cpp liveportrait/ditto.cpp liveportrait/coreml.mm)
+add_executable(moss-ditto worker.cpp timeline_render.cpp avatar_runtime.cpp media_io.cpp liveportrait/ditto.cpp)
+if(APPLE)
+    target_sources(moss-ditto PRIVATE page_face.mm liveportrait/coreml.mm)
+    target_link_libraries(moss-ditto PRIVATE "-framework Foundation" "-framework CoreML" "-framework Vision")
+else()
+    target_sources(moss-ditto PRIVATE page_face.cpp)
+endif()
 target_include_directories(moss-ditto PRIVATE ${ORT_INCLUDE} ${JSON_INCLUDE} ${OpenCV_INCLUDE_DIRS} ${MOSS_MEDIAPIPE_INCLUDE})
-target_link_libraries(moss-ditto PRIVATE PkgConfig::FFMPEG ${ORT_LIBRARY} ${OpenCV_LIBS} ${MOSS_MEDIAPIPE_LIBRARY} "-framework Foundation" "-framework CoreML" "-framework Vision")
+target_link_libraries(moss-ditto PRIVATE PkgConfig::FFMPEG ${ORT_LIBRARY} ${OpenCV_LIBS} ${MOSS_MEDIAPIPE_LIBRARY})
+if(WIN32)
+    target_compile_definitions(moss-ditto PRIVATE MOSS_ONNX_DIRECTML=1)
+endif()
 set_source_files_properties(liveportrait/coreml.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 set_source_files_properties(page_face.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 set_target_properties(moss-ditto PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/workers")
 set_target_properties(moss-ditto PROPERTIES CXX_STANDARD 17 OBJCXX_STANDARD 17)
+if(WIN32)
+    # PATH is searched after System32. Windows ships its own ONNX Runtime;
+    # keep the pinned DirectML runtime beside the executable for every check.
+    file(GLOB ORT_RUNTIME_DLLS "${ONNXRUNTIME_ROOT}/lib/*.dll")
+    if(NOT ORT_RUNTIME_DLLS)
+        message(FATAL_ERROR "The Windows ONNX Runtime SDK must include runtime DLLs")
+    endif()
+    find_file(MOSS_DIRECTML_DLL DirectML.dll
+        PATHS "${ONNXRUNTIME_ROOT}/lib" "${ONNXRUNTIME_ROOT}/../bin" REQUIRED NO_DEFAULT_PATH)
+    find_file(MOSS_MEDIAPIPE_DLL mediapipe.dll
+        PATHS "${MOSS_MEDIAPIPE_ROOT}" REQUIRED NO_DEFAULT_PATH)
+    add_custom_command(TARGET moss-ditto POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${ORT_RUNTIME_DLLS} "${MOSS_DIRECTML_DLL}" "${MOSS_MEDIAPIPE_DLL}"
+            "$<TARGET_FILE_DIR:moss-ditto>"
+        COMMAND_EXPAND_LISTS VERBATIM)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME ditto_runtime COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/scripts/diagnose_windows_runtime.py" $<TARGET_FILE:moss-ditto> runtime-check)
+else()
+    add_test(NAME ditto_runtime COMMAND moss-ditto runtime-check)
+endif()
 add_executable(ditto_mouth_reference_tests tests/mouth_reference_test.cpp)
 target_include_directories(ditto_mouth_reference_tests PRIVATE ${JSON_INCLUDE})
 set_target_properties(ditto_mouth_reference_tests PROPERTIES CXX_STANDARD 17)

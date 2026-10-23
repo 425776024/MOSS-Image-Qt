@@ -16,6 +16,11 @@
 #include <QStorageInfo>
 #include <QTimer>
 #include <QtConcurrent>
+#include <cerrno>
+#include <cstring>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 namespace {
 QByteArray read(QString path) { QFile f(path);return f.open(QIODevice::ReadOnly)?f.readAll():QByteArray(); }
@@ -34,6 +39,19 @@ QString hashFile(QString path) {
     return hash.addData(&f)?QString::fromLatin1(hash.result().toHex()):QString();
 }
 QString sizeText(qint64 bytes) { return QLocale().formattedDataSize(bytes,2,QLocale::DataSizeSIFormat); }
+QString installModelFile(const QString &source,const QString &destination) {
+#ifdef Q_OS_WIN
+    // The Windows CRT rename cannot replace an existing file. Use UTF-16 paths
+    // so model repair also works under non-ASCII user and model directories.
+    const auto from=QDir::toNativeSeparators(source).toStdWString();
+    const auto to=QDir::toNativeSeparators(destination).toStdWString();
+    if(MoveFileExW(from.c_str(),to.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))return {};
+    const auto code=GetLastError();return QString("Windows error %1").arg(code);
+#else
+    if(::rename(QFile::encodeName(source).constData(),QFile::encodeName(destination).constData())==0)return {};
+    return QString::fromLocal8Bit(std::strerror(errno));
+#endif
+}
 }
 QList<ModelAsset> ModelManager::assets() {
     static const auto files=parse(QJsonDocument::fromJson(read(":/models/config/models.json")).object());return files;
@@ -230,9 +248,6 @@ void ModelManager::next() {
         if(!out.open(QIODevice::WriteOnly)||out.write(data)!=data.size()||!out.commit()){finish("无法写入模型配置");return;}
         advance();return;
     }
-    const bool noticeReady=m_endpoint!="apple-assets" ||
-        (safePath(".licenses/"+a.sha256+".txt") && QFileInfo(m_root+"/.licenses/"+a.sha256+".txt").isFile());
-    if(QFileInfo(path+".part").size()==a.bytes && noticeReady){checkFile(a,path+".part",true);return;}
     transfer(a);
 }
 void ModelManager::checkFile(ModelAsset a,QString path,bool install) {
@@ -250,9 +265,9 @@ void ModelManager::checkFile(ModelAsset a,QString path,bool install) {
             QFile::remove(path);QTimer::singleShot(0,this,&ModelManager::next);return;
         }
         if(install) {
-            // rename(2) on our macOS target atomically replaces an existing file.
             const auto dest=m_root+"/"+a.path;
-            if(::rename(QFile::encodeName(path).constData(),QFile::encodeName(dest).constData())!=0){finish("无法安装模型文件");return;}
+            const auto error=installModelFile(path,dest);
+            if(!error.isEmpty()){finish("无法安装模型文件："+a.path+"；"+error+"。已保留下载文件，请关闭占用文件的程序后重试。");return;}
         }
         advance();
     });
@@ -261,6 +276,11 @@ void ModelManager::checkFile(ModelAsset a,QString path,bool install) {
 void ModelManager::transfer(ModelAsset a) {
     const auto path=m_root+"/"+a.path+".part";
     if(!safePath(a.path+".part")){finish("下载路径包含符号链接");return;}
+    const bool noticeReady=m_endpoint!="apple-assets" ||
+        (safePath(".licenses/"+a.sha256+".txt") && QFileInfo(m_root+"/.licenses/"+a.sha256+".txt").isFile());
+    // Also reuse complete partials when repairing a same-size corrupt model;
+    // that path enters transfer() directly after checking the installed file.
+    if(QFileInfo(path).size()==a.bytes && noticeReady){checkFile(a,path,true);return;}
 #ifdef MOSS_APP_STORE
     if(m_endpoint=="apple-assets") {
         const auto notice=".licenses/"+a.sha256+".txt";
@@ -306,10 +326,17 @@ void ModelManager::transfer(ModelAsset a) {
     connect(reply,&QNetworkReply::readyRead,this,consume);
     connect(reply,&QNetworkReply::finished,this,[this,reply,a,path,consume] {
         if(reply->error()==QNetworkReply::NoError)consume();
-        const auto error=reply->error();const auto message=reply->property("failure").toString();const auto detail=reply->errorString();
+        const auto error=reply->error();auto message=reply->property("failure").toString();const auto detail=reply->errorString();
+        const auto status=reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if(!m_part.flush()&&message.isEmpty())message="无法保存下载文件："+m_part.errorString();
         m_part.close();m_reply=nullptr;reply->deleteLater();
         if(m_cancelled){finish({},true);return;}
-        if(error!=QNetworkReply::NoError||!message.isEmpty()||QFileInfo(path).size()!=a.bytes){finish("下载未完成，可续传或切换源重试："+(message.isEmpty()?detail:message));return;}
+        const auto size=QFileInfo(path).size();
+        if(error!=QNetworkReply::NoError||!message.isEmpty()||size!=a.bytes){
+            if(message.isEmpty())message=error!=QNetworkReply::NoError?detail:QString("文件大小不符：%1 / %2 bytes").arg(size).arg(a.bytes);
+            finish(QString("下载未完成，可续传或切换源重试：%1\n文件：%2\n下载源：%3\nHTTP %4；已保存 %5 / %6 bytes")
+                .arg(message,a.path,m_endpoint).arg(status).arg(size).arg(a.bytes));return;
+        }
         checkFile(a,path,true);
     });
 }

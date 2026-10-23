@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#ifdef MOSS_ONNX_DIRECTML
+#include <dml_provider_factory.h>
+#endif
 
 namespace avatar {
 inline Ort::SessionOptions onnxOptions(const std::filesystem::path& model,
@@ -12,6 +15,17 @@ inline Ort::SessionOptions onnxOptions(const std::filesystem::path& model,
   Ort::SessionOptions options;
   options.SetIntraOpNumThreads(4);
   options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+#ifdef MOSS_ONNX_DIRECTML
+  const char* device = std::getenv("XINSHEN_ONNX_DEVICE");
+  if (!cpuOnly && (!device || std::string(device) != "cpu")) {
+    options.DisableMemPattern();
+    options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+    // ORT partitions unsupported operators to CPU. Failure to create the GPU
+    // provider is explicit; do not report GPU acceleration for a CPU session.
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(options, 0));
+    std::cerr << "[inference] " << model.filename() << " DirectML GPU\n";
+  }
+#endif
 #if defined(__APPLE__) && defined(__aarch64__)
   const char* device = std::getenv("XINSHEN_ONNX_DEVICE");
   if (!cpuOnly && (!device || std::string(device) != "cpu")) {

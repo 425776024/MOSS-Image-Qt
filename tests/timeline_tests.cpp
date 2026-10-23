@@ -324,14 +324,18 @@ private slots:
 
     void sourcesAndOptionsAreValidated()
     {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto frame = directory.filePath("frame one.png");
+        const auto narration = directory.filePath("narration.wav");
         TimelineDocument document;
-        document.setSource("image", "/tmp/frame one.png");
-        QCOMPARE(document.track("image").value("source").toString(), QString("file:///tmp/frame one.png"));
+        document.setSource("image", frame);
+        QCOMPARE(document.track("image").value("source").toString(), QUrl::fromLocalFile(frame).toString());
         QCOMPARE(document.track("image").value("kind").toString(), QString("image"));
         document.setSource("speech", "file:///tmp/talking.mp4");
         QCOMPARE(document.track("speech").value("kind").toString(), QString("video"));
-        document.setValue("speech", "audioSource", "/tmp/narration.wav");
-        QCOMPARE(document.track("speech").value("audioSource").toString(), QString("file:///tmp/narration.wav"));
+        document.setValue("speech", "audioSource", narration);
+        QCOMPARE(document.track("speech").value("audioSource").toString(), QUrl::fromLocalFile(narration).toString());
         document.setValue("speech", "gain", 7.);
         QCOMPARE(document.track("speech").value("gain").toDouble(), 2.);
         document.setValue("background", "color", "salmon");

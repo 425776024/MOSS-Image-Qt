@@ -2,7 +2,7 @@
 #include <stdexcept>
 #import <Vision/Vision.h>
 
-int pageFaceCount(const std::filesystem::path &image) {
+int pageFaceCount(const std::filesystem::path &image, const std::filesystem::path &) {
     @autoreleasepool {
         NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:image.string().c_str()]];
         VNImageRequestHandler *handler = [[VNImageRequestHandler alloc] initWithURL:url options:@{}];

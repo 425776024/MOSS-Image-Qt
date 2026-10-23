@@ -1,5 +1,6 @@
 #include "Studio.h"
 #include "ConversationMediaStore.h"
+#include "TestFileSystem.h"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QJsonDocument>
@@ -16,6 +17,14 @@ private:
         file.write(QJsonDocument(value).toJson());
     }
 private slots:
+    void unownedMediaTraversalStopsAtFilesystemRoot(){
+        QTemporaryDir directory;QVERIFY(directory.isValid());
+        const auto path=directory.filePath("unowned.png");
+        QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));file.write("fixture");file.close();
+        QCOMPARE(ConversationMediaStore::ownedDirectory(path),QString());
+        QVERIFY(ConversationMediaStore::pin(QVariantMap{{"source",path}}));
+        QVERIFY(QFileInfo::exists(path));
+    }
     void missingAvatarImageModelsDoNotChangeEditor(){
         QTemporaryDir work,models;const auto previousRoot=qgetenv("MOSS_MODEL_ROOT");
         qputenv("MOSS_OUTPUT_ROOT",work.path().toUtf8());qputenv("MOSS_MODEL_ROOT",models.path().toUtf8());
@@ -117,7 +126,7 @@ private slots:
         QVERIFY(ConversationMediaStore::mark(owned));
         QVERIFY(ConversationMediaStore::clean({owned},{dir.path()},QVariantMap{{"canvasLayers",QVariantMap{{"source",file}}}}).isEmpty());QVERIFY(QFileInfo::exists(file));
         const auto other=outside.filePath("data");QVERIFY(QDir().mkpath(other));QVERIFY(ConversationMediaStore::mark(other));
-        const auto link=dir.filePath("linked");QVERIFY(QFile::link(other,link));
+        const auto link=dir.filePath("linked");QVERIFY(createTestSymlink(other,link));
         ConversationMediaStore::clean({dir.path(),other,link},{dir.path()},{});QVERIFY(QFileInfo::exists(other));QVERIFY(QFileInfo::exists(file));
         ConversationMediaStore::clean({owned},{dir.path()},{});QVERIFY(!QFileInfo::exists(owned));
     }
@@ -125,7 +134,7 @@ private slots:
         QTemporaryDir dir,outside;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());
         const auto job=dir.filePath("generated-job");QVERIFY(QDir().mkpath(job));
         const auto imagePath=job+"/image.png";QImage image(32,32,QImage::Format_RGB32);image.fill(Qt::cyan);QVERIFY(image.save(imagePath));
-        const auto source=outside.filePath("original.png");QVERIFY(image.save(source));QVERIFY(QFile::link(source,job+"/linked-original.png"));
+        const auto source=outside.filePath("original.png");QVERIFY(image.save(source));QVERIFY(createTestSymlink(source,job+"/linked-original.png"));
         QVERIFY(ConversationMediaStore::mark(job));
         Studio studio;auto first=studio.conversation();const auto result=first->addAsset(imagePath,"image");first->addResults({result},"image");
         QCOMPARE(first->asset(result)["temporaryDirectory"].toString(),QFileInfo(job).canonicalFilePath());
@@ -237,6 +246,10 @@ private slots:
         s.loadProject(QUrl::fromLocalFile(path));QCOMPARE(s.conversation()->draft(),draft);
         QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
         const auto custom=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(custom);QCOMPARE(s.layoutTemplates().size(),3);
+        // Replacing an existing catalog must also work with Windows file sharing.
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),4);
+        QCOMPARE(s.importLayoutTemplate(QUrl::fromLocalFile(path)),QString());QCOMPARE(s.layoutTemplates().size(),5);
+        const auto second=s.layoutTemplates().last().toMap()["id"].toString();s.removeLayoutTemplate(second);QCOMPARE(s.layoutTemplates().size(),4);
     }
     void mouthAdaptationPersistsAndInvalidatesOnlyRenderedVideo() {
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());

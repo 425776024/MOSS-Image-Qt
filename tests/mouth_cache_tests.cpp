@@ -4,9 +4,9 @@
 using namespace ditto::mouth_cache;
 void check(bool value) { if (!value) throw std::runtime_error("mouth cache assertion failed"); }
 int main() {
-    char directory[]="/tmp/moss-mouth-cache-XXXXXX";
-    if (!mkdtemp(directory)) return 1;
-    const fs::path root(directory);
+    const auto root=fs::temp_directory_path()/("moss-mouth-cache-"+
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    if (!fs::create_directory(root)) return 1;
     try {
         const auto a=root/(std::string(64,'a')+".json"), b=root/(std::string(64,'b')+".json"), c=root/(std::string(64,'c')+".json");
         auto put=[](const fs::path &p, int size){std::ofstream(p)<<std::string(size,'x');};

@@ -29,8 +29,9 @@ bool ConversationMediaStore::mark(const QString &directory){
 QString ConversationMediaStore::ownedDirectory(QString path){
     path=canonical(path);if(path.isEmpty())return {};
     auto directory=QFileInfo(path).isDir()?path:QFileInfo(path).absolutePath();
-    while(directory!="/"&&!directory.isEmpty()){
-        if(owned(directory))return directory;directory=QFileInfo(directory).absolutePath();
+    while(!directory.isEmpty()){
+        const auto parent=QFileInfo(directory).absolutePath();if(parent==directory)break;
+        if(owned(directory))return directory;directory=parent;
     }
     return {};
 }
@@ -39,9 +40,10 @@ bool ConversationMediaStore::pin(const QVariant &project){
     for(const auto &path:references(project)){
         auto directory=QFileInfo(path).isDir()?path:QFileInfo(path).absolutePath();
         // Files can be nested inside an owned inference job directory.
-        while(directory!="/"&&!directory.isEmpty()){
+        while(!directory.isEmpty()){
+            const auto parent=QFileInfo(directory).absolutePath();if(parent==directory)break;
             if(owned(directory)){if(!record(directory+retained))return false;break;}
-            directory=QFileInfo(directory).absolutePath();
+            directory=parent;
         }
     }
     return true;

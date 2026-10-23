@@ -301,15 +301,18 @@ void Studio::saveText(QUrl url,QString text){
     else{m_status="输入内容已导出";emit changed();}
 }
 QString Studio::engine(QString name)const{
+#ifdef Q_OS_WIN
+    name += ".exe";
+#endif
     QStringList paths={QCoreApplication::applicationDirPath()+"/"+name,
         QCoreApplication::applicationDirPath()+"/../Helpers/"+name,
         };
     if(!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
         paths.append(QCoreApplication::applicationDirPath()+"/../../../workers/"+name);
-    if(name=="sa3-generate"&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
+    if(name.startsWith("sa3-generate")&&!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
         paths.append(QString(MOSS_SOURCE_ROOT)+"/.local/build-audio/bin/sa3-generate");
     if(!qEnvironmentVariableIsSet("MOSS_DISABLE_DEV_PATHS"))
-        paths.append(QString(MOSS_SOURCE_ROOT)+(name=="sd-cli"?"/.local/build-engine/bin/":"/build/workers/")+name);
+        paths.append(QString(MOSS_SOURCE_ROOT)+(name.startsWith("sd-cli")?"/.local/build-engine/bin/":"/build/workers/")+name);
     for(auto p:paths)if(QFileInfo(p).isExecutable())return QDir::cleanPath(p);
     return {};
 }
@@ -713,6 +716,8 @@ void Studio::consumeOutput(QByteArray bytes){
     const auto text=QString::fromUtf8(bytes);m_log=(m_log+text).right(18000);m_pending+=text;
     if(!m_remoteJob&&(m_log.contains("Metal")||m_log.contains("METAL")))m_backend="Metal · Apple GPU";
     if(m_log.contains("CoreML")||m_log.contains("coreml"))m_backend="Core ML · Ditto";
+    if(m_log.contains("DirectML GPU"))m_backend="DirectML · Ditto";
+    if(m_log.contains("ggml_vulkan")||m_log.contains("Using Vulkan"))m_backend="Vulkan · GPU";
     if(m_log.contains("generating image"))m_status="正在生成图像…";
     if(m_log.contains("decoding"))m_status="正在解码图像…";
     const QRegularExpression step(m_kind=="sfx"?R"(step\s+(\d+)\s*/\s*(\d+))":R"((\d+)\s*/\s*(\d+)\s*[-|])");
@@ -724,16 +729,26 @@ void Studio::consumeOutput(QByteArray bytes){
         auto line=m_pending.left(end);m_pending.remove(0,end+1);
         auto j=QJsonDocument::fromJson(line.toUtf8()).object();
         if(j["event"]=="error")m_workerError=j["message"].toString();
+        if(j["event"]=="voice-backend")m_backend=(j["backend"]=="vulkan"?"Vulkan":"CPU")+QString(" · Ming-3.0 Q8");
         if(j["event"]=="page-route"){
             m_narrationRoute=j["route"].toString();
             m_status=m_narrationRoute=="portrait"?"检测到人像，正在生成说话视频…":"未检测到人像，正在合成画面配音…";
+#ifdef Q_OS_WIN
+            m_backend=m_narrationRoute=="portrait"?"正在检测":"Media Foundation · 图像配音";
+#else
             m_backend=m_narrationRoute=="portrait"?"Core ML · Ditto":"VideoToolbox · 图像配音";
+#endif
         }
         if(j["event"]=="progress"){
             QString stage=j["stage"].toString();auto total=j["total"].toDouble();
             if(total>0)m_progress=j["done"].toDouble()/total;
-            if(stage.startsWith("voice"))m_backend="CPU · Ming-3.0 Q8";
-            if(stage=="timeline-video")m_backend="VideoToolbox · 时间轴合成";
+            if(stage=="voice-load")m_backend="正在检测";
+            if(stage=="timeline-video")
+#ifdef Q_OS_WIN
+                m_backend="Media Foundation · 时间轴合成";
+#else
+                m_backend="VideoToolbox · 时间轴合成";
+#endif
             m_status=stage=="timeline-video"?"正在导出时间轴视频…":stage.startsWith("voice")?(m_kind=="voice-design"?"正在设计语音…":"正在合成配音文案…"):stage=="page-video"?"正在合成图像配音视频…":stage=="render"?"正在生成数字人画面…":stage=="ditto-mouth-calibration"?"正在校准人物嘴形（首次使用）…":stage=="ditto-audio"?"正在提取语音特征…":stage=="ditto-motion"?"正在生成表情动作…":"正在加载数字人模型…";
         }
     }

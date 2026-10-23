@@ -1,0 +1,22 @@
+{
+  "vcpkg": {
+    "repository": "https://github.com/microsoft/vcpkg.git",
+    "revision": "bd8298ae219367a606c74c6c25dc50cc6d66eca8"
+  },
+  "stable-diffusion": {
+    "repository": "https://github.com/leejet/stable-diffusion.cpp.git",
+    "revision": "b13a48219d5cdf408edcb93da6cd69b612ed03d3"
+  },
+  "onnxruntime-directml": {
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/1.23.0/microsoft.ml.onnxruntime.directml.1.23.0.nupkg",
+    "sha256": "a33ec2382b3c440bab74042a135733bb6e5085f293b908d3997688a58fe307e7"
+  },
+  "directml": {
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ai.directml/1.15.4/microsoft.ai.directml.1.15.4.nupkg",
+    "sha256": "4e7cb7ddce8cf837a7a75dc029209b520ca0101470fcdf275c1f49736a3615b9"
+  },
+  "mediapipe-wheel": {
+    "url": "https://files.pythonhosted.org/packages/5b/f6/763477e9aeed98accc984ed6ee3f11a21a0c5fd1d1c6586b8d07067748ff/mediapipe-0.10.35-py3-none-win_amd64.whl",
+    "sha256": "b08f001cf3c3cd0d88d9ed68f3368dc8a4913f568281a93117f083115aa672ba"
+  }
+}

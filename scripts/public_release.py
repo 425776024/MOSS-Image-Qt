@@ -10,13 +10,13 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL_SUFFIXES = {'.npz', '.engine', '.onnx', '.pth', '.pt', '.ckpt', '.gguf', '.safetensors', '.mlmodel', '.task', '.fst', '.bin', '.dylib', '.a', '.so', '.mp4', '.mov'}
+MODEL_SUFFIXES = {'.npz', '.engine', '.onnx', '.pth', '.pt', '.ckpt', '.gguf', '.safetensors', '.mlmodel', '.task', '.fst', '.bin', '.dylib', '.a', '.so', '.dll', '.exe', '.lib', '.pyd', '.whl', '.nupkg', '.mp4', '.mov'}
 MODEL_SUFFIXES |= {'.p12', '.p8', '.pem', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile'}
 SOURCE_DIRS = ('src', 'qml', 'config', 'scripts', 'tests', 'vendor', 'assets', '.github')
 SOURCE_DOCS = ('LICENSE', 'README.md', 'README-en.md', 'THIRD_PARTY.md', 'CMakeLists.txt', '.gitignore', '.gitattributes',
                'AGENTS.md', 'DESIGN.md', '.cursor/rules/macos-design.mdc', 'docs/macos-design-skills.md',
                'docs/model-management.md', 'docs/ditto-default-model.md', 'docs/build.md',
-               'docs/macos-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md')
+               'docs/macos-release.md', 'docs/windows-release.md', 'docs/apple-model-assets.md', 'docs/privacy.md', 'docs/model-terms.md')
 
 # Exact, hash-pinned showcase exceptions. Local exports remain forbidden.
 PUBLIC_DEMO_MEDIA = {
@@ -31,6 +31,8 @@ PUBLIC_SCRIPTS = {
     "prepare_ming.py", "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",
     "apple_model_assets.py", "upload_apple_assets.py", "package_appstore.py",
     "configure_appstore_upload.py", "appstore_keychain_service.swift",
+    "build_ci_windows.py", "package_windows.py", "test_windows.ps1", "test_windows.cmd",
+    "diagnose_windows_runtime.py",
 }
 
 PRIVATE_SERVER_FILES = {
@@ -46,7 +48,8 @@ def audit_app(app):
         if path.is_file() and path.name in {Path(p).name for p in PRIVATE_SERVER_FILES}:
             raise ValueError('Server payload in App: ' + str(path))
     env = dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_QUICK_BACKEND='software')
-    result = subprocess.run([str(app.absolute() / 'Contents/MacOS/MossStudio'),
+    executable = app.absolute() / ('MossStudio.exe' if (app / 'MossStudio.exe').is_file() else 'Contents/MacOS/MossStudio')
+    result = subprocess.run([str(executable),
                              '--headless', '--public-release-check'],
                             capture_output=True, text=True, timeout=10, env=env)
     if result.returncode or result.stdout.strip() != 'MOSS_PUBLIC_LOCAL_ONLY_V1':

@@ -1,4 +1,5 @@
 #include "ModelManager.h"
+#include "TestFileSystem.h"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QSettings>
@@ -81,7 +82,7 @@ private slots:
     }
     void symlinksAndBusyOperationsAreRejected() {
         QTemporaryDir root,other;ModelManager m(nullptr,catalog());m.setRoot(root.path());write(other.filePath("model.bin"),payload);
-        QVERIFY(QFile::link(other.path(),root.filePath("ditto")));m.removeGroup("ditto");QVERIFY(!m.error().isEmpty());QVERIFY(QFileInfo::exists(other.filePath("model.bin")));QVERIFY(!m.ready("ditto"));
+        QVERIFY(createTestSymlink(other.path(),root.filePath("ditto")));m.removeGroup("ditto");QVERIFY(!m.error().isEmpty());QVERIFY(QFileInfo::exists(other.filePath("model.bin")));QVERIFY(!m.ready("ditto"));
         write(root.filePath("image-q4/model.bin"),payload);m.setInferenceBusy(true);m.removeGroup("image-q4");QVERIFY(m.ready("image-q4"));
         m.requestDownload("image");QVERIFY(m.requested().isEmpty());
     }
@@ -95,7 +96,7 @@ private slots:
         QFETCH(bool,ignoreRange);QTemporaryDir root;QTcpServer server;QVERIFY(server.listen(QHostAddress::LocalHost));QByteArray request;
         connect(&server,&QTcpServer::newConnection,this,[&]{auto socket=server.nextPendingConnection();connect(socket,&QTcpSocket::readyRead,socket,[&,socket]{
             request+=socket->readAll();if(!request.contains("\r\n\r\n"))return;
-            const auto body=ignoreRange?payload:payload.mid(5);QByteArray head=ignoreRange?"HTTP/1.1 200 OK\r\n":"HTTP/1.1 206 Partial Content\r\nContent-Range: bytes 5-"+QByteArray::number(payload.size()-1)+"/"+QByteArray::number(payload.size())+"\r\n";
+            const auto body=ignoreRange?payload:payload.mid(5);QByteArray head=ignoreRange?QByteArray("HTTP/1.1 200 OK\r\n"):"HTTP/1.1 206 Partial Content\r\nContent-Range: bytes 5-"+QByteArray::number(payload.size()-1)+"/"+QByteArray::number(payload.size())+"\r\n";
             socket->write(head+"Content-Length: "+QByteArray::number(body.size())+"\r\nConnection: close\r\n\r\n"+body);socket->disconnectFromHost();});connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);});
         ModelManager m(nullptr,catalog(),QUrl(QString("http://127.0.0.1:%1/").arg(server.serverPort())));m.setRoot(root.path());
         write(root.filePath("ditto/model.bin.part"),payload.left(5));m.requestDownload("ditto");m.startDownload();QTRY_VERIFY_WITH_TIMEOUT(!m.busy(),5000);
@@ -110,6 +111,51 @@ private slots:
     void completePartialInstallsWithoutNetwork() {
         QTemporaryDir root;ModelManager m(nullptr,catalog());m.setRoot(root.path());write(root.filePath("ditto/model.bin.part"),payload);
         m.requestDownload("ditto");m.startDownload();QTRY_VERIFY(!m.busy());QVERIFY(m.error().isEmpty());QCOMPARE(read(root.filePath("ditto/model.bin")),payload);
+    }
+    void completedDownloadRepairsExistingModel_data() {
+        QTest::addColumn<bool>("sameSize");QTest::addColumn<bool>("unicode");
+        QTest::newRow("truncated")<<false<<false;
+        QTest::newRow("same-size-corruption")<<true<<false;
+        QTest::newRow("unicode-truncated")<<false<<true;
+        QTest::newRow("unicode-same-size")<<true<<true;
+    }
+    void completedDownloadRepairsExistingModel() {
+        QFETCH(bool,sameSize);QFETCH(bool,unicode);QTemporaryDir root;
+        const auto relative=unicode?QString::fromUtf8("数字人/模型.bin"):QString("ditto/model.bin");
+        const auto base=root.path()+(unicode?QString::fromUtf8("/下载资源-🦊"):QString());
+        ModelManager manager(nullptr,catalog().replace("ditto/model.bin",relative.toUtf8()));manager.setRoot(base);
+        const auto destination=base+"/"+relative;
+        write(destination,sameSize?QByteArray(payload.size(),'x'):QByteArray("old"));
+        write(destination+".part",payload);
+        QSignalSpy completed(&manager,&ModelManager::completed);
+        manager.requestDownload("ditto");manager.startDownload();QTRY_VERIFY(!manager.busy());
+        QVERIFY2(manager.error().isEmpty(),qPrintable(manager.error()));
+        QCOMPARE(completed.size(),1);QVERIFY(completed.first().first().toBool());
+        QCOMPARE(read(destination),payload);QVERIFY(!QFileInfo::exists(destination+".part"));
+        QVERIFY(manager.ready("ditto"));
+    }
+    void failedInstallationPreservesDownloadForRetry() {
+        QTemporaryDir root;ModelManager manager(nullptr,catalog());manager.setRoot(root.path());
+        const auto destination=root.filePath("ditto/model.bin");
+        QVERIFY(QDir().mkpath(destination));write(destination+"/keep.txt","keep");write(destination+".part",payload);
+        manager.requestDownload("ditto");manager.startDownload();QTRY_VERIFY(!manager.busy());
+        QVERIFY(manager.error().contains("无法安装模型文件"));QCOMPARE(read(destination+".part"),payload);
+        QCOMPARE(read(destination+"/keep.txt"),QByteArray("keep"));
+        QVERIFY(QFile::remove(destination+"/keep.txt"));QVERIFY(QDir().rmdir(destination));
+        manager.startDownload();QTRY_VERIFY(!manager.busy());
+        QVERIFY2(manager.error().isEmpty(),qPrintable(manager.error()));QCOMPARE(read(destination),payload);
+        QVERIFY(!QFileInfo::exists(destination+".part"));
+    }
+    void networkFailureIncludesContextAndPreservesPartial() {
+        QTemporaryDir root;QTcpServer server;QVERIFY(server.listen(QHostAddress::LocalHost));
+        connect(&server,&QTcpServer::newConnection,this,[&]{auto socket=server.nextPendingConnection();connect(socket,&QTcpSocket::readyRead,socket,[socket]{
+            socket->readAll();socket->write("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");socket->disconnectFromHost();
+        });connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);});
+        ModelManager manager(nullptr,catalog(),QUrl(QString("http://127.0.0.1:%1/").arg(server.serverPort())));manager.setRoot(root.path());
+        write(root.filePath("ditto/model.bin.part"),payload.left(5));manager.requestDownload("ditto");manager.startDownload();QTRY_VERIFY(!manager.busy());
+        QVERIFY(manager.error().contains("HTTP 503"));QVERIFY(manager.error().contains("ditto/model.bin"));
+        QVERIFY(manager.error().contains(manager.endpoint()));QCOMPARE(read(root.filePath("ditto/model.bin.part")),payload.left(5));
+        QVERIFY(!QFileInfo::exists(root.filePath("ditto/model.bin")));
     }
     void officialCatalogIsPinnedAndPrivatePathsAreAbsent() {
         const auto files=ModelManager::assets();QVERIFY(!files.isEmpty());

@@ -1,12 +1,14 @@
 # GitHub 自动打包、签名和公证
 
 工作流：`.github/workflows/macos.yml`。当前仅支持 **Apple Silicon / macOS 15+**，
-不生成 Intel 或 Windows 版本。GitHub 托管的 `macos-15` runner 构建，无需把个人 Mac 注册为 runner。
+此工作流不生成 Intel 或 Windows 版本；Windows 由 `.github/workflows/windows.yml` 同步构建。GitHub 托管的 `macos-15` runner 构建，无需把个人 Mac 注册为 runner。
 
 ## 普通构建
 
 推送到 `public-release`，向默认分支提交 PR，或手动运行工作流，
 会从公开依赖构建完整 App：Qt 界面、sd-cli、moss-ditto、moss-voice、sa3-generate。
+两个平台均构建触发该次运行的提交，不固定旧分支或旧标签；新推送会取消同分支尚未完成的旧推送构建。
+本地改动须先提交并推送才会进入 CI；手动签名和标签发布不受推送取消影响。
 模型不进入包，由用户在模型中心按需下载。无需配置 Apple Secrets 即可构建。
 
 在 Actions → macOS App and DMG → 对应运行 → Artifacts 下载 `macOS-arm64-unsigned`，里面包含：

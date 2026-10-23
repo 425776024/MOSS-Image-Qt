@@ -1,0 +1,155 @@
+name: Windows x64 App
+
+on:
+  push:
+    branches: [public-release]
+    tags: ['v*', 'windows-*']
+  pull_request:
+    branches: [public-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/public-release') }}
+
+jobs:
+  build:
+    name: Build Windows 10/11 x64 (Vulkan + DirectML)
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      BUILD_JOBS: '3'
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.local/vcpkg-bincache,readwrite
+      VCPKG_MAX_CONCURRENCY: '3'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Restore pinned native dependency packages
+        id: native-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .local/vcpkg-bincache
+          key: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          # Exclude the obsolete exact key, which may contain an empty cache.
+          restore-keys: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-
+      - name: Enter the MSVC 2022 x64 build environment
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          & "$vs\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          $exports = @('Path', 'INCLUDE', 'LIB', 'LIBPATH', 'VSINSTALLDIR', 'VCINSTALLDIR', 'VCToolsInstallDir', 'VCToolsVersion', 'VCToolsRedistDir', 'VisualStudioVersion', 'WindowsSdkDir', 'WindowsSDKVersion', 'WindowsSDKLibVersion', 'WindowsSdkBinPath', 'WindowsSdkVerBinPath', 'UniversalCRTSdkDir', 'UCRTVersion', 'VSCMD_ARG_TGT_ARCH', 'VSCMD_ARG_HOST_ARCH', 'VSCMD_ARG_app_plat', 'VSCMD_VER', 'VS170COMNTOOLS')
+          Get-ChildItem Env: | Where-Object { $_.Name -in $exports } | ForEach-Object { "$($_.Name)=$($_.Value)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append }
+      - name: Install Qt 6.10.2 and build tools
+        shell: pwsh
+        run: |
+          python -m pip install aqtinstall==3.3.0 cmake==3.31.6 ninja==1.11.1.3
+          python -m aqt install-qt windows desktop 6.10.2 win64_msvc2022_64 -m qtmultimedia qtshadertools -O "$env:RUNNER_TEMP/Qt"
+          "QT_ROOT=$env:RUNNER_TEMP/Qt/6.10.2/msvc2022_64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Check the public-source boundary and distribution helpers
+        run: |
+          python scripts/public_release.py audit
+          python -m unittest discover -s tests -p '*_tests.py'
+      - name: Compile and test app and Ditto worker before native engines
+        run: python scripts/build_ci_windows.py --check-app
+      - name: Restore completely built native engines
+        id: engine-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/build/image/bin
+            .local/ci-windows/build/sfx/bin
+            .local/ci-windows/build/ming/bin
+            .local/ci-windows/build/engines-ready.txt
+          key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
+      - name: Build native engines, run CTest and deploy a portable ZIP
+        run: python scripts/build_ci_windows.py
+      - name: Save completed engines even if later worker or packaging checks fail
+        if: always() && !cancelled() && steps.engine-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci-windows/build/engines-ready.txt') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/build/image/bin
+            .local/ci-windows/build/sfx/bin
+            .local/ci-windows/build/ming/bin
+            .local/ci-windows/build/engines-ready.txt
+          key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
+      - name: Upload Windows preview (GPU inference still requires a real PC)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Windows-x64-preview
+          path: dist/windows-artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Windows-build-evidence
+          path: |
+            dist/windows-bundle-audit.json
+            build-windows/Testing/Temporary/LastTest.log
+            build-windows/*-test.txt
+            build-windows/CMakeFiles/CMakeConfigureLog.yaml
+            .local/ci-windows/build/**/CMakeFiles/CMakeConfigureLog.yaml
+            .local/ci-windows/deployed-smoke/
+            .local/ci-windows/vcpkg_installed/vcpkg/issue_body.md
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+      - name: Save completed dependency packages even if later checks fail
+        if: always() && !cancelled() && steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .local/vcpkg-bincache
+          key: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  release:
+    name: Attach Windows preview to a draft Release
+    needs: build
+    if: >-
+      github.repository == '425776024/MOSS-Image-Qt' &&
+      (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/windows-'))
+    runs-on: ubuntu-latest
+    # Shares the lock with the macOS release job so draft creation cannot race.
+    concurrency:
+      group: release-assets-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a commit on the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Windows-x64-preview
+          path: release
+      - name: Verify and upload to a draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          (cd release && sha256sum -c SHA256SUMS-windows-x64.txt)
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+            gh release upload "$RELEASE_TAG" release/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release/* --verify-tag --draft \
+              --title "Moss Studio $RELEASE_TAG" --generate-notes
+          fi

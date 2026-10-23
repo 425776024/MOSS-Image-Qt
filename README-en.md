@@ -4,13 +4,13 @@
 
 A local AI creation app for Apple Silicon Macs and Windows x64 PCs. Create images, speech, and talking-avatar videos through conversation.
 
-[**Download for macOS (DMG)**](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.dmg) · [App ZIP](https://github.com/425776024/MOSS-Image-Qt/releases/download/macos-0.1.0-preview.1/Moss-Studio-0.1.0-macOS-arm64-notarized.app.zip) · [Release notes and checksums](https://github.com/425776024/MOSS-Image-Qt/releases/tag/macos-0.1.0-preview.1)
+[**Downloads, release notes and checksums**](https://github.com/425776024/MOSS-Image-Qt/releases)
 
-Version 0.1.0 preview for **Apple Silicon (M1 or later) and macOS 15+**. The app and DMG are Developer ID signed and Apple notarized. No Python installation is required; models download on demand.
+macOS supports **Apple Silicon (M1 or later) and macOS 15+**, with DMG and App ZIP packages. See each release for its signing and notarization status. No Python installation is required; models download on demand.
 
-[**Download for Windows (portable ZIP)**](https://github.com/425776024/MOSS-Image-Qt/releases/download/win-0.1.0-preview.2/Moss-Studio-0.1.0-Windows-x64-preview.zip) · [Windows release notes and checksums](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2)
+The Windows test preview targets **Windows 10 1903+ / Windows 11, x64**, with Vulkan / DirectML backends. Extract the complete portable ZIP and run `MossStudio.exe`; no Python installation is required, and models download on demand. Full GPU inference, desktop interaction and export still need real-PC validation. Run the included `test_windows.cmd` for an initial diagnostic report.
 
-The Windows test preview targets **Windows 10 1903+ / Windows 11, x64**, with Vulkan / DirectML backends. Extract the complete ZIP and run `MossStudio.exe`; no Python installation is required, and models download on demand. CI build and startup checks passed; full GPU inference, desktop interaction and export still need real-PC validation. Run the included `test_windows.cmd` for an initial diagnostic report.
+Every push to `public-release` automatically builds both platforms. Find current development packages in successful [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) and [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush) runs under Artifacts. Development builds may differ from published Releases.
 
 ## Feature preview
 
@@ -104,6 +104,8 @@ Manage resources by task: images, avatars, speech, and sound effects. Download, 
 Built with Qt / QML / C++. Pinned model revisions, hashes, and sources are listed in the [model catalog](config/models.json).
 
 [Design guidelines](DESIGN.md) · [Build and run](docs/build.md) · [macOS packaging and notarization](docs/macos-release.md) · [Model management](docs/model-management.md) · [Ditto model notes](docs/ditto-default-model.md) · [Third-party sources](THIRD_PARTY.md)
+
+The Windows preview is publicly available in [Releases](https://github.com/425776024/MOSS-Image-Qt/releases/tag/win-0.1.0-preview.2). See [Windows build and validation](docs/windows-release.md) for real-PC test steps.
 
 ## License
 
