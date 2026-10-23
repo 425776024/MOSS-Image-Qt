@@ -8,6 +8,10 @@ on:
     branches: [master, dev]
   workflow_dispatch:
     inputs:
+      run_tests:
+        description: 'Compile and run unit tests (off for routine packaging)'
+        type: boolean
+        default: false
       notarize:
         description: 'Developer ID signing + Apple notarization (requires macos-release secrets)'
         type: boolean
@@ -30,6 +34,7 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: '1'
       QT_QPA_PLATFORM: offscreen
       QT_QUICK_BACKEND: software
+      MOSS_RUN_TESTS: ${{ inputs.run_tests && '1' || '0' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -41,17 +46,57 @@ jobs:
         run: |
           test "$(uname -m)" = arm64
           python3 scripts/public_release.py audit
+      - name: Run optional Python unit tests
+        if: inputs.run_tests
+        run: |
           python3 -m unittest discover -s tests -p '*_tests.py'
       - name: Install build tools and Qt 6.10.2
         run: |
-          # ffmpeg is a test-only CLI for generating MP3/AAC fixtures. The app
-          # links the isolated FFmpeg build prepared by prepare_ci_macos.py.
-          brew install cmake ninja pkg-config openssl@3 nlohmann-json ffmpeg
+          brew install cmake ninja pkg-config openssl@3 nlohmann-json
+          if [[ "$MOSS_RUN_TESTS" == 1 ]]; then brew install ffmpeg; fi
           python3 -m pip install aqtinstall==3.3.0
           python3 -m aqt install-qt mac desktop 6.10.2 clang_64 -m qtmultimedia qtshadertools -O "$RUNNER_TEMP/Qt"
           echo "QT_ROOT=$RUNNER_TEMP/Qt/6.10.2/macos" >> "$GITHUB_ENV"
-      - name: Build native workers, run CTest, deploy and package
+      - name: Identify native toolchain
+        run: |
+          toolchain=$( (xcrun clang --version; xcrun --show-sdk-version) | shasum -a 256 | cut -d ' ' -f 1)
+          echo "MOSS_TOOLCHAIN=$toolchain" >> "$GITHUB_ENV"
+      - name: Restore compiled native dependencies
+        id: native-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci/native
+            .local/ci/build/sa3/bin
+            .local/ci/native-ready.txt
+          key: macos-arm64-native-${{ env.MOSS_TOOLCHAIN }}-${{ hashFiles('config/macos-dependencies.json', 'scripts/prepare_ci_macos.py', 'scripts/prepare_ming.py') }}
+      - name: Restore image engine build
+        id: image-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/deps/stable-diffusion.cpp
+            .local/build-engine
+          key: macos-arm64-image-${{ env.MOSS_TOOLCHAIN }}-${{ hashFiles('scripts/build.sh', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
+      - name: Build native workers, deploy and package
         run: ./scripts/build_ci_macos.sh
+      - name: Save compiled native dependencies
+        if: always() && steps.native-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci/native-ready.txt') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci/native
+            .local/ci/build/sa3/bin
+            .local/ci/native-ready.txt
+          key: macos-arm64-native-${{ env.MOSS_TOOLCHAIN }}-${{ hashFiles('config/macos-dependencies.json', 'scripts/prepare_ci_macos.py', 'scripts/prepare_ming.py') }}
+      - name: Save image engine build
+        if: always() && steps.image-cache.outputs.cache-hit != 'true' && hashFiles('.local/build-engine/bin/sd-cli') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/deps/stable-diffusion.cpp
+            .local/build-engine
+          key: macos-arm64-image-${{ env.MOSS_TOOLCHAIN }}-${{ hashFiles('scripts/build.sh', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
       - name: Smoke test the deployed app without development paths
         timeout-minutes: 3
         env:

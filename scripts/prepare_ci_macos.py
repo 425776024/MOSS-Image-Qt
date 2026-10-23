@@ -17,6 +17,15 @@ LOCK = json.loads((ROOT / 'config/macos-dependencies.json').read_text())
 JOBS = os.environ.get('BUILD_JOBS', '3')
 
 
+def native_fingerprint():
+    fingerprint = hashlib.sha256()
+    for name in ('config/macos-dependencies.json', 'scripts/prepare_ci_macos.py', 'scripts/prepare_ming.py'):
+        fingerprint.update((ROOT / name).read_bytes())
+    for command in (('xcrun', 'clang', '--version'), ('xcrun', '--show-sdk-version')):
+        fingerprint.update(subprocess.check_output(command))
+    return fingerprint.hexdigest()
+
+
 def run(*args, **kwargs):
     subprocess.run([str(a) for a in args], check=True, **kwargs)
 
@@ -75,6 +84,21 @@ def prepare_openssl():
 def main():
     if platform.system() != 'Darwin' or platform.machine() != 'arm64':
         raise SystemExit('This release targets Apple Silicon macOS only.')
+    ready = BASE / 'native-ready.txt'
+    fingerprint = native_fingerprint()
+    required = (
+        NATIVE / 'ffmpeg/lib/libavcodec.dylib',
+        NATIVE / 'opencv/lib/libopencv_dnn.dylib',
+        NATIVE / 'openssl/lib/libssl.3.dylib',
+        NATIVE / 'audio-deps/onnxruntime/lib/libonnxruntime.dylib',
+        NATIVE / 'audio-deps/ming/lib/libaudiocpp.dylib',
+        NATIVE / 'mediapipe/libmediapipe.dylib',
+        BASE / 'build/sa3/bin/sa3-generate',
+    )
+    if ready.is_file() and ready.read_text().strip() == fingerprint and all(p.is_file() for p in required):
+        print('Reusing native dependencies with matching source, compiler and SDK', flush=True)
+        return
+    ready.unlink(missing_ok=True)
     NATIVE.mkdir(parents=True, exist_ok=True)
     notices = NATIVE / 'licenses'
     notices.mkdir(exist_ok=True)
@@ -147,6 +171,7 @@ def main():
                   '-DBUILD_SHARED_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DGGML_CCACHE=OFF', '-DGGML_NATIVE=OFF')
     run('cmake', '--build', build, '--target', 'sa3-generate', '--parallel', JOBS)
     shutil.copy2(sa3 / 'LICENSE', notices / 'sa3-LICENSE')
+    ready.write_text(fingerprint + '\n')
     print('Public native dependencies ready:', NATIVE)
 
 

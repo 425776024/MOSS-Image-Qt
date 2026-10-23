@@ -52,6 +52,10 @@ python scripts/build_ci_windows.py
 
 依赖固定于 `config/windows-dependencies.json`、`config/windows-vcpkg/vcpkg.json`，跨平台上游提交沿用 `config/macos-dependencies.json`。vcpkg 只启用 LGPL FFmpeg 组件，不启用 GPL / nonfree / x264。MediaPipe 从校验后的官方 Windows wheel 提取 C DLL，分发不包含 Python。运行库与许可随安装程序携带。首轮 Windows CI 已通过 15 项 CTest、31 项 Python 分发测试、开发路径隔离启动、941 项 DLL 导入检查、公开源码边界及模型／Python 排除审计；Ditto 已验证 ONNX Runtime 1.23.0 初始化、CPU 张量及 DirectML provider 枚举。实际 GPU 推理及桌面验收仍以实机记录为准。
 
+常规打包默认不编译和运行单元测试，保留安装程序、中文目录、启动、快捷方式、卸载及文件校验。
+排查问题时可手动触发工作流并勾选 `run_tests`，或本地运行 `python scripts/build_ci_windows.py --run-tests`。
+vcpkg 缓存保存已完成的依赖包，完整原生引擎单独缓存；工具链变化会使部分缓存失效，冷构建可能超过一小时。
+
 首次 `win-0.1.0-preview.1` 是从已通过 CI 的 Windows 分支提交手动发布，未合并待实机验收的 PR；与上面的 `v*` / `windows-*` 标签自动生成草稿流程分开。
 
 官方依据：[Qt 6.10 平台要求](https://doc.qt.io/qt-6.10/supported-platforms.html)、[sd.cpp 构建](https://github.com/leejet/stable-diffusion.cpp/blob/b13a48219d5cdf408edcb93da6cd69b612ed03d3/docs/build.md)、[DirectML](https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html)、[Windows UTF-8 清单](https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page)。

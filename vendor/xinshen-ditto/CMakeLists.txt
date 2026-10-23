@@ -48,6 +48,9 @@ if(WIN32)
             ${ORT_RUNTIME_DLLS} "${MOSS_DIRECTML_DLL}" "${MOSS_MEDIAPIPE_DLL}"
             "$<TARGET_FILE_DIR:moss-ditto>"
         COMMAND_EXPAND_LISTS VERBATIM)
+endif()
+if(BUILD_TESTING)
+if(WIN32)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_test(NAME ditto_runtime COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/scripts/diagnose_windows_runtime.py" $<TARGET_FILE:moss-ditto> runtime-check)
@@ -63,8 +66,11 @@ target_include_directories(ditto_sha256_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(ditto_sha256_tests PRIVATE PkgConfig::FFMPEG ${OpenCV_LIBS})
 set_target_properties(ditto_sha256_tests PROPERTIES CXX_STANDARD 17)
 add_test(NAME ditto_sha256 COMMAND ditto_sha256_tests)
+endif()
 
 if(NOT APPLE)
     target_link_libraries(moss-ditto PRIVATE OpenSSL::Crypto)
-    target_link_libraries(ditto_sha256_tests PRIVATE OpenSSL::Crypto)
+    if(TARGET ditto_sha256_tests)
+        target_link_libraries(ditto_sha256_tests PRIVATE OpenSSL::Crypto)
+    endif()
 endif()

@@ -3,8 +3,8 @@
 GitHub 托管 Mac 的自动构建、App/DMG 下载、Developer ID 签名与 Apple 公证配置，见
 [macOS 自动发布](macos-release.md)。完整 CI 依赖从公开上游下载，不使用开发者的本地 SDK 路径。
 
-Windows 10/11 x64 的 Vulkan / DirectML 构建、便携包与 RTX 3090 实机验收步骤，见
-[Windows 构建与验收](windows-release.md)。该通路仍待首次 Windows CI 和实机验证。
+Windows 10/11 x64 的 Vulkan / DirectML 构建、安装包与 RTX 3090 实机验收步骤，见
+[Windows 构建与验收](windows-release.md)。GPU 推理和真实桌面验收仍需实机记录。
 
 
 目标平台为 Apple Silicon macOS。需要 Xcode/Metal、CMake、Ninja、Qt 6.10.2，
@@ -20,9 +20,9 @@ cmake -S . -B build -G Ninja \
   -DMOSS_AUDIO_DEPS=/path/to/audio-deps \
   -DMOSS_MING_ROOT=/path/to/audio-deps/ming \
   -DJSON_INCLUDE=/path/to/nlohmann/include \
-  -DVOICE_JSON_INCLUDE=/path/to/nlohmann/include
+  -DVOICE_JSON_INCLUDE=/path/to/nlohmann/include \
+  -DBUILD_TESTING=OFF
 cmake --build build -j 6
-ctest --test-dir build --output-on-failure
 ./build/MossStudio.app/Contents/MacOS/MossStudio
 ```
 
@@ -30,6 +30,11 @@ ctest --test-dir build --output-on-failure
 图像与音效工作进程分别来自 stable-diffusion.cpp 和 sa3.cpp。
 `scripts/build.sh` 准备固定提交的 stable-diffusion.cpp，并应用 `vendor/moss-flowedit/` 中的原生 FlowEdit 补丁；
 更新「保留原貌」功能时须同时重建图像引擎，旧引擎会提示更新。该方式不新增模型或 Python 推理依赖。
+常规打包默认不编译、不运行 CTest 和 Python 单元测试；只保留公开源码边界、包依赖、安装与启动校验。
+需要单元测试时，手动触发 Actions 并勾选 `run_tests`；本地可用 `MOSS_RUN_TESTS=1 ./scripts/build.sh`。
+直接使用 CMake 的开发者可设 `-DBUILD_TESTING=ON` 后自行运行 CTest。
+Mac 原生依赖和图像引擎按固定源码、编译器与 SDK 复用缓存；Windows 使用 vcpkg 包缓存及完整引擎缓存。
+首次构建、依赖升级或工具链变化仍需重新编译，缓存不保证每次命中。
 本地已配置好依赖时可运行
 `scripts/run-local.sh` 增量构建。`scripts/prepare_audio.sh` 是可选的开发机依赖导入器，
 要求显式设置来源路径，不导入模型。

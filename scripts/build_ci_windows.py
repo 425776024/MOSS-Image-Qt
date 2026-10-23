@@ -112,7 +112,7 @@ def cmake(source, build, *options):
         '-DGGML_AVX512=OFF', '-DGGML_CCACHE=OFF', *options)
 
 
-def main(check_app_only=False):
+def main(check_app_only=False, run_tests=False):
     if os.name != 'nt':
         raise SystemExit('Run this script on Windows in an x64 MSVC developer shell.')
     os.chdir(ROOT)
@@ -186,13 +186,15 @@ def main(check_app_only=False):
         '-DMOSS_BUILD_DITTO=ON', f'-DPKG_CONFIG_EXECUTABLE={Path(pkgconf).as_posix()}',
         f'-DONNXRUNTIME_ROOT={ort.as_posix()}', f'-DMOSS_MEDIAPIPE_ROOT={mp.as_posix()}',
         f'-DJSON_INCLUDE={(prefix / "include").as_posix()}',
-        f'-DVOICE_JSON_INCLUDE={(prefix / "include").as_posix()}']
+        f'-DVOICE_JSON_INCLUDE={(prefix / "include").as_posix()}',
+        f'-DBUILD_TESTING={"ON" if run_tests else "OFF"}']
     if check_app_only:
         # Catch app and Ditto portability errors before building three engines.
         # The final configure uses the same toolchain and reuses these objects.
         cmake(ROOT, BUILD, *project_options, '-DMOSS_BUILD_VOICE=OFF')
         run('cmake', '--build', BUILD, '--parallel', JOBS)
-        test_build(BUILD)
+        if run_tests:
+            test_build(BUILD)
         return
 
     engine = checkout('stable-diffusion', LOCK['stable-diffusion'])
@@ -245,7 +247,8 @@ def main(check_app_only=False):
           f'-DMOSS_MING_ROOT={ming_root.as_posix()}')
     run('cmake', '--build', BUILD, '--parallel', JOBS)
     # Side-loaded DLLs are needed beside test executables as well as on PATH.
-    test_build(BUILD)
+    if run_tests:
+        test_build(BUILD)
     from package_windows import package
     package(qt, prefix, NATIVE, engine_build, sfx_build, BUILD)
 
@@ -253,5 +256,9 @@ def main(check_app_only=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check-app', action='store_true',
-                        help='Compile and test app sources before building native engines')
-    main(check_app_only=parser.parse_args().check_app)
+                        help='Compile app sources before building native engines')
+    parser.add_argument('--run-tests', action='store_true',
+                        default=os.environ.get('MOSS_RUN_TESTS') == '1',
+                        help='Opt in to compiling and running the unit-test suite')
+    args = parser.parse_args()
+    main(check_app_only=args.check_app, run_tests=args.run_tests)
