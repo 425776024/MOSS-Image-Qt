@@ -1,0 +1,45 @@
+name: Publish development downloads
+
+on:
+  workflow_run:
+    workflows: [macOS App and DMG, Windows x64 App]
+    types: [completed]
+    branches: [public-release]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Successful public-release push build to publish'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-development-downloads
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == '425776024/MOSS-Image-Qt' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Always run the publisher from the trusted branch, never from an artifact
+      # or the triggering PR. Downloaded app binaries are not executed here.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: public-release
+          persist-credentials: false
+      - name: Verify source, checksums and publish a development Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+        run: python3 scripts/publish_preview.py "$BUILD_RUN_ID"

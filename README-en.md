@@ -10,7 +10,7 @@ macOS supports **Apple Silicon (M1 or later) and macOS 15+**, with DMG and App Z
 
 The Windows test preview targets **Windows 10 1903+ / Windows 11, x64**, with Vulkan / DirectML backends. Extract the complete portable ZIP and run `MossStudio.exe`; no Python installation is required, and models download on demand. Full GPU inference, desktop interaction and export still need real-PC validation. Run the included `test_windows.cmd` for an initial diagnostic report.
 
-Every push to `public-release` automatically builds both platforms. Find current development packages in successful [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) and [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush) runs under Artifacts. Development builds may differ from published Releases.
+Every push to `public-release` automatically builds both platforms and publishes successful development packages to the downloads page above. Automatic macOS previews are labeled as not notarized; notarized releases remain available separately. Build records are available in [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) and [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush) runs, which also offer downloads under Artifacts.
 
 ## Feature preview
 

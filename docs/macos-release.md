@@ -18,7 +18,12 @@
 - `SHA256SUMS.txt` 和 `release-manifest.json`。
 
 `unsigned` 包只有本地 ad-hoc 签名，**不是公证发布版**，不能承诺通过 Gatekeeper。
-它不会自动进入 Releases。流程运行 CTest、公开源码边界审计、App 依赖审计、DMG 校验，
+主线推送构建成功后，`publish-preview.yml` 会校验来源、提交和 SHA-256，
+自动发布独立的 `macos-build-<run-id>` 预发布版到 Releases，标题明确标注“未公证”。
+既有已公证版本保留；自动开发包不会标记为正式 Latest，也不会覆盖它们。
+PR、失败或过期构建不发布；漏发时可手动运行该工作流并填写成功的主线推送 run ID。
+发布任务仅上传校验后的产物，不执行下载的二进制。
+流程运行 CTest、公开源码边界审计、App 依赖审计、DMG 校验，
 以及部署后离屏启动测试。CI 不下载大模型，也不宣称已验收模型推理、GPU 性能或真实用户首次安装。
 
 ## 先在本机公证（无需导出签名私钥）

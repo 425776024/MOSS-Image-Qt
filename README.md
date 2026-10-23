@@ -10,7 +10,7 @@ macOS 支持 **Apple Silicon（M1 及后续芯片）、macOS 15+**，提供 DMG 
 
 Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 Vulkan / DirectML 后端。完整解压便携 ZIP 后运行 `MossStudio.exe`；无需安装 Python，模型按需下载。显卡完整推理及真实桌面、导出验收仍待实测。首轮测试可双击包内 `test_windows.cmd`。
 
-`public-release` 每次推送都会自动编译两个平台。最新开发构建见 [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) 和 [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush)，从成功运行的 Artifacts 下载；开发构建与 Releases 已发布安装包可能不同。
+`public-release` 每次推送都会自动编译两个平台，成功后将开发包发布到上方下载目录。macOS 自动开发包标注“未公证”，已公证安装包单独保留。构建记录见 [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) 和 [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush)；也可从成功运行的 Artifacts 下载。
 
 ## 功能预览
 

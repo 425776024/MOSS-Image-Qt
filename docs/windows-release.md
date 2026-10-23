@@ -10,7 +10,7 @@ Windows 版目标为 **Windows 10 1903+ / Windows 11、x64**。Qt 6.10 支持 Wi
 
 旧版下载最后失败时，关闭旧 App，把新版本完整解压到新目录，沿用原模型目录后重试。不要先清理下载残留。若仍失败，展开“查看详情”并提供完整错误文字。默认镜像为 `hf-mirror.com`，换源需要手动操作，当前没有自动测速或自动换源。
 
-`public-release` 每次推送都会与 macOS 同步自动构建；新推送会取消同分支未完成的旧推送构建。开发构建可从 Actions 下载 `Windows-x64-preview`，需解开 Artifact 外层 ZIP 和应用内层 ZIP；Release 下载只需解压应用 ZIP。
+`public-release` 每次推送都会与 macOS 同步自动构建；新推送会取消同分支未完成的旧推送构建。构建成功后，`publish-preview.yml` 自动将校验后的便携包发布为 `windows-build-<run-id>` 预发布版，可直接从 Releases 下载。开发构建也可从 Actions 下载 `Windows-x64-preview`，需解开 Artifact 外层 ZIP 和应用内层 ZIP；Release 下载只需解压应用 ZIP。
 
 不需要 Python、Qt SDK 或 CUDA Toolkit。模型在 App 中按需下载；显卡需安装提供 Vulkan / DirectX 12 的厂商驱动。Windows N 版可能需要系统 Media Feature Pack。
 
