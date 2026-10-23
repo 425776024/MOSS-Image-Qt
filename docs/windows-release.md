@@ -55,6 +55,8 @@ python scripts/build_ci_windows.py
 常规打包默认不编译和运行单元测试，保留安装程序、中文目录、启动、快捷方式、卸载及文件校验。
 排查问题时可手动触发工作流并勾选 `run_tests`，或本地运行 `python scripts/build_ci_windows.py --run-tests`。
 vcpkg 缓存保存已完成的依赖包，完整原生引擎单独缓存；工具链变化会使部分缓存失效，冷构建可能超过一小时。
+`master` 的 push 构建成功后自动发布。手动打包完成后，在 **Publish development downloads** 中填写该次 `run_id` 发布；
+发布任务在 Actions 内校验安装包和源码提交，避免开发机重复下载、再上传整个安装包。PR、其他分支及失败构建不允许发布。
 
 首次 `win-0.1.0-preview.1` 是从已通过 CI 的 Windows 分支提交手动发布，未合并待实机验收的 PR；与上面的 `v*` / `windows-*` 标签自动生成草稿流程分开。
 

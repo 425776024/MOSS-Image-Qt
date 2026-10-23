@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'Successful Windows master push build to publish'
+        description: 'Successful Windows master build to publish'
         required: true
         type: string
 
@@ -42,4 +42,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           BUILD_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
-        run: python3 scripts/publish_preview.py "$BUILD_RUN_ID"
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            python3 scripts/publish_preview.py "$BUILD_RUN_ID" --allow-manual-run
+          else
+            python3 scripts/publish_preview.py "$BUILD_RUN_ID"
+          fi

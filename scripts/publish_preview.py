@@ -25,13 +25,14 @@ def api(path):
     return json.loads(gh('api', f'repos/{REPO}/{path}'))
 
 
-def validate_run(run):
-    if (run.get('event') != 'push' or run.get('head_branch') != BRANCH
+def validate_run(run, *, allow_manual=False):
+    events = ('push', 'workflow_dispatch') if allow_manual else ('push',)
+    if (run.get('event') not in events or run.get('head_branch') != BRANCH
             or run.get('status') != 'completed' or run.get('conclusion') != 'success'
             or run.get('head_repository', {}).get('full_name') != REPO
             or run.get('path') not in PLATFORMS
             or not re.fullmatch(r'[0-9a-f]{40}', run.get('head_sha', ''))):
-        raise ValueError('Only successful macOS/Windows push builds from master may be published')
+        raise ValueError('Only successful trusted master builds may be published; manual builds require explicit opt-in')
     return PLATFORMS[run['path']]
 
 
@@ -81,15 +82,15 @@ def verified_assets(folder, platform, checksums, sha, *, notarized=False):
 
 def latest_success(run):
     workflow = Path(run['path']).name
-    runs = api(f'actions/workflows/{workflow}/runs?branch={BRANCH}&event=push&status=success&per_page=1')
+    runs = api(f'actions/workflows/{workflow}/runs?branch={BRANCH}&event={run["event"]}&status=success&per_page=1')
     return bool(runs['workflow_runs']) and runs['workflow_runs'][0]['id'] == run['id']
 
 
-def publish(run_id):
+def publish(run_id, *, allow_manual=False):
     if os.environ.get('GH_REPO', REPO) != REPO:
         raise ValueError('Unexpected repository')
     run = api(f'actions/runs/{run_id}')
-    platform, label, artifact, checksums = validate_run(run)
+    platform, label, artifact, checksums = validate_run(run, allow_manual=allow_manual)
     if platform == 'macos':
         print('macOS requires local notarization. Run scripts/release_macos.command on the signing Mac.')
         return
@@ -148,4 +149,7 @@ def publish(run_id):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('run_id', type=int)
-    publish(parser.parse_args().run_id)
+    parser.add_argument('--allow-manual-run', action='store_true',
+                        help='Explicitly authorize a successful manual master build')
+    args = parser.parse_args()
+    publish(args.run_id, allow_manual=args.allow_manual_run)
