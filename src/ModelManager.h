@@ -25,6 +25,8 @@ class ModelManager : public QObject {
     Q_PROPERTY(QStringList sourceValues READ sourceValues CONSTANT)
     Q_PROPERTY(QString imageQuant READ imageQuant WRITE setImageQuant NOTIFY changed)
     Q_PROPERTY(QVariantList groups READ groups NOTIFY changed)
+    Q_PROPERTY(QVariantList resources READ resources NOTIFY changed)
+    Q_PROPERTY(bool initialSetup READ initialSetup NOTIFY changed)
     Q_PROPERTY(bool sfxTermsAccepted READ sfxTermsAccepted NOTIFY changed)
     Q_PROPERTY(bool sfxTermsRequired READ sfxTermsRequired NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
@@ -56,6 +58,10 @@ public:
     QString imageQuant() const { return m_quant; }
     void setImageQuant(QString value);
     QVariantList groups() const;
+    QVariantList resources() const;
+    bool initialSetup() const { return m_initialSetup; }
+    Q_INVOKABLE void showInitialSetup();
+    Q_INVOKABLE void setRequested(QStringList capabilities);
     bool busy() const { return m_busy; }
     bool locked() const { return m_busy||m_inference; }
     void setInferenceBusy(bool value) { m_inference=value; }
@@ -102,6 +108,7 @@ private:
     QList<ModelAsset> m_assets,m_queue;
     QVariantList m_groups;
     bool m_busy=false,m_cancelled=false,m_inference=false,m_verifyOnly=false;
+    bool m_initialSetup=false,m_setupOffered=false;
     int m_index=0;
     qint64 m_total=0,m_done=0;
     double m_progress=0;

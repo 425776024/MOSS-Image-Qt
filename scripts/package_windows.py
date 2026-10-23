@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy a model-free Windows ZIP and validate it with development paths hidden."""
+"""Deploy XAvatar and build and exercise a model-free Windows installer."""
 import hashlib
 import json
 import os
@@ -7,7 +7,6 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,18 +50,80 @@ def check_worker_startup(binary, env):
         raise ValueError(f'Native worker failed to load: {binary.name}: {result.returncode}: {detail}')
 
 
+def build_installer(destination, artifacts):
+    compiler = os.environ.get('INNO_SETUP_COMPILER') or shutil.which('ISCC.exe')
+    if not compiler:
+        compiler = str(Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Inno Setup 6/ISCC.exe')
+    if not Path(compiler).is_file():
+        raise ValueError('Install Inno Setup 6 or set INNO_SETUP_COMPILER to ISCC.exe')
+    run(compiler, f'/DPayloadDir={destination.resolve()}', f'/DArtifactsDir={artifacts.resolve()}',
+        ROOT / 'config/windows-installer.iss')
+    installer = artifacts / 'XAvatar-0.1.0-Windows-x64-Setup.exe'
+    if not installer.is_file():
+        raise ValueError('The XAvatar installer was not generated')
+    return installer
+
+
+def check_installer(installer, destination, test_root, env):
+    installed = test_root / '安装验证-中文路径/XAvatar'
+    # Keep the installed files on failure for diagnosis. Never reuse stale files.
+    if installed.exists():
+        raise ValueError(f'Preserve the previous installation check before rebuilding: {installed}')
+    run(installer, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/LANG=english',
+        '/TASKS=desktopicon', f'/DIR={installed.resolve()}',
+        f'/LOG={test_root / "installer.log"}', timeout=300)
+    for source in destination.rglob('*'):
+        if source.is_file():
+            target = installed / source.relative_to(destination)
+            if not target.is_file():
+                raise ValueError(f'Installed file missing or damaged: {source.relative_to(destination)}')
+            with target.open('rb') as actual, source.open('rb') as expected:
+                if hashlib.file_digest(actual, 'sha256').digest() != hashlib.file_digest(expected, 'sha256').digest():
+                    raise ValueError(f'Installed file damaged: {source.relative_to(destination)}')
+    # Run from a different working directory, with build paths excluded.
+    installed_env = dict(env, PATH=os.pathsep.join([str(installed),
+        str(Path(os.environ['SystemRoot']) / 'System32'), os.environ['SystemRoot']]))
+    public = run(installed / 'XAvatar.exe', '--headless', '--public-release-check',
+        cwd=test_root, env=installed_env, timeout=30, capture_output=True, text=True)
+    if public.stdout.strip() != 'MOSS_PUBLIC_LOCAL_ONLY_V1':
+        raise ValueError('Installed XAvatar did not pass the public binary check')
+    run('powershell.exe', '-NoProfile', '-Command', '''
+$ErrorActionPreference = 'Stop'
+$exe = Join-Path $env:XAVATAR_INSTALL_TEST_ROOT 'XAvatar.exe'
+$metadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
+if ($metadata.OriginalFilename -ne 'XAvatar.exe' -or $metadata.ProductName -ne 'XAvatar') { throw 'Incorrect application branding' }
+$shell = New-Object -ComObject WScript.Shell
+$links = @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'XAvatar.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs')) 'XAvatar/XAvatar.lnk'))
+foreach ($link in $links) {
+    if (!(Test-Path $link) -or $shell.CreateShortcut($link).TargetPath -ne $exe) { throw "Invalid shortcut: $link" }
+}
+''', env=dict(installed_env, XAVATAR_INSTALL_TEST_ROOT=str(installed.resolve())), timeout=30)
+    run(installed / 'XAvatar.exe', '--home-smoke', '--minimum-window', '--check-initial-setup',
+        '--ui-language', 'zh', cwd=test_root, env=installed_env, timeout=90)
+    # Test uninstall without deleting files owned by the user.
+    sentinel = test_root / 'works/uninstall-preserves-project.txt'
+    sentinel.parent.mkdir(parents=True, exist_ok=True)
+    sentinel.write_text('user project', encoding='utf-8')
+    uninstaller = installed / 'unins000.exe'
+    run(uninstaller, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
+        f'/LOG={test_root / "uninstaller.log"}', cwd=test_root, timeout=120)
+    if (installed / 'XAvatar.exe').exists() or sentinel.read_text(encoding='utf-8') != 'user project':
+        raise ValueError('Uninstall did not remove the application cleanly while preserving user data')
+
+
 def package(qt, prefix, native, image_build, sfx_build, build):
-    destination = ROOT / 'dist/windows/MossStudio'
+    destination = ROOT / 'dist/windows/XAvatar'
     if destination.exists():
         raise ValueError(f'Preserve the previous package before rebuilding: {destination}')
     destination.mkdir(parents=True)
-    for source in (build / 'MossStudio.exe', build / 'workers/moss-ditto.exe',
+    for source in (build / 'XAvatar.exe', build / 'workers/moss-ditto.exe',
                    build / 'workers/moss-voice.exe', image_build / 'bin/sd-cli.exe',
                    sfx_build / 'bin/sa3-generate.exe'):
         shutil.copy2(source, destination)
     run(qt / 'bin/windeployqt.exe', '--release', '--qmldir', ROOT / 'qml',
         '--no-compiler-runtime', '--include-plugins', 'qoffscreen',
-        '--dir', destination, destination / 'MossStudio.exe')
+        '--dir', destination, destination / 'XAvatar.exe')
     # windeployqt bundles a VC installer for release builds. A portable ZIP
     # instead needs the redistributable DLLs beside its executables.
     deploy_msvc_runtime(destination, Path(os.environ['VCToolsRedistDir']))
@@ -105,7 +166,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     test_root.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, MOSS_DISABLE_DEV_PATHS='1',
         MOSS_EVIDENCE_ROOT=str(test_root), MOSS_OUTPUT_ROOT=str(test_root / 'works'),
-        MOSS_SETTINGS_ROOT=str(test_root / 'settings'),
+        MOSS_SETTINGS_ROOT=str(test_root / 'settings'), MOSS_MODEL_ROOT=str(test_root / 'models'),
         PATH=os.pathsep.join([str(destination), str(Path(os.environ['SystemRoot']) / 'System32'),
                               os.environ['SystemRoot']]))
     # Also check all imported DLLs, including delay imports, in the package.
@@ -134,7 +195,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
             raise ValueError('The packaged image engine is missing the FlowEdit adapter')
         for language in ('zh', 'en'):
             for theme in ('light', 'dark'):
-                run(destination / 'MossStudio.exe', '--home-smoke', '--minimum-window',
+                run(destination / 'XAvatar.exe', '--home-smoke', '--minimum-window',
                     '--ui-language', language, '--ui-theme', theme, env=env, timeout=90)
         run(destination / 'sd-cli.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
         # The pinned sa3 CLI has no --help branch: no model arguments print
@@ -148,18 +209,16 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     finally:
         os.environ.clear()
         os.environ.update(saved)
-    evidence = ROOT / 'dist/windows-bundle-audit.json'
-    evidence.write_text(json.dumps({'platform': 'Windows x64', 'modelFree': True,
-        'pythonFree': True, 'deployedSmoke': True, 'gpuInferenceValidated': False,
-        'imports': dlls}, indent=2) + '\n')
     artifacts = ROOT / 'dist/windows-artifacts'
     artifacts.mkdir(parents=True, exist_ok=True)
-    archive = artifacts / 'Moss-Studio-0.1.0-Windows-x64-preview.zip'
-    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
-        for path in sorted(destination.rglob('*')):
-            if path.is_file():
-                z.write(path, path.relative_to(destination.parent))
-    with archive.open('rb') as f:
+    installer = build_installer(destination, artifacts)
+    check_installer(installer, destination, test_root, env)
+    evidence = ROOT / 'dist/windows-bundle-audit.json'
+    evidence.write_text(json.dumps({'platform': 'Windows x64', 'modelFree': True,
+        'pythonFree': True, 'deployedSmoke': True, 'installerValidated': True,
+        'installedStartupValidated': True, 'uninstallValidated': True, 'gpuInferenceValidated': False,
+        'imports': dlls}, indent=2) + '\n')
+    with installer.open('rb') as f:
         checksum = hashlib.file_digest(f, 'sha256').hexdigest()
-    (artifacts / 'SHA256SUMS-windows-x64.txt').write_text(f'{checksum}  {archive.name}\n')
-    print('Windows preview package:', archive)
+    (artifacts / 'SHA256SUMS-windows-x64.txt').write_text(f'{checksum}  {installer.name}\n')
+    print('Windows installer:', installer)

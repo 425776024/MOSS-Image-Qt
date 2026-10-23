@@ -8,11 +8,13 @@ HomeDialog {
     property bool termsExpanded: false
     property bool sourceExpanded: false
     property bool wasDownloading: false
+    property var availableResources: []
+    signal setupFinished()
     readonly property bool ready: wasDownloading && !studio.models.busy && !studio.models.error && studio.models.progress>=1
     title: HomeTheme.t(ready ? "准备完成" : studio.models.error ? "下载未完成" : "准备创作资源")
     dialogIcon: ready ? "check" : "download"
     tone: studio.models.error ? HomeTheme.danger : HomeTheme.accent
-    width: Math.min(400,Overlay.overlay ? Overlay.overlay.width-40 : 400)
+    width: Math.min(440,Overlay.overlay ? Overlay.overlay.width-40 : 440)
     closePolicy: studio.models.busy ? Popup.NoAutoClose : Popup.CloseOnEscape
     defaultAction: studio.models.busy ? null : ready ? downloadClose : downloadConfirm
     Connections {
@@ -20,17 +22,60 @@ HomeDialog {
         function onDownloadRequested() { dialog.open() }
         function onChanged() { if(studio.models.busy)dialog.wasDownloading=true }
     }
-    onOpened: {termsConsent.checked=false;termsExpanded=false;sourceExpanded=false;wasDownloading=studio.models.busy}
-    onClosed: studio.models.dismissRequest()
+    onOpened: {
+        availableResources=studio.models.resources
+        termsConsent.checked=false;termsExpanded=false;sourceExpanded=false;wasDownloading=studio.models.busy
+        downloadConfirm.forceActiveFocus(Qt.TabFocusReason)
+    }
+    onClosed: {
+        const initial=studio.models.initialSetup
+        studio.models.dismissRequest()
+        if(initial)setupFinished()
+    }
     contentItem: ColumnLayout {
         spacing: 14
         Label {
             Layout.fillWidth: true
-            text: dialog.ready ? HomeTheme.t("已就绪，请重新点击生成")
+            text: dialog.ready ? HomeTheme.t(studio.models.initialSetup ? "可以开始创作了" : "已就绪，请重新点击生成")
                 : studio.models.error ? HomeTheme.t(studio.models.error.indexOf("磁盘")>=0 ? "空间不足，请清理后重试" : "下载中断，请重试")
                 : studio.models.busy ? HomeTheme.t(studio.models.status.indexOf("校验")===0 ? "正在校验…" : studio.models.status.indexOf("取消")>=0 ? "正在取消…" : "正在下载…")
-                : HomeTheme.t("首次使用需下载")+" "+studio.models.requestInfo.size
+                : HomeTheme.t("选择需要的创作资源，可稍后在设置中下载。")
             wrapMode: Text.Wrap; color: HomeTheme.secondary; font.pixelSize: 13
+        }
+        ColumnLayout {
+            visible: !studio.models.busy && !dialog.ready
+            Layout.fillWidth: true; spacing: 2
+            Repeater {
+                model: dialog.availableResources
+                RowLayout {
+                    id: resource
+                    required property var modelData
+                    Layout.fillWidth: true; spacing: 12
+                    AppCheckBox {
+                        objectName: "setupResource-"+resource.modelData.id
+                        Layout.fillWidth: true
+                        text: HomeTheme.t(resource.modelData.title)
+                        checked: resource.modelData.ready || studio.models.requested.indexOf(resource.modelData.id)>=0
+                        enabled: !resource.modelData.ready
+                        onClicked: {
+                            let selected=studio.models.requested.slice()
+                            if(checked)selected.push(resource.modelData.id)
+                            else selected=selected.filter(id=>id!==resource.modelData.id)
+                            studio.models.setRequested(selected)
+                        }
+                    }
+                    Label {
+                        text: resource.modelData.ready ? HomeTheme.t("可用") : resource.modelData.size
+                        color: HomeTheme.secondary; font.pixelSize: 12
+                    }
+                }
+            }
+            Label {
+                objectName: "setupDownloadSize"
+                Layout.fillWidth: true; Layout.topMargin: 6
+                text: HomeTheme.t("所需下载")+" "+studio.models.requestInfo.size
+                color: HomeTheme.secondary; font.pixelSize: 12
+            }
         }
         RowLayout {
             visible: studio.models.busy
@@ -71,13 +116,13 @@ HomeDialog {
             Layout.fillWidth: true; spacing: 8
             HomeButton { visible: !!studio.models.error && !studio.models.busy; text: HomeTheme.t("更换下载源"); quiet: true; compact: true; onClicked: dialog.sourceExpanded=!dialog.sourceExpanded }
             Item { Layout.fillWidth: true }
-            HomeButton { id: downloadClose; text: HomeTheme.t(studio.models.busy ? "取消下载" : dialog.ready ? "完成" : "稍后"); primary: dialog.ready; implicitHeight: 28; onClicked: studio.models.busy ? studio.models.cancel() : dialog.close() }
+            HomeButton { id: downloadClose; objectName: "closeModelDownload"; text: HomeTheme.t(studio.models.busy ? "取消下载" : dialog.ready ? "完成" : "稍后"); primary: dialog.ready; implicitHeight: 28; onClicked: studio.models.busy ? studio.models.cancel() : dialog.close() }
             HomeButton {
                 id: downloadConfirm
                 objectName: "confirmModelDownload"; visible: !studio.models.busy && !dialog.ready
                 implicitHeight: 28
                 text: HomeTheme.t(studio.models.error ? "重试" : "下载"); primary: true
-                enabled: !studio.models.sfxTermsRequired || termsConsent.checked
+                enabled: studio.models.requested.length>0 && (!studio.models.sfxTermsRequired || termsConsent.checked)
                 onClicked: {if(studio.models.sfxTermsRequired)studio.models.acceptSfxTerms();studio.models.startDownload()}
             }
         }

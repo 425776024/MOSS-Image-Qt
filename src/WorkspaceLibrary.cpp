@@ -35,6 +35,10 @@ void WorkspaceLibrary::setAppearanceMode(QString value) {
     if (!QStringList{"system", "light", "dark"}.contains(value) || value == m_appearance) return;
     QSettings().setValue("home/appearance", value); m_appearance = value; emit preferencesChanged();
 }
+bool WorkspaceLibrary::quickStartPending() const { return QSettings().value("home/quickStartVersion",0).toInt()<1; }
+void WorkspaceLibrary::completeQuickStart() {
+    QSettings().setValue("home/quickStartVersion",1);emit preferencesChanged();
+}
 void WorkspaceLibrary::setThemePreset(QString value) {
     if (!QStringList{"dark", "graphite", "teal", "blue"}.contains(value) || value == m_theme) return;
     QSettings().setValue("home/theme", value); m_theme = value; emit preferencesChanged();

@@ -182,11 +182,11 @@ add_executable(nested_probe ../main.cpp)
     def test_portable_executable_gets_same_public_binary_check(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / 'MossStudio.exe').touch()
+            (root / 'XAvatar.exe').touch()
             completed = subprocess.CompletedProcess([], 0, stdout='MOSS_PUBLIC_LOCAL_ONLY_V1\n', stderr='')
             with patch.object(release.subprocess, 'run', return_value=completed) as run:
                 release.audit_app(root)
-                self.assertEqual(Path(run.call_args.args[0][0]), root / 'MossStudio.exe')
+                self.assertEqual(Path(run.call_args.args[0][0]), root / 'XAvatar.exe')
                 self.assertIn('--public-release-check', run.call_args.args[0])
 
     def test_windows_binaries_cannot_enter_public_source(self):

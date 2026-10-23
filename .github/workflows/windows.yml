@@ -2,10 +2,10 @@ name: Windows x64 App
 
 on:
   push:
-    branches: [public-release]
+    branches: [master, dev]
     tags: ['v*', 'windows-*']
   pull_request:
-    branches: [public-release]
+    branches: [master, dev]
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: windows-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/public-release') }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
 
 jobs:
   build:
@@ -70,7 +70,7 @@ jobs:
             .local/ci-windows/build/ming/bin
             .local/ci-windows/build/engines-ready.txt
           key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
-      - name: Build native engines, run CTest and deploy a portable ZIP
+      - name: Build native engines, run CTest and deploy and test the XAvatar installer
         run: python scripts/build_ci_windows.py
       - name: Save completed engines even if later worker or packaging checks fail
         if: always() && !cancelled() && steps.engine-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci-windows/build/engines-ready.txt') != ''

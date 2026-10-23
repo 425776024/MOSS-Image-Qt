@@ -12,6 +12,13 @@ class WorkspaceLibraryTest : public QObject {
     Q_OBJECT
     QTemporaryDir m_settings;
 private slots:
+    void quickStartCompletionSurvivesRestart() {
+        QTemporaryDir root;QSettings().remove("home/quickStartVersion");
+        WorkspaceLibrary first(root.path());QVERIFY(first.quickStartPending());
+        QSignalSpy changed(&first,&WorkspaceLibrary::preferencesChanged);
+        first.completeQuickStart();QVERIFY(!first.quickStartPending());QCOMPARE(changed.count(),1);
+        WorkspaceLibrary reopened(root.path());QVERIFY(!reopened.quickStartPending());
+    }
     void initTestCase() {
         QVERIFY(m_settings.isValid());
         QSettings::setDefaultFormat(QSettings::IniFormat);

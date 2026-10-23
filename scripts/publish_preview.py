@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 
 REPO = '425776024/MOSS-Image-Qt'
-BRANCH = 'public-release'
+BRANCH = 'master'
 PLATFORMS = {
     '.github/workflows/macos.yml': ('macos', 'macOS', 'macOS-arm64-unsigned', 'SHA256SUMS.txt'),
     '.github/workflows/windows.yml': ('windows', 'Windows', 'Windows-x64-preview', 'SHA256SUMS-windows-x64.txt'),
@@ -31,7 +31,7 @@ def validate_run(run):
             or run.get('head_repository', {}).get('full_name') != REPO
             or run.get('path') not in PLATFORMS
             or not re.fullmatch(r'[0-9a-f]{40}', run.get('head_sha', ''))):
-        raise ValueError('Only successful macOS/Windows push builds from public-release may be published')
+        raise ValueError('Only successful macOS/Windows push builds from master may be published')
     return PLATFORMS[run['path']]
 
 
@@ -57,9 +57,9 @@ def verified_assets(folder, platform, checksums, sha, *, notarized=False):
         entries[name] = digest
     kind = 'notarized' if notarized else 'unsigned'
     suffixes = ((f'-macOS-arm64-{kind}.app.zip', f'-macOS-arm64-{kind}.dmg')
-                if platform == 'macos' else ('-Windows-x64-preview.zip',))
+                if platform == 'macos' else ('-Windows-x64-Setup.exe',))
     if len(entries) != len(suffixes) or any(
-            sum(name.startswith('Moss-Studio-') and name.endswith(suffix) for name in entries) != 1
+            sum(name.startswith('Moss-Studio-' if platform == 'macos' else 'XAvatar-') and name.endswith(suffix) for name in entries) != 1
             for suffix in suffixes):
         raise ValueError('Unexpected development package set')
     names = set(entries) | {checksums}
@@ -119,9 +119,9 @@ def publish(run_id):
                          '需要已公证安装包时，请选择下载目录中的已公证发布版。\n\n'
                          '**macOS development build: ad-hoc signed, not Apple notarized.** '
                          'Choose a notarized release for a notarized installer.' if platform == 'macos' else
-                         '**Windows 开发测试包。** 完整解压 ZIP 后运行 MossStudio.exe；'
+                         '**Windows 开发测试包。** 运行 XAvatar 安装程序，安装后从桌面或开始菜单启动；'
                          'GPU 推理与真实桌面验收仍需实机测试。\n\n'
-                         '**Windows development build.** Extract the complete ZIP before running MossStudio.exe. '
+                         '**Windows development build.** Run the XAvatar installer, then launch from the desktop or Start menu. '
                          'GPU inference and desktop validation still require a real PC.')
         notes = root / 'notes.md'
         notes.write_text(f'{qualification}\n\n'

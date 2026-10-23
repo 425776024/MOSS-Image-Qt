@@ -4,11 +4,11 @@ on:
   workflow_run:
     workflows: [Windows x64 App]
     types: [completed]
-    branches: [public-release]
+    branches: [master]
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'Successful Windows public-release push build to publish'
+        description: 'Successful Windows master push build to publish'
         required: true
         type: string
 
@@ -35,7 +35,7 @@ jobs:
       # or the triggering PR. Downloaded app binaries are not executed here.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: public-release
+          ref: master
           persist-credentials: false
       - name: Verify source, checksums and publish a development Release
         env:

@@ -8,9 +8,9 @@
 
 macOS 支持 **Apple Silicon（M1 及后续芯片）、macOS 15+**，提供 DMG 和 App ZIP；签名与公证状态以对应发布说明为准。运行无需 Python，模型按需下载。
 
-Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 Vulkan / DirectML 后端。完整解压便携 ZIP 后运行 `MossStudio.exe`；无需安装 Python，模型按需下载。显卡完整推理及真实桌面、导出验收仍待实测。首轮测试可双击包内 `test_windows.cmd`。
+Windows 测试预览版支持 **Windows 10 1903+ / Windows 11、x64**，包含 Vulkan / DirectML 后端。新版提供 `XAvatar-…-Setup.exe` 单文件安装程序，安装后从桌面或开始菜单启动“新身数字人”；无需安装 Python，首次进入可多选下载资源，并引导选择创作功能。显卡完整推理及真实桌面、导出验收仍待实测。首轮测试可双击包内 `test_windows.cmd`。
 
-`public-release` 每次推送都会自动编译两个平台。macOS 经维护者[本地一键公证发布](docs/macos-release.md#本地一键公证和发布)后更新下载目录；Windows 成功构建后自动发布。构建记录见 [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Apublic-release+event%3Apush) 和 [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Apublic-release+event%3Apush)；也可从成功运行的 Artifacts 下载。
+`master` 为稳定主线，`dev` 为日常开发分支；两者每次推送都会自动编译两个平台。macOS 经维护者[本地一键公证发布](docs/macos-release.md#本地一键公证和发布)后更新下载目录；Windows 成功构建后自动发布。构建记录见 [macOS Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/macos.yml?query=branch%3Amaster+event%3Apush) 和 [Windows Actions](https://github.com/425776024/MOSS-Image-Qt/actions/workflows/windows.yml?query=branch%3Amaster+event%3Apush)；也可从成功运行的 Artifacts 下载。
 
 ## 功能预览
 

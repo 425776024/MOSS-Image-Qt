@@ -2,10 +2,10 @@ name: macOS App and DMG
 
 on:
   push:
-    branches: [public-release]
+    branches: [master, dev]
     tags: ['v*']
   pull_request:
-    branches: [public-release]
+    branches: [master, dev]
   workflow_dispatch:
     inputs:
       notarize:
@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: macos-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/public-release') }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
 
 jobs:
   build:

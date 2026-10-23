@@ -162,6 +162,38 @@ QVariantList ModelManager::groups() const {
 double ModelManager::partialBytes() const {
     qint64 bytes=0;for(const auto &a:m_assets)if(safePath(a.path+".part")&&QFileInfo(m_root+"/"+a.path+".part").isFile())bytes+=QFileInfo(m_root+"/"+a.path+".part").size();return bytes;
 }
+QVariantList ModelManager::resources() const {
+    QVariantList rows;
+    const QStringList ids={"image","ditto","voice","sfx"};
+    const QStringList titles={"图像创作","数字人","语音与音色","音效"};
+    for(int i=0;i<ids.size();++i) {
+        const auto files=selected(expand({ids[i]}));
+        if(files.isEmpty())continue;
+        qint64 total=0,missing=0;
+        for(const auto &asset:files){total+=asset.bytes;if(!present(asset))missing+=asset.bytes;}
+        rows.append(QVariantMap{{"id",ids[i]},{"title",titles[i]},
+            {"ready",ready(ids[i])},{"totalBytes",total},{"missingBytes",missing},{"size",sizeText(missing)}});
+    }
+    return rows;
+}
+void ModelManager::showInitialSetup() {
+    if(locked()||m_setupOffered||QSettings().value("resourceSetupVersion",0).toInt()>=1)return;
+    m_setupOffered=true;
+    QStringList defaults;bool missing=false;
+    for(const auto &value:resources()) {
+        const auto row=value.toMap();if(row["ready"].toBool())continue;
+        missing=true;
+        const auto id=row["id"].toString();if(id=="ditto"||id=="voice")defaults<<id;
+    }
+    if(!missing){QSettings().setValue("resourceSetupVersion",1);return;}
+    m_initialSetup=true;setRequested(defaults);emit downloadRequested();
+}
+void ModelManager::setRequested(QStringList capabilities) {
+    if(locked())return;
+    QStringList valid;
+    for(const auto &id:capabilities)if(!expand({id}).isEmpty()&&!valid.contains(id))valid<<id;
+    m_requested=valid;m_error.clear();m_status.clear();m_progress=0;emit changed();
+}
 bool ModelManager::sfxTermsAccepted() const {
     return QSettings().value("sfxModelTermsVersion").toString()=="2026-10-22";
 }
@@ -177,16 +209,21 @@ QString ModelManager::modelTerms(bool english) const {
     return english&&section>=0?text.mid(section):text.left(section>=0?section:text.size());
 }
 bool ModelManager::ensure(QStringList capabilities) {
+    if(locked())return false;
     QStringList missing;for(const auto &id:expand(capabilities))if(!ready(id)||(id=="sfx"&&!sfxTermsAccepted()))missing<<id;
     if(missing.isEmpty())return true;
     // Keep the logical image group so Q4/Q8 can be selected in the dialog.
-    m_requested=capabilities;m_error.clear();emit changed();emit downloadRequested();return false;
+    setRequested(capabilities);emit downloadRequested();return false;
 }
 void ModelManager::requestDownload(QString group) {
     if(locked()||expand({group}).isEmpty())return;
-    m_requested={group};m_error.clear();emit changed();emit downloadRequested();
+    setRequested({group});emit downloadRequested();
 }
-void ModelManager::dismissRequest(){if(!busy()){m_requested.clear();emit changed();}}
+void ModelManager::dismissRequest(){
+    if(busy())return;
+    if(m_initialSetup){QSettings().setValue("resourceSetupVersion",1);m_initialSetup=false;}
+    m_requested.clear();emit changed();
+}
 QVariantMap ModelManager::requestInfo() const {
     QStringList names;qint64 bytes=0;
     for(const auto &id:expand(m_requested)) {

@@ -14,6 +14,7 @@ class WorkspaceLibrary : public QObject {
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY preferencesChanged)
     Q_PROPERTY(QString languagePreference READ languagePreference NOTIFY preferencesChanged)
     Q_PROPERTY(QString appName READ appName NOTIFY preferencesChanged)
+    Q_PROPERTY(bool quickStartPending READ quickStartPending NOTIFY preferencesChanged)
     Q_PROPERTY(QString root READ root CONSTANT)
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(bool canRestoreAvatar READ canRestoreAvatar NOTIFY avatarsChanged)
@@ -27,6 +28,8 @@ public:
     QString language() const { return m_language; }
     QString languagePreference() const { return m_languagePreference; }
     QString appName() const { return m_language == "zh" ? QStringLiteral("新身数字人") : QStringLiteral("XAvatar"); }
+    bool quickStartPending() const;
+    Q_INVOKABLE void completeQuickStart();
     static QString resolveLanguage(const QStringList &uiLanguages);
     void setAppearanceMode(QString value);
     void setThemePreset(QString value);

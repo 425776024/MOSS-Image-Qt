@@ -5,7 +5,7 @@
 
 ## 普通构建
 
-推送到 `public-release`，向默认分支提交 PR，或手动运行工作流，
+推送到 `master`，向默认分支提交 PR，或手动运行工作流，
 会从公开依赖构建完整 App：Qt 界面、sd-cli、moss-ditto、moss-voice、sa3-generate。
 两个平台均构建触发该次运行的提交，不固定旧分支或旧标签；新推送会取消同分支尚未完成的旧推送构建。
 本地改动须先提交并推送才会进入 CI；手动签名和标签发布不受推送取消影响。
@@ -31,7 +31,7 @@ macOS 未公证开发包只保留在 Actions Artifacts，不再自动公开发�
 ./scripts/release_macos.command
 ```
 
-脚本会选择 GitHub 当前 `public-release` 提交的 macOS push 构建；仍在构建时会等待。
+脚本会选择 GitHub 当前 `master` 提交的 macOS push 构建；仍在构建时会等待。
 失败、取消、PR 或非主线构建不会发布，也不会悄悄退回旧构建。
 它不提交或上传本地未提交代码；界面修改须先提交并推送到主线。
 
@@ -97,7 +97,7 @@ python3 scripts/macos_distribution.py sign-notarize-local 'dist/Moss Studio.app'
    本流程使用带 Issuer ID 的团队密钥，不接受需要省略 issuer 的个人 API key。
    `.p8` 只可下载一次；保存在仓库外。无需 Apple 主密码或双重认证验证码。
 3. 在仓库 Settings → Environments 创建 `macos-release`，限制允许的部署分支为
-   `public-release`，允许的标签为 `v*`。如默认分支改名，更新这里及工作流触发条件。
+   `master`，允许的标签为 `v*`。如默认分支改名，更新这里及工作流触发条件。
    同时通过仓库 Rulesets 限制发布标签只能由维护者创建/修改，并保护默认分支和 workflow 修改。
    如套餐支持，可添加 Required reviewers。只有一个维护者时不要启用“禁止自行批准”。
 4. 在该 Environment 的 Secrets 中添加下表内容。不要使用普通 Variables。

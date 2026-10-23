@@ -20,7 +20,7 @@ if ($CpuVoice) { $env:MOSS_VOICE_BACKEND = 'cpu' } else { $env:MOSS_VOICE_BACKEN
 
 function Invoke-MossTest([string]$Name, [string[]]$Arguments, [int]$Timeout = 120) {
     $timer = [Diagnostics.Stopwatch]::StartNew()
-    $process = Start-Process -FilePath (Join-Path $appRoot 'MossStudio.exe') -ArgumentList $Arguments -PassThru `
+    $process = Start-Process -FilePath (Join-Path $appRoot 'XAvatar.exe') -ArgumentList $Arguments -PassThru `
         -RedirectStandardOutput (Join-Path $reportRoot "$Name.stdout.log") `
         -RedirectStandardError (Join-Path $reportRoot "$Name.stderr.log")
     while (-not $process.WaitForExit(1000)) {

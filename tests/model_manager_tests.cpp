@@ -29,6 +29,38 @@ class ModelManagerTests:public QObject {
     }
     QByteArray read(QString path) {QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return f.readAll();}
 private slots:
+    void firstLaunchOffersMultipleResourcesOnceWithoutDownloading() {
+        QTemporaryDir root;ModelManager manager(nullptr,catalog());manager.setRoot(root.path());
+        QSignalSpy offered(&manager,&ModelManager::downloadRequested);
+        manager.showInitialSetup();QCOMPARE(offered.count(),1);QVERIFY(manager.initialSetup());
+        QCOMPARE(manager.requested(),QStringList{"ditto"});QVERIFY(!manager.busy());
+        QCOMPARE(manager.resources().size(),2);
+        manager.setRequested({"image","ditto","image","invalid"});
+        QCOMPARE(manager.requested(),(QStringList{"image","ditto"}));
+        manager.dismissRequest();QVERIFY(!manager.initialSetup());QVERIFY(manager.requested().isEmpty());
+        manager.showInitialSetup();QCOMPARE(offered.count(),1);
+        ModelManager reopened(nullptr,catalog());reopened.setRoot(root.path());
+        QSignalSpy next(&reopened,&ModelManager::downloadRequested);reopened.showInitialSetup();
+        QCOMPARE(next.count(),0);QVERIFY(!reopened.busy());
+        reopened.requestDownload("image");QCOMPARE(next.count(),1);
+    }
+    void readyInstallationSkipsSetupAndResourceSizesRespectImageQuality() {
+        QTemporaryDir root;ModelManager manager(nullptr,catalog());manager.setRoot(root.path());manager.setImageQuant("Q4_K");
+        for(const auto &id:{"image-q4","image-shared","ditto"})write(root.filePath(QString(id)+"/model.bin"),payload);
+        QSignalSpy offered(&manager,&ModelManager::downloadRequested);manager.showInitialSetup();
+        QCOMPARE(offered.count(),0);QVERIFY(!manager.initialSetup());
+        QCOMPARE(manager.resources().first().toMap()["missingBytes"].toLongLong(),0);
+        manager.setImageQuant("Q8_0");
+        QCOMPARE(manager.resources().first().toMap()["missingBytes"].toLongLong(),payload.size());
+        QCOMPARE(manager.resources().first().toMap()["totalBytes"].toLongLong(),payload.size()*2);
+    }
+    void multiSelectionKeepsSoundTermsExplicitAndDeduplicatesImageFiles() {
+        QTemporaryDir root;ModelManager manager(nullptr,catalog().replace("ditto","sfx"));manager.setRoot(root.path());
+        manager.setRequested({"image","image-q4","sfx"});QVERIFY(manager.sfxTermsRequired());
+        manager.startDownload();QVERIFY(!manager.busy());QVERIFY(!manager.error().isEmpty());
+        manager.setRequested({"image"});QVERIFY(!manager.sfxTermsRequired());
+        manager.setRequested({});QVERIFY(manager.requested().isEmpty());manager.startDownload();QVERIFY(!manager.busy());
+    }
     void initTestCase() {QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());QCoreApplication::setOrganizationName("ModelTest");QCoreApplication::setApplicationName("ModelTest");}
     void init(){QSettings().clear();qunsetenv("MOSS_MODEL_ROOT");qunsetenv("MOSS_IMAGE_QUANT");}
     void soundTermsGateDownloadAndInstalledModelUse() {

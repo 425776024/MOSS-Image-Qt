@@ -17,6 +17,7 @@
 #include <QQuickImageProvider>
 #include <QSettings>
 #include <QKeyEvent>
+#include <QIcon>
 #ifdef Q_OS_MACOS
 #include "WindowAppearance.h"
 #endif
@@ -57,6 +58,7 @@ int main(int argc,char **argv){
     if(backgroundTest)qInfo("Moss background test: offscreen rendering; no desktop window or input automation.");
     app.setOrganizationName("MossStudio");app.setApplicationName("MossStudio");app.setApplicationVersion("0.1.0");
     app.setApplicationDisplayName(QString::fromUtf8("新身数字人"));
+    app.setWindowIcon(QIcon(":/home/assets/app-icon/xinshen-1024.png"));
     if(qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,qEnvironmentVariable("MOSS_SETTINGS_ROOT"));
@@ -100,6 +102,14 @@ int main(int argc,char **argv){
     QObject::connect(app.styleHints(),&QStyleHints::colorSchemeChanged,&app,updateAppearance);
 #endif
     if(mainWindow) mainWindow->show();
+    // Offer setup only after the real home window is shown. Automated captures
+    // opt in explicitly so existing startup and inference checks stay isolated.
+    if(!backgroundTest||args.contains("--check-initial-setup"))
+        QTimer::singleShot(0,&app,[&]{
+            studio.models()->showInitialSetup();
+            if(!studio.models()->initialSetup())QMetaObject::invokeMethod(homeWindow,"showQuickStart");
+        });
+    if(args.contains("--native-titlebar"))homeWindow->setProperty("nativeTitleBar",true);
     if(editorTest){
         const auto at=args.indexOf("--editor-mode");
         const bool av=args.contains("--timeline-test")||args.contains("--avatar-test")||args.contains("--page-video-test")||args.contains("--voice-only-test");
@@ -205,6 +215,51 @@ int main(int argc,char **argv){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         if(!args.contains("--preserve-preview")&&!args.contains("--home-smoke"))studio.document()->example();
         if(args.contains("--home-smoke")){
+            if(args.contains("--check-quick-start")||args.contains("--capture-task-menu"))QTimer::singleShot(1200,&app,[&]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
+                auto active=qvariant_cast<QObject *>(homeWindow->property("activeView"));
+                auto picker=active?active->findChild<QQuickItem *>("conversationTask"):nullptr;
+                auto popup=picker?qvariant_cast<QObject *>(picker->property("popup")):nullptr;
+                if(!picker||!popup||!workspace.quickStartPending()){app.exit(5);return;}
+                picker->forceActiveFocus(Qt::TabFocusReason);QMetaObject::invokeMethod(popup,"open");
+                if(args.contains("--check-quick-start")){
+                    const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                    key(Qt::Key_Home);key(Qt::Key_Down);key(Qt::Key_Down);key(Qt::Key_Down);key(Qt::Key_Return);
+                    if(studio.conversation()->task()!="voice"||workspace.quickStartPending()||!homeWindow->activeFocusItem()||homeWindow->activeFocusItem()->objectName()!="conversationDraft"){app.exit(5);return;}
+                    qInfo("Quick start: task menu keyboard selection, input focus and completion persistence passed");
+                }
+            });
+            if(args.contains("--check-initial-setup"))QTimer::singleShot(900,&app,[&]{
+                if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")||!qEnvironmentVariableIsSet("MOSS_MODEL_ROOT")){app.exit(5);return;}
+                auto dialog=homeWindow->findChild<QObject *>("modelDownloadDialog");
+                if(!dialog||!dialog->property("opened").toBool()||!studio.models()->initialSetup()||studio.models()->busy()){app.exit(5);return;}
+                // Repeater controls follow the visual tree inside the overlay.
+                std::function<QQuickItem *(QQuickItem *,QString)> findItem=[&](QQuickItem *item,QString name)->QQuickItem *{
+                    if(item->objectName()==name)return item;
+                    for(auto child:item->childItems())if(auto found=findItem(child,name))return found;
+                    return nullptr;
+                };
+                const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                auto image=findItem(homeWindow->contentItem(),"setupResource-image");
+                auto sound=findItem(homeWindow->contentItem(),"setupResource-sfx");
+                auto confirm=findItem(homeWindow->contentItem(),"confirmModelDownload");
+                if(!image||!sound||!confirm||studio.models()->requested()!=QStringList{"ditto","voice"}){app.exit(5);return;}
+                image->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                if(!studio.models()->requested().contains("image")||studio.models()->requested().size()!=3){app.exit(5);return;}
+                key(Qt::Key_Tab);if(homeWindow->activeFocusItem()==image){app.exit(5);return;}
+                sound->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                if(!studio.models()->sfxTermsRequired()||confirm->isEnabled()){app.exit(5);return;}
+                key(Qt::Key_Return);if(studio.models()->busy()){app.exit(5);return;}
+                sound->forceActiveFocus();key(Qt::Key_Space);
+                if(!confirm->isEnabled()||studio.models()->requested().size()!=3){app.exit(5);return;}
+                // Keep the chooser visible for the normal capture. A second
+                // probe exercises dismissal and the persisted first-run flag.
+                if(args.contains("--check-setup-dismiss")){
+                    key(Qt::Key_Escape);studio.models()->showInitialSetup();
+                    if(dialog->property("visible").toBool()||studio.models()->initialSetup()||QSettings().value("resourceSetupVersion").toInt()!=1){app.exit(5);return;}
+                }
+                qInfo("Initial resource setup: multi-selection, Tab, guarded Return and dismissal passed; no downloads started");
+            });
             homeWindow->setProperty("destination",argument("--home-page","chat"));
             if(auto settings=homeWindow->findChild<QObject *>("homeSettings"))
                 settings->setProperty("section",argument("--settings-section",argument("--home-page","chat")=="about"?"5":"0").toInt());

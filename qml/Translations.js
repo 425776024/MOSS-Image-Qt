@@ -2,6 +2,13 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "选择创作功能": "Choose a creative task",
+    "从下方菜单选择功能，再输入内容并发送。": "Choose a task below, then enter your idea and send it.",
+    "选择功能": "Choose task",
+    "知道了": "Got it",
+    "选择需要的创作资源，可稍后在设置中下载。": "Choose resources to download. You can add more in Settings later.",
+    "所需下载": "Download size",
+    "可以开始创作了": "You're ready to create",
     "图生图": "Image to Image",
     "整图": "Whole Image",
     "局部": "Selection",

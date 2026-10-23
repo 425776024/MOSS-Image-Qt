@@ -31,9 +31,11 @@ qt_add_executable(MossStudio MACOSX_BUNDLE
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
     src/WorkspaceLibrary.cpp src/WorkspaceLibrary.h src/main.cpp src/ModelManager.cpp src/ModelManager.h src/Studio.cpp src/StudioTimeline.cpp src/Studio.h src/RemoteImageClient.cpp src/RemoteImageClient.h src/TimelineDocument.cpp src/TimelineDocument.h src/AudioDurationProbe.cpp src/AudioDurationProbe.h src/Document.cpp src/Document.h src/SoundPlan.cpp src/SoundPlan.h)
 qt_add_resources(MossStudio home_resources PREFIX "/home"
-    FILES THIRD_PARTY.md assets/home/wechat_contact_qr.png assets/home/wechat_official_account_qr.png)
+    FILES THIRD_PARTY.md assets/app-icon/xinshen-1024.png assets/home/wechat_contact_qr.png assets/home/wechat_official_account_qr.png)
 if(WIN32)
-    set_target_properties(MossStudio PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_sources(MossStudio PRIVATE config/windows-app.rc)
+    target_include_directories(MossStudio PRIVATE assets/app-icon)
+    set_target_properties(MossStudio PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME XAvatar)
 endif()
 if(APPLE)
     foreach(language en zh-Hans)

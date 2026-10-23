@@ -55,7 +55,7 @@ class LocalMacOSReleaseTests(unittest.TestCase):
 
     def test_latest_running_build_is_waited_for_and_not_replaced_by_old_success(self):
         run = dict(id=123, head_sha='a' * 40, status='in_progress', event='push',
-                   head_branch='public-release', path='.github/workflows/macos.yml',
+                   head_branch='master', path='.github/workflows/macos.yml',
                    head_repository={'full_name': release.preview.REPO}, html_url='https://example.com/build')
         finished = dict(run, status='completed', conclusion='success')
         responses = [{'commit': {'sha': run['head_sha']}}, {'workflow_runs': [run]}, finished, {'status': 'identical'}]

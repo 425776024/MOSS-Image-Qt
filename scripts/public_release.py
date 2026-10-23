@@ -48,7 +48,7 @@ def audit_app(app):
         if path.is_file() and path.name in {Path(p).name for p in PRIVATE_SERVER_FILES}:
             raise ValueError('Server payload in App: ' + str(path))
     env = dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_QUICK_BACKEND='software')
-    executable = app.absolute() / ('MossStudio.exe' if (app / 'MossStudio.exe').is_file() else 'Contents/MacOS/MossStudio')
+    executable = app.absolute() / ('XAvatar.exe' if (app / 'XAvatar.exe').is_file() else 'Contents/MacOS/MossStudio')
     result = subprocess.run([str(executable),
                              '--headless', '--public-release-check'],
                             capture_output=True, text=True, timeout=10, env=env)

@@ -16,7 +16,9 @@ Item {
     property string pickerMode: "target"
     property bool imageToolsOpen: false
     property string toolsTask: ""
-    property bool inspectorOpen: true
+    property bool inspectorOpen: thread.messages.some(entry=>(entry.assetIds || []).length>0)
+    property bool quickStartActive: false
+    readonly property bool showingQuickStart: quickStartActive && workspace.quickStartPending
     property real minimumChatWidth: 540
     property real preferredInspectorWidth: 400
     property real maximumInspectorWidth: 490
@@ -177,6 +179,22 @@ Item {
         }
 
         CardSurface {
+            objectName: "creationQuickStart"
+            visible: root.showingQuickStart
+            Layout.fillWidth: true; Layout.leftMargin: root.railMargin; Layout.rightMargin: root.railMargin
+            implicitHeight: quickStartBody.implicitHeight+20; baseColor: HomeTheme.preview; radius: 10
+            RowLayout {
+                id: quickStartBody; anchors.fill: parent; anchors.margins: 10; spacing: 10
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 4
+                    Label { Layout.fillWidth: true; text: HomeTheme.t("选择创作功能"); color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.DemiBold; wrapMode: Text.Wrap }
+                    Label { Layout.fillWidth: true; text: HomeTheme.t("从下方菜单选择功能，再输入内容并发送。"); color: HomeTheme.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                }
+                HomeButton { objectName: "quickStartDismiss"; text: HomeTheme.t("知道了"); quiet: true; compact: true; onClicked: workspace.completeQuickStart() }
+                HomeButton { objectName: "quickStartChoose"; text: HomeTheme.t("选择功能"); compact: true; onClicked: {taskPicker.forceActiveFocus();taskPicker.popup.open()} }
+            }
+        }
+        CardSurface {
             id: composer; objectName: "conversationComposer"
             Layout.fillWidth: true; Layout.leftMargin: root.railMargin; Layout.rightMargin: root.railMargin; Layout.bottomMargin: 16
             implicitHeight: composerBody.implicitHeight+20; baseColor: HomeTheme.field; radius: 12; outlined: true
@@ -217,7 +235,12 @@ Item {
                         AppSelect {
                             id: taskPicker; objectName: "conversationTask"; width: HomeTheme.english ? 156 : 112; height: 30
                             surfaceColor: HomeTheme.preview; surfaceRadius: 7; model: root.taskLabels; currentIndex: root.taskKeys.indexOf(root.thread.task)
-                            onActivated: index => {root.forceActiveFocus();root.thread.task=root.taskKeys[index]}
+                            surfaceBorderColor: root.showingQuickStart ? HomeTheme.accent : HomeTheme.line
+                            outlined: root.showingQuickStart
+                            onActivated: index => {
+                                root.forceActiveFocus();root.thread.task=root.taskKeys[index]
+                                if(root.showingQuickStart){workspace.completeQuickStart();draft.forceActiveFocus()}
+                            }
                             Accessible.name: HomeTheme.t("创作功能"); font.pixelSize: 12
                         }
                         HomeButton {

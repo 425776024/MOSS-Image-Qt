@@ -4,12 +4,14 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 
 ApplicationWindow {
-    ModelDownloadDialog {}
+    ModelDownloadDialog { onSetupFinished: home.showQuickStart() }
     id: home
     objectName: "homeWindow"
     width: 1080; height: 720; minimumWidth: 960; minimumHeight: 640
     visible: false; topPadding: 0
-    title: workspace.appName + (HomeTheme.english ? " · Creative studio" : HomeTheme.t(" · 对话创作")); color: HomeTheme.surface
+    title: workspace.appName; color: HomeTheme.surface
+    property bool nativeTitleBar: Qt.platform.os !== "osx"
+    property bool quickStartActive: false
     font.family: ".AppleSystemUIFont"; font.pixelSize: 14
     property string destination: "chat"
     property int page: 0
@@ -48,6 +50,10 @@ ApplicationWindow {
         if(studio.conversation && context)studio.conversation.task=({speech:"avatar",voice:"voice",sfx:"sfx",image:"image"})[context] || studio.conversation.task
         showConversation()
     }
+    function showQuickStart() {
+        if(!workspace.quickStartPending)return
+        destination="chat";quickStartActive=true
+    }
     function showHome(target) { if(target === "models"){settings.section=1;destination="settings"}else destination=target === "works" ? "chat" : target || "chat" }
     function openInspector(context) { showEditor(context) }
     function openWork(id) { home.contentItem.forceActiveFocus();destination="chat";studio.openConversation(id);showConversation() }
@@ -62,7 +68,7 @@ ApplicationWindow {
     Connections { target: studio; function onConversationChanged(){home.showConversation()} }
     onDestinationChanged: if(activeView)activeView.visible=destination === "chat"
     Component.onCompleted: showConversation()
-    Component { id: threadComponent; ConversationView { anchors.fill: parent; visible: false; minimumChatWidth: Math.min(home.width*.5, Math.max(400, threadHost.width-261)); preferredInspectorWidth: home.inspectorWidth; maximumInspectorWidth: home.width*.34; onInspectorWidthAdjusted: width => home.inspectorWidth=width } }
+    Component { id: threadComponent; ConversationView { anchors.fill: parent; visible: false; quickStartActive: home.quickStartActive; minimumChatWidth: Math.min(home.width*.5, Math.max(400, threadHost.width-261)); preferredInspectorWidth: home.inspectorWidth; maximumInspectorWidth: home.width*.34; onInspectorWidthAdjusted: width => home.inspectorWidth=width } }
     component RailButton: AbstractButton {
         id: button
         property string glyph: "document"
@@ -93,6 +99,8 @@ ApplicationWindow {
     ColumnLayout {
         anchors.fill: parent; spacing: 0
         Rectangle {
+            objectName: "homeTitleStrip"
+            visible: !home.nativeTitleBar
             Layout.fillWidth: true; Layout.preferredHeight: 32; color: HomeTheme.sidebar
             MouseArea { anchors.fill: parent; onPressed: home.startSystemMove(); onDoubleClicked: home.visibility === Window.Maximized ? home.showNormal() : home.showMaximized() }
             Text { anchors.centerIn: parent; text: workspace.appName; color: HomeTheme.secondary; font.pixelSize: 12; font.weight: Font.Medium }

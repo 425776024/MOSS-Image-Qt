@@ -15,7 +15,7 @@ SHA = 'a' * 40
 
 class PreviewPublicationTests(unittest.TestCase):
     def run_info(self):
-        return dict(event='push', head_branch='public-release', status='completed',
+        return dict(event='push', head_branch='master', status='completed',
                     conclusion='success', head_repository={'full_name': preview.REPO},
                     path='.github/workflows/macos.yml', head_sha=SHA)
 
@@ -101,10 +101,10 @@ class PreviewPublicationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 preview.verified_assets(root, 'macos', 'SHA256SUMS.txt', SHA)
 
-    def test_windows_archive_is_verified(self):
+    def test_windows_installer_is_verified(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            name = 'Moss-Studio-0.1.0-Windows-x64-preview.zip'
+            name = 'XAvatar-0.1.0-Windows-x64-Setup.exe'
             (root / name).write_bytes(b'windows archive')
             (root / 'SHA256SUMS-windows-x64.txt').write_text(
                 hashlib.sha256(b'windows archive').hexdigest() + '  ' + name + '\n')
