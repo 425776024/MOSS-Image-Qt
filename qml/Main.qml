@@ -7,9 +7,9 @@ ApplicationWindow {
     ModelDownloadDialog { onSetupFinished: home.showQuickStart() }
     id: home
     objectName: "homeWindow"
-    width: Math.min(1440,Math.max(1200,Screen.desktopAvailableWidth-40))
-    height: Math.min(860,Screen.desktopAvailableHeight-48,width*.62)
-    minimumWidth: 1200; minimumHeight: 680
+    width: Math.min(1152,Math.max(1080,Screen.desktopAvailableWidth-40))
+    height: Math.min(688,Screen.desktopAvailableHeight-48,width*.62)
+    minimumWidth: 1080; minimumHeight: 600
     visible: false; topPadding: 0
     title: workspace.appName; color: HomeTheme.surface
     property bool nativeTitleBar: Qt.platform.os !== "osx"
