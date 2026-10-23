@@ -25,6 +25,20 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 | --- | --- |
 | [<img src="assets/screenshots/en/studio.png" alt="Projects and images" width="420" />](assets/screenshots/en/studio.png) | [<img src="assets/screenshots/en/voice-design.png" alt="Voice design and templates" width="420" />](assets/screenshots/en/voice-design.png) |
 
+## Talking-avatar demos
+
+Both videos include sound. The left side shows the official model; the far-right optimized result requires the App Store version. GitHub builds use the official model.
+
+**Multiple avatars · 84 seconds**
+
+https://github.com/user-attachments/assets/c8c14e41-5ce8-4330-bbd6-d52f6e8f06cb
+
+**Video portrait · 20 seconds**
+
+https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
+
+[Download original video 1](assets/showcase/avatar-demo-01.mp4) · [Download original video 2](assets/showcase/avatar-demo-02.mp4)
+
 ## Download
 
 [**Get installers, release notes, and checksums**](https://github.com/425776024/MOSS-Image-Qt/releases)

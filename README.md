@@ -25,6 +25,20 @@
 | --- | --- |
 | [<img src="assets/screenshots/zh-Hans/studio.png" alt="作品与图像创作" width="420" />](assets/screenshots/zh-Hans/studio.png) | [<img src="assets/screenshots/zh-Hans/voice-design.png" alt="声音设计与模板" width="420" />](assets/screenshots/zh-Hans/voice-design.png) |
 
+## 数字人视频
+
+视频含声音。左侧为官方原版，最右侧优化效果需 App Store 版本；GitHub 版使用官方原版模型。
+
+**多种形象 · 84 秒**
+
+https://github.com/user-attachments/assets/c8c14e41-5ce8-4330-bbd6-d52f6e8f06cb
+
+**视频人物 · 20 秒**
+
+https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
+
+[下载原始视频一](assets/showcase/avatar-demo-01.mp4) · [下载原始视频二](assets/showcase/avatar-demo-02.mp4)
+
 ## 下载
 
 [**前往 Releases 下载安装包、查看更新与校验和**](https://github.com/425776024/MOSS-Image-Qt/releases)
