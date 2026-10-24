@@ -259,8 +259,11 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         cuda_env = dict(env, XINSHEN_CUDA_RUNTIME_DIR=str(native / 'cuda'),
                         PATH=os.pathsep.join([str(native / 'cuda'), str(destination), env['PATH']]))
         cuda_runtime = json.loads(subprocess.check_output(
-            [str(destination / 'cuda/moss-ditto.exe'), 'runtime-check'], env=cuda_env, timeout=30, text=True))
-        if not cuda_runtime.get('tensorCheck') or 'CUDAExecutionProvider' not in cuda_runtime.get('providers', []):
+            [str(destination / 'moss-ditto.exe'), 'cuda-runtime-check'], env=cuda_env, timeout=45, text=True))
+        expected_cuda_version = re.search(r'/v([0-9.]+)/', json.loads(
+            (ROOT / 'config/windows-dependencies.json').read_text())['onnxruntime-cuda']['url']).group(1)
+        if (not cuda_runtime.get('tensorCheck') or 'CUDAExecutionProvider' not in cuda_runtime.get('providers', [])
+                or cuda_runtime.get('runtime') != expected_cuda_version):
             raise ValueError(f'Ditto CUDA runtime missing: {cuda_runtime}')
     finally:
         os.environ.clear()
@@ -274,6 +277,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         'pythonFree': True, 'deployedSmoke': True, 'installerValidated': True,
         'installedStartupValidated': True, 'uninstallValidated': True, 'gpuInferenceValidated': False,
         'cudaBundledInInstaller': False, 'cudaComponentsVerified': True,
+        'onnxRuntime': runtime, 'cudaRuntime': cuda_runtime,
         'imports': dlls}, indent=2) + '\n')
     with installer.open('rb') as f:
         checksum = hashlib.file_digest(f, 'sha256').hexdigest()

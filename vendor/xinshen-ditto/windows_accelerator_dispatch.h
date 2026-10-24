@@ -34,14 +34,32 @@ inline int runCudaChild(const std::filesystem::path &executable,
   std::wstring command = windowsArgument(executable.wstring());
   for (const auto &arg : arguments) command += L" " + windowsArgument(arg);
   // The small child executable ships with the app; independently cached CUDA
-  // DLLs must precede the parent app's DirectML ORT in the child search path.
+  // DLLs must precede both System32's ORT and the parent app's DirectML ORT.
   std::wstring environment;
-  auto inherited = GetEnvironmentStringsW();
-  if (!inherited) throw std::runtime_error("Cannot read worker environment");
   bool pathFound = false;
   const auto required = GetEnvironmentVariableW(L"XINSHEN_CUDA_RUNTIME_DIR", nullptr, 0);
   std::wstring runtime(required, L'\0');
   if (required) { GetEnvironmentVariableW(L"XINSHEN_CUDA_RUNTIME_DIR", runtime.data(), required); runtime.resize(required - 1); }
+  if (runtime.empty() || !std::filesystem::is_regular_file(std::filesystem::path(runtime) / "onnxruntime.dll"))
+    throw std::runtime_error("Verified CUDA runtime directory is unavailable");
+  // SetDllDirectory is inherited by Win32 children and precedes System32.
+  // PATH and the current directory alone are searched after System32, which
+  // can load the Windows ORT before main() and crash on an incompatible API.
+  // Scope this to the isolated worker, restoring its setting after the child.
+  struct DllDirectory {
+    std::wstring previous;
+    explicit DllDirectory(const std::wstring &directory) {
+      const DWORD length = GetDllDirectoryW(0, nullptr);
+      if (length) {
+        previous.resize(length);
+        previous.resize(GetDllDirectoryW(length, previous.data()));
+      }
+      if (!SetDllDirectoryW(directory.c_str())) throw std::runtime_error("Cannot select CUDA DLL directory");
+    }
+    ~DllDirectory() { SetDllDirectoryW(previous.empty() ? nullptr : previous.c_str()); }
+  } dllDirectory(runtime);
+  auto inherited = GetEnvironmentStringsW();
+  if (!inherited) throw std::runtime_error("Cannot read worker environment");
   const auto prefix = (runtime.empty() ? L"" : runtime + L";") + executable.parent_path().wstring() + L";" +
                       executable.parent_path().parent_path().wstring() + L";";
   for (const wchar_t *p = inherited; *p; p += std::wcslen(p) + 1) {
@@ -88,17 +106,19 @@ inline int runCudaChild(const std::filesystem::path &executable,
 inline std::optional<int> dispatchCuda(int argc, char **argv) {
   if (argc < 2) return {};
   const std::string command = argv[1];
-  if (command != "generate" && command != "generate-page") return {};
+  if (command != "generate" && command != "generate-page" && command != "cuda-runtime-check") return {};
   if (command == "generate-page" && argc == 3 && !readJson(argv[2]).value("speech", true)) return {};
   wchar_t buffer[32768];
   const DWORD size = GetModuleFileNameW(nullptr, buffer, 32768);
   if (!size || size >= 32768) throw std::runtime_error("Cannot locate installed Ditto worker");
   const std::filesystem::path self(std::wstring(buffer, size));
   if (self.parent_path().filename() == L"cuda") return {};
+  const auto cuda = self.parent_path() / "cuda" / "moss-ditto.exe";
+  // CI exercises the same loader isolation without requiring an NVIDIA GPU.
+  if (command == "cuda-runtime-check") return runCudaChild(cuda, {L"runtime-check"}, 30000);
   const char *configured = std::getenv("XINSHEN_ONNX_DEVICE");
   const auto requested = normalizedDevice(configured ? configured : "");
   if (requested == "cpu" || requested == "directml") return {};
-  const auto cuda = self.parent_path() / "cuda" / "moss-ditto.exe";
   try {
     if (!std::filesystem::is_regular_file(cuda)) throw std::runtime_error("CUDA worker is missing");
     if (!GetEnvironmentVariableW(L"XINSHEN_CUDA_RUNTIME_DIR", nullptr, 0))

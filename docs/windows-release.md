@@ -56,7 +56,7 @@ CUDA 路径可使用 CUDA provider 支持的算子，避免 DirectML 的上述�
 CUDA 12.8、cuDNN 9.10、ONNX Runtime GPU 按上游依赖分别生成 ZIP 组件，每个组件只包含运行 DLL 和许可证。文件内容决定组件版本，应用版本和构建时间不影响组件身份。组件存入 `QStandardPaths::AppLocalDataLocation/runtimes/components/<sha256>/`，所需组合在 `runtimes/sets/<id>/` 中通过硬链接组装（文件系统不支持时复制）。因此更新 ONNX Runtime 不会重新下载未改变的 cuDNN，主程序更新也不会清理运行库。
 每次使用会校验已安装组件；未改变且完整的组件不产生下载请求。下载支持断点续传；归档和解压后的每个文件分别校验 SHA-256，全部通过后才原子安装。损坏组件隔离后重新下载，取消保留部分下载；旧组件组合保留用于应用回退。不同应用实例通过锁串行准备组件。
 CI 将主安装包与 `Windows-runtime-components` 分开上传。受信任发布任务先验证并上传缺少的组件到 `gpu-runtime-components-v1` Release（以内容哈希命名，禁止覆盖），确认远端 digest 后再公开主安装包。常规升级只下载主安装包，只有组件版本改变或文件损坏才下载相应组件。构建端也独立缓存经过校验的 CUDA 文件。
-CUDA 子进程位于程序的 `cuda/` 目录，DLL 从独立缓存加载；其工作目录和 DLL 搜索路径指向缓存，防止误加载主目录中的 DirectML ONNX Runtime。NVIDIA 显卡驱动仍由系统提供。首次在线下载后的组件可离线使用；当前标准发行流程不额外生成离线整合安装包。
+CUDA 子进程位于程序的 `cuda/` 目录，DLL 从独立缓存加载；父 worker 在创建子进程前通过 `SetDllDirectoryW` 指定缓存，确保它优先于 Windows System32 中的 ONNX Runtime，再用独立工作目录和 PATH 隔离主目录中的 DirectML 版本。CI 通过同一启动路径检查 CUDA 核心版本、provider 和 CPU 张量，无需构建机器具备 NVIDIA 显卡。NVIDIA 显卡驱动仍由系统提供。首次在线下载后的组件可离线使用；当前标准发行流程不额外生成离线整合安装包。
 模型精度仍为原始 FP32，CUDA 关闭 TF32，未自动转换 FP16 权重，不承诺尚未测得的加速倍数。
 
 安装目录附带以下实机脚本，使用同一组模型、人像、音频和随机种子，默认各生成 0.8 秒（20 帧）：
