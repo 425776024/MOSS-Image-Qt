@@ -820,7 +820,7 @@ var english = {
     "正在检测": "Checking",
     "Apple · App Store 资源包": "Apple · App Store assets",
     "自动选择": "Automatic",
-    "国内镜像 · hf-mirror.com": "Mirror · hf-mirror.com",
+    "ModelScope · modelscope.cn": "ModelScope · modelscope.cn",
     "轻量扩散模型，与 Q8 共用图像组件": "Lightweight diffusion model; shares image components with Q8",
     "较高精度扩散模型，与 Q4 共用图像组件": "Higher-precision diffusion model; shares image components with Q4",
     "MOSS 共用组件": "MOSS shared components",

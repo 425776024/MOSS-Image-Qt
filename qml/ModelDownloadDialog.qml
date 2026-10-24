@@ -106,7 +106,7 @@ HomeDialog {
             }
         }
         HomeCombo {
-            visible: dialog.sourceExpanded && !studio.models.busy
+            visible: dialog.sourceExpanded && !studio.models.busy && studio.models.sourceValues.length>1
             Layout.fillWidth: true; Layout.preferredHeight: 32
             model: studio.models.sourceNames.map(function(name) {return HomeTheme.t(name)})
             currentIndex: studio.models.sourceValues.indexOf(studio.models.endpoint)
@@ -114,7 +114,7 @@ HomeDialog {
         }
         RowLayout {
             Layout.fillWidth: true; spacing: 8
-            HomeButton { visible: !!studio.models.error && !studio.models.busy; text: HomeTheme.t("更换下载源"); quiet: true; compact: true; onClicked: dialog.sourceExpanded=!dialog.sourceExpanded }
+            HomeButton { visible: !!studio.models.error && !studio.models.busy && studio.models.sourceValues.length>1; text: HomeTheme.t("更换下载源"); quiet: true; compact: true; onClicked: dialog.sourceExpanded=!dialog.sourceExpanded }
             Item { Layout.fillWidth: true }
             HomeButton { id: downloadClose; objectName: "closeModelDownload"; text: HomeTheme.t(studio.models.busy ? "取消下载" : dialog.ready ? "完成" : "稍后"); primary: dialog.ready; implicitHeight: 28; onClicked: studio.models.busy ? studio.models.cancel() : dialog.close() }
             HomeButton {

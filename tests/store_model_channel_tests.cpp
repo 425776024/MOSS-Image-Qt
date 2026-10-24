@@ -15,11 +15,21 @@ private slots:
         ModelManager m(nullptr,"{\"groups\":[],\"files\":[]}");
         QCOMPARE(m.endpoint(),QString("apple-assets"));QVERIFY(!m.rootSelectable());
         QCOMPARE(m.imageQuant(),QString("Q4_K"));
-        m.setEndpoint("https://hf-mirror.com");
-        QCOMPARE(QSettings().value("storeModelEndpoint").toString(),QString("https://hf-mirror.com"));
+        m.setEndpoint("https://modelscope.cn");
+        QCOMPARE(QSettings().value("storeModelEndpoint").toString(),QString("https://modelscope.cn"));
         QCOMPARE(QSettings().value("modelEndpoint").toString(),QString("https://huggingface.co"));
         ModelManager restored(nullptr,"{\"groups\":[],\"files\":[]}");
-        QCOMPARE(restored.endpoint(),QString("https://hf-mirror.com"));
+        QCOMPARE(restored.endpoint(),QString("https://modelscope.cn"));
+    }
+    void oldStoreSourcesMigrateWithoutChangingPublicSettings() {
+        for(const auto old:{"auto","https://hf-mirror.com","https://huggingface.co"}) {
+            QSettings().clear();QSettings().setValue("modelEndpoint","public-setting-sentinel");
+            QSettings().setValue("storeModelEndpoint",old);
+            ModelManager manager(nullptr,"{\"groups\":[],\"files\":[]}");
+            QCOMPARE(manager.endpoint(),QString("https://modelscope.cn"));
+            QCOMPARE(QSettings().value("storeModelEndpoint").toString(),manager.endpoint());
+            QCOMPARE(QSettings().value("modelEndpoint").toString(),QString("public-setting-sentinel"));
+        }
     }
     void unconfiguredBundleFailsWithoutCallingApple(){
         AppleAssetDownload transport;QSignalSpy done(&transport,&AppleAssetDownload::completed);
@@ -47,7 +57,7 @@ private slots:
         QStandardPaths::setTestModeEnabled(true);
         const QByteArray catalog=R"({"groups":[{"id":"isolated-test"}],"files":[{"group":"isolated-test","path":"isolated-channel-test.bin","file":"never-fetch","sha256":"test","bytes":10,"appleOnly":true}]})";
         ModelManager m(nullptr,catalog,QUrl("http://127.0.0.1:1/"));
-        m.setEndpoint("https://huggingface.co");QSignalSpy done(&m,&ModelManager::completed);
+        m.setEndpoint("https://modelscope.cn");QSignalSpy done(&m,&ModelManager::completed);
         m.requestDownload("isolated-test");m.startDownload();
         QTRY_COMPARE(done.count(),1);QVERIFY(!done.at(0).at(0).toBool());
         QVERIFY(m.error().contains("App Store"));QVERIFY(!m.error().contains("镜像"));

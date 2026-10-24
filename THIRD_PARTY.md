@@ -107,9 +107,9 @@ https://huggingface.co/voxta/ditto-talkinghead-onnx,
 https://huggingface.co/audio-cpp/Ming-3.0-TTS-0.5B-GGUF,
 https://modelscope.cn/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF,
 https://huggingface.co/thepatch/t5gemma-b-b-ul2-GGUF.
-Downloading through hf-mirror.com changes the endpoint, not the pinned identities
-or applicable upstream terms. In particular, bundled upstream auxiliary models
-may have terms different from Ditto's source license.
+Public app model downloads use the pinned ModelScope file URLs and SHA-256
+identities in the catalog. Canonical upstream repositories remain documented
+for provenance; they are not automatic download fallbacks.
 
 ## Ming-3.0 Q8 speech
 

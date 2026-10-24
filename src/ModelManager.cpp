@@ -94,9 +94,16 @@ ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport
 #ifdef MOSS_APP_STORE
     m_endpoint=settings.value("storeModelEndpoint","apple-assets").toString();
 #else
-    m_endpoint=settings.value("modelEndpoint","auto").toString();
+    m_endpoint=settings.value("modelEndpoint","https://modelscope.cn").toString();
 #endif
-    if(!sourceValues().contains(m_endpoint))m_endpoint=sourceValues().first();
+    if(!sourceValues().contains(m_endpoint)) {
+        m_endpoint="https://modelscope.cn";
+#ifdef MOSS_APP_STORE
+        settings.setValue("storeModelEndpoint",m_endpoint);
+#else
+        settings.setValue("modelEndpoint",m_endpoint);
+#endif
+    }
     m_quant=qEnvironmentVariable("MOSS_IMAGE_QUANT",settings.value("imageQuant","Q4_K").toString());
     if(m_quant!="Q4_K"&&m_quant!="Q8_0")m_quant="Q4_K";
 }
@@ -110,16 +117,16 @@ void ModelManager::setRoot(QString value) {
 }
 QStringList ModelManager::sourceNames() const {
 #ifdef MOSS_APP_STORE
-    return {"Apple · App Store 资源包", "自动选择", "国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+    return {"Apple · App Store 资源包", "ModelScope · modelscope.cn"};
 #else
-    return {"自动选择", "国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+    return {"ModelScope · modelscope.cn"};
 #endif
 }
 QStringList ModelManager::sourceValues() const {
 #ifdef MOSS_APP_STORE
-    return {"apple-assets", "auto", "https://hf-mirror.com", "https://huggingface.co"};
+    return {"apple-assets", "https://modelscope.cn"};
 #else
-    return {"auto", "https://hf-mirror.com", "https://huggingface.co"};
+    return {"https://modelscope.cn"};
 #endif
 }
 void ModelManager::setEndpoint(QString value) {
@@ -425,12 +432,12 @@ void ModelManager::transfer(ModelAsset a) {
     QList<QUrl> urls;
     if(!m_testTransport.isEmpty())urls<<m_testTransport.resolved(QUrl(a.file));
     else {
-        // ModelScope has independent repository IDs/revisions; never substitute
-        // its domain into a Hugging Face resolve URL. Explicit source choices
-        // still lock the download to that provider.
-        if(m_endpoint=="auto"&&!a.modelscopeUrl.isEmpty())urls<<QUrl(a.modelscopeUrl);
-        const QStringList endpoints=m_endpoint=="auto"?QStringList{"https://huggingface.co"}:QStringList{m_endpoint};
-        if(!a.repo.isEmpty())for(const auto &endpoint:endpoints)urls<<QUrl(endpoint+"/"+a.repo+"/resolve/"+a.revision+"/"+a.file);
+        // The catalog pins ModelScope's own repository/revision and the exact
+        // payload hash. Canonical upstream URLs are provenance, not fallbacks.
+        if(a.modelscopeUrl.isEmpty()) {
+            transport->deleteLater();fail(a,"资源下载地址缺失，请更新应用后重试");return;
+        }
+        urls<<QUrl(a.modelscopeUrl);
     }
     m_status="正在下载…";emit changed();
     connect(transport,&ModelHttpDownload::progress,this,[this,a](qint64 bytes){updateProgress(a.path,std::min(bytes,a.bytes));});
@@ -440,7 +447,7 @@ void ModelManager::transfer(ModelAsset a) {
         if(!error.isEmpty()){fail(a,error+"\n文件："+a.path+"\n下载源："+m_endpoint);return;}
         checkFile(a,path,true);
     });
-    transport->start(path,a.transferBytes(),a.transferSha256(),urls,a.repo+"/"+a.revision,m_endpoint=="auto");
+    transport->start(path,a.transferBytes(),a.transferSha256(),urls,a.repo+"/"+a.revision,false);
 }
 QString ModelManager::deletionDescription(QString id) const {
     QString description="删除后可重新下载。只处理此组清单文件，保留作品和未登记的本地文件。";

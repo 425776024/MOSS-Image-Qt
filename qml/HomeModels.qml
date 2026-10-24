@@ -15,9 +15,7 @@ Item {
     readonly property bool locked: studio.busy || studio.models.busy
     readonly property var sourceLabels: ({
         "apple-assets": "App Store",
-        "auto": HomeTheme.t("自动选择"),
-        "https://hf-mirror.com": "hf-mirror.com",
-        "https://huggingface.co": "Hugging Face"
+        "https://modelscope.cn": "ModelScope"
     })
     readonly property var resources: [
         {id:"image",title:"图像创作",icon:"image",ids:["image-q4","image-q8","image-shared"]},
