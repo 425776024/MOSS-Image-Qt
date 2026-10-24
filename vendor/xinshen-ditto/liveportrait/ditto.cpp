@@ -5,6 +5,7 @@
 #include "ditto_source_condition.h"
 #include "ditto_mouth_reference.h"
 #include "ditto_mouth_calibration.h"
+#include "ditto_controls.h"
 #include "mouth_cache_store.h"
 #if defined(__APPLE__)
 #include "coreml.h"
@@ -761,9 +762,7 @@ V motionFromJson(const J &j) {
   return r;
 }
 void sourceNeutralEmotion(J &cfg) {
-  V emotion(8, float(1. / (std::exp(8.) + 7.)));
-  emotion[4] = float(std::exp(8.) / (std::exp(8.) + 7.));
-  cfg["default_kwargs"]["emo"] = J::array({emotion});
+  cfg["default_kwargs"]["emo"] = mouth_detail::neutralEmotionCondition();
 }
 void sourceCondition(J &cfg, const Source &source, const Image &image,
                      const fs::path &root) {
@@ -1049,13 +1048,14 @@ V stitchMotion(const fs::path &root, const V &raw, const Source &source,
     V m = source.motion;
     if (still)
       for (int k = 1; k < 202; ++k)
-        m[k] += (raw[i * 265 + k] - raw[k]) * (k < 199 ? ratio : 1);
+        m[k] += (raw[i * 265 + k] - raw[k]) * (k < 199 ? ratio : 1) *
+                control_detail::gain(cfg, k < 67 ? "pitch" : k < 133 ? "yaw" : k < 199 ? "roll" : "t");
     for (int p : {6, 12, 14, 17, 19, 20})
       for (int j = 0; j < 3; ++j) {
         int k = 202 + p * 3 + j;
         m[k] += (raw[i * 265 + k] -
                  (cfg.value("mouthConditionReference", false) ? reference[k] : raw[k])) * ratio *
-                mouth_detail::openingGain(cfg, i);
+                mouth_detail::openingGain(cfg, i) * control_detail::gain(cfg, "exp");
       }
     if (still)
       for (int p : {11, 13, 15, 16, 18})
@@ -1363,7 +1363,7 @@ void checkDriver(const J &plan, const J &caps) {
     require(driver.at("mouthReferenceCatalogSha256") == caps.at("mouthReferenceCatalogSha256"),
             "口型适配配置已变化，请重新检查本机模型");
   if (driver.contains("mouthReferenceRevision"))
-    require(driver.at("mouthReferenceRevision") == mouth_detail::automaticRevision,
+    require(driver.at("mouthReferenceRevision") == mouth_detail::runtimeRevision,
             "口型适配程序已变化，请重新生成");
   const auto identity = driver.value("pipelineId", "");
   require(identity.empty() || identity == caps.at("pipelineId"),
@@ -1441,6 +1441,10 @@ J configureMouthReference(const fs::path &root, const J &plan, const J &caps,
       cfg.value("sourceConditioning","")!="source-neutral-v1" || !cfg.value("mouthConditionReference",false))
     return decision;
   decision["automaticRevision"]=mouth_detail::automaticRevision;
+  decision["referenceRevision"]=mouth_detail::runtimeRevision;
+  const auto emotion=cfg.at("default_kwargs").at("emo");
+  const bool emotionLinked=!mouth_detail::isNeutralEmotion(emotion);
+  decision["emotionCondition"]=emotion;
   // Preserve previously reviewed partial corrections for the built-in relaxed
   // portraits. Generic calibration must not silently promote a 50% profile.
   if (decision.at("strategy")=="calibrated" && decision.at("strength").get<double>()<1)
@@ -1451,27 +1455,17 @@ J configureMouthReference(const fs::path &root, const J &plan, const J &caps,
   const auto start=Clock::now();
   try {
     const auto cacheDir=mouthCalibrationDirectory();
-    const J identity={{"revision",mouth_detail::automaticRevision}, {"pipelineId",caps.at("pipelineId")},
+    const J baseIdentity={{"revision",mouth_detail::runtimeRevision}, {"pipelineId",caps.at("pipelineId")},
       {"conditionManifestSha256",caps.at("denoiseConditionManifestSha256")},
       {"catalogSha256",caps.at("mouthReferenceCatalogSha256")}, {"sourceSha256",av.at("sourceSha256")},
       {"source",sourceJson(source)}, {"sourceMouthGeometry",cfg.at("sourceMouthGeometry")},
-      {"defaultKwargs",cfg.at("default_kwargs")}, {"configSha256",avatar::sha256(root/"config.json")}};
-    const auto key=jsonHash(identity);
-    const auto path=cacheDir/(key+".json");
-    auto saved=loadMouthCache(path);
-    bool hit=saved.is_object() && saved.value("key","")==key && saved.contains("summary");
-    J summary;
-    if (hit) {
-      summary=saved.at("summary");
-      const auto why=mouth_detail::calibrationRejection(summary,mouth_detail::mouthOf(source.motion));
-      if (why=="invalid-silence-reference" || why=="invalid-silence-statistics") hit=false;
-    }
-    if (!hit) {
-      avatar::checkCancelled();
+      {"configSha256",avatar::sha256(root/"config.json")}};
+    V features;
+    const auto loadFeatures=[&] {
+      if (!features.empty()) return;
       const auto featureKey=avatar::sha256(root/"hubert.onnx")+std::string("-native-silence150-v1");
       const auto featurePath=cacheDir/(featureKey+".json");
       auto featuresSaved=loadMouthCache(featurePath);
-      V features;
       if (featuresSaved.is_object() && featuresSaved.value("key","")==featureKey) {
         try {
           features=featuresSaved.at("features").get<V>();
@@ -1483,27 +1477,62 @@ J configureMouthReference(const fs::path &root, const J &plan, const J &caps,
         features=audioFeatures(root,V(150*640,0));
         saveMouthCache(featurePath,{{"key",featureKey},{"features",features}});
       }
+    };
+    const auto referenceFor=[&](const J &predictionCfg, bool &hit, std::string &key) {
+      auto identity=baseIdentity;
+      identity["defaultKwargs"]=predictionCfg.at("default_kwargs");
+      key=jsonHash(identity);
+      const auto path=cacheDir/(key+".json");
+      auto saved=loadMouthCache(path);
+      hit=saved.is_object() && saved.value("key","")==key && saved.contains("summary");
+      if (hit) {
+        const auto why=mouth_detail::silenceStabilityRejection(saved.at("summary"));
+        if (why!="invalid-silence-reference" && why!="invalid-silence-statistics")
+          return saved.at("summary");
+        hit=false;
+      }
+      avatar::checkCancelled();
+      loadFeatures();
       std::vector<V> runs;
       for (int calibrationSeed : mouth_detail::calibrationSeeds) {
         avatar::checkCancelled();
         avatar::progress("ditto-mouth-calibration",runs.size(),3);
-        runs.push_back(predict(root,features,cfg,calibrationSeed));
+        runs.push_back(predict(root,features,predictionCfg,calibrationSeed));
       }
-      summary=mouth_detail::summarizeSilence(runs,mouth_detail::mouthOf(source.motion));
+      auto summary=mouth_detail::summarizeSilence(runs,mouth_detail::mouthOf(source.motion));
       saveMouthCache(path,{{"key",key},{"identity",identity},{"summary",summary}});
       avatar::progress("ditto-mouth-calibration",3,3);
+      return summary;
+    };
+    bool hit=false, neutralHit=false;
+    std::string key, neutralKey;
+    J neutral;
+    if (emotionLinked) {
+      auto neutralCfg=cfg;
+      sourceNeutralEmotion(neutralCfg);
+      neutral=referenceFor(neutralCfg,neutralHit,neutralKey);
     }
+    const auto summary=referenceFor(cfg,hit,key);
     cfg["mouthCalibrationRuntime"]={{"cacheHit",hit},{"seconds",seconds(start)},{"key",key}};
-    const auto why=mouth_detail::calibrationRejection(summary,mouth_detail::mouthOf(source.motion));
+    if (emotionLinked) {
+      cfg["mouthCalibrationRuntime"]["neutralCacheHit"]=neutralHit;
+      cfg["mouthCalibrationRuntime"]["neutralKey"]=neutralKey;
+      decision["neutralCalibrationKey"]=neutralKey;
+      decision["neutralCalibration"]=neutral;
+    }
+    const auto why=emotionLinked
+        ? mouth_detail::emotionCalibrationRejection(summary,neutral,mouth_detail::mouthOf(source.motion))
+        : mouth_detail::calibrationRejection(summary,mouth_detail::mouthOf(source.motion));
     if (!why.empty()) { decision["automaticFallback"]=why; decision["calibrationKey"]=key; return decision; }
     const auto opening=mouth_detail::openingTransition(audio);
     cfg["mouthReferenceExp"]=summary.at("referenceMouth");
     cfg["mouthOpeningTransition"]=opening;
-    decision["revision"]=mouth_detail::automaticRevision;
+    decision["revision"]=mouth_detail::runtimeRevision;
     decision["strategy"]="silent-calibrated";
     decision["profileId"]="";
     decision["strength"]=1;
-    decision["reason"]="source-conditioned-stable-silence";
+    decision["reason"]=emotionLinked ? "emotion-conditioned-stable-silence" : "source-conditioned-stable-silence";
+    if (emotionLinked) decision["emotionOffsetMax"]=mouth_detail::emotionOffsetMax(summary,neutral);
     decision["calibrationKey"]=key;
     decision["calibration"]=summary;
     decision["openingTransition"]=cfg.at("mouthOpeningTransition");
@@ -1531,6 +1560,7 @@ J build(const fs::path &root, const fs::path &dir, const fs::path &planPath,
   int seed = plan.value(
       "seed", plan.value("audioDriver", J::object()).value("seed", 1024));
   auto cfg = avatar::readJson(root / "config.json");
+  const auto controls = control_detail::normalize(plan.value("audioDriver", J::object()));
   timings["validationAndAudioPlan"] = seconds(started);
   started = Clock::now();
   Source s;
@@ -1542,6 +1572,7 @@ J build(const fs::path &root, const fs::path &dir, const fs::path &planPath,
     s = prep(image);
     sourceCondition(cfg, s, image, root);
   }
+  control_detail::apply(cfg, controls);
   timings["sourcePreparation"] = seconds(started);
   const auto mouthReference = configureMouthReference(root, plan, caps, av, s, cfg, audio.samples);
   started = Clock::now();
@@ -1568,6 +1599,7 @@ J build(const fs::path &root, const fs::path &dir, const fs::path &planPath,
           {"sampleCount", audio.samples.size()},
           {"fps", 25},
           {"seed", seed},
+          {"motionControls", controls},
           {"source", sourceJson(s)},
           {"sourceConditioning", cfg.value("sourceConditioning", std::string{})},
           {"referenceConditions", cfg.at("default_kwargs").at("ch_info")},
@@ -1597,18 +1629,21 @@ J runtimeCheck() {
 J capabilities(const fs::path &models) {
   auto m = verify(models);
   const auto condition = conditionPackage(models);
-  const auto identity = m.at("pipelineId").get<std::string>() + condition.sha256 + mouth_detail::automaticRevision;
+  const auto identity = m.at("pipelineId").get<std::string>() + condition.sha256 + mouth_detail::runtimeRevision;
   return {{"engine", "ditto-native-v1"},
           {"execution", "local"},
           {"pipelineId", m.at("pipelineId")},
           {"denoiseConditionManifestSha256", condition.sha256},
-          {"mouthReferenceRevision",mouth_detail::automaticRevision},
+          {"mouthReferenceRevision",mouth_detail::runtimeRevision},
           {"mouthReferenceCatalogSha256", fs::exists(models / "mouth-reference.json")
               ? avatar::sha256(models / "mouth-reference.json") : std::string{}},
           {"motionExecutionRevision", avatar::sha256(identity.data(), identity.size())},
           {"fps", 25},
           {"sampleRate", 16000},
           {"styles", J::array({"official"})},
+          {"motionControlRevision", "emotion-and-relative-gains-v1"},
+          {"emotionLabels", J::array({"angry", "disgust", "fear", "happy", "neutral", "sad", "surprise", "contempt"})},
+          {"motionGainRange", J::array({0, 2})},
           {"runtime", "C++ ONNX Runtime"},
           {"manifestSha256", avatar::sha256(models / "manifest.json")}};
 }
@@ -1652,6 +1687,7 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
   tmp += ".partial";
   require(!fs::exists(output) && !fs::exists(tmp), "output exists");
   auto cfg = avatar::readJson(root / "config.json");
+  const auto controls = control_detail::normalize(plan.value("audioDriver", J::object()));
   const int seed = plan.value(
       "seed", plan.value("audioDriver", J::object()).value("seed", 1024));
   const char *motionSerial = std::getenv("XINSHEN_DITTO_MOTION_SERIAL");
@@ -1671,6 +1707,7 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
       s = prep(image);
       sourceCondition(cfg, s, image, root);
     }
+    control_detail::apply(cfg, controls);
     timings["sourcePreparation"] = seconds(prepStarted);
     const auto mouthReference = configureMouthReference(root, plan, caps, av, s, cfg, audio.samples);
     fs::path featurePath = result;
@@ -1683,6 +1720,7 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
              {"sourceSha256", av.at("sourceSha256")},
              {"audioFloat32Sha256", avatar::sha256(audio.samples.data(), audio.samples.size() * 4)},
              {"sampleCount", audio.samples.size()}, {"fps", 25}, {"seed", seed},
+             {"motionControls", controls},
              {"source", sourceJson(s)}, {"featurePath", fs::absolute(featurePath).string()},
              {"sourceConditioning", cfg.value("sourceConditioning", std::string{})},
              {"referenceConditions", cfg.at("default_kwargs").at("ch_info")},
@@ -1698,6 +1736,8 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
       cache = avatar::readJson(plan.at("motionCache").get<std::string>());
     else
       cache = build(root, dir, planPath, result);
+    require(control_detail::cacheMatches(cache, controls),
+            "人物表情或动作幅度已变化，请重新预测动作");
     require(cache.at("engine") == "ditto-native-v1" &&
                 cache.value("motionExecutionRevision", "") == caps.at("motionExecutionRevision") &&
                 cache.at("pipelineId") == caps.at("pipelineId") &&
@@ -1718,6 +1758,7 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
       cfg["sourceMouthGeometry"]=cache.value("sourceMouthGeometry",J());
       sourceNeutralEmotion(cfg);
     }
+    control_detail::apply(cfg, controls);
     const auto mouthReference = configureMouthReference(root, plan, caps, av, s, cfg, audio.samples);
     require(mouth_detail::cacheMatches(cache, mouthReference),
             "口型适配策略已变化，请重新生成动作缓存");
@@ -1983,6 +2024,8 @@ void renderTimeline(const fs::path &root, const fs::path &dir,
          {"renderProfile", renderProfile},
          {"renderManifestSha256", renderManifestSha256},
          {"motionCacheReused", plan.contains("motionCache")},
+         {"motionControls", controls},
+         {"emotionCondition", controls.at("emo").get<int>() < 0 ? J(nullptr) : cfg.at("default_kwargs").at("emo")},
          {"mouthReference", cache.at("mouthReference")},
          {"mouthCalibrationRuntime",cache.value("mouthCalibrationRuntime",J())},
          {"motionStreaming", motionStreaming},

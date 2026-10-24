@@ -78,6 +78,11 @@ Rectangle {
                 VoiceStyleControls { Layout.fillWidth: true; options: root.settings; onOptionEdited: (key,value)=>sound.set(key,value) }
                 InputArea { objectName: "speechText"; label: HomeTheme.t("配音文案"); Layout.fillWidth: true; Layout.preferredHeight: 104; value: root.settings.speechText; placeholder: HomeTheme.t("输入配音文案…"); onEdited: text => sound.set("speechText", text) }
             }
+            AvatarMotionControls {
+                visible: root.mode === "speech"; Layout.fillWidth: true
+                options: root.settings
+                onOptionEdited: (key, value) => sound.set(key, value)
+            }
             StudioCheckBox {
                 objectName: "automaticMouthAdaptation"; visible: root.mode === "speech"
                 text: HomeTheme.t("自动适配人像口型"); checked: root.settings.mouthReference !== "source"

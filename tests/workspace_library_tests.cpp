@@ -100,6 +100,22 @@ private slots:
         restored.set("emotion","悲伤");QCOMPARE(restored.settings()["dialect"].toString(),QString("standard"));
         restored.set("emotion","unsupported");QCOMPARE(restored.settings()["emotion"].toString(),QString("悲伤"));
     }
+    void avatarControlsPersistIndependentlyOfSpeechStyle(){
+        SoundPlan sound;QCOMPARE(sound.settings()["emo"].toInt(),-1);
+        sound.set("dialect","chuanyu");sound.setResult("speechResult","same-audio.wav");
+        sound.set("emo",3);sound.set("use_d_keys",QVariantMap{{"exp",1.3},{"pitch",1.2},{"yaw",1.2},{"roll",1.2},{"t",1.}});
+        QCOMPARE(sound.settings()["dialect"].toString(),QString("chuanyu"));
+        QCOMPARE(sound.settings()["speechResult"].toString(),QString("same-audio.wav"));
+        SoundPlan restored;restored.restore(sound.json());QCOMPARE(restored.settings(),sound.settings());
+        restored.set("emo",8);QCOMPARE(restored.settings()["emo"].toInt(),3);
+        restored.set("emo",2.5);QCOMPARE(restored.settings()["emo"].toInt(),3);
+        restored.set("use_d_keys",QVariantMap{{"exp",4.}});QCOMPARE(restored.settings(),sound.settings());
+        restored.set("use_d_keys",QVariantMap{{"exp",1.25}});
+        QCOMPARE(restored.settings()["use_d_keys"].toMap()["yaw"].toDouble(),0.);
+        SoundPlan malformed;malformed.restore({{"emo",99},{"use_d_keys",QJsonObject{{"exp",-1}}}});
+        QCOMPARE(malformed.settings()["emo"].toInt(),-1);
+        QCOMPARE(malformed.settings()["use_d_keys"].toMap()["exp"].toDouble(),1.);
+    }
     void voiceImportRequiresManualTranscriptAndKeepsManagedAudio() {
         QTemporaryDir dir;
         const auto source = dir.filePath("reference.wav");

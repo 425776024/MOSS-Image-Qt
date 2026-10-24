@@ -6,6 +6,9 @@
 
 namespace ditto::mouth_detail {
 inline constexpr const char *automaticRevision = "silent-mouth-calibration-v2";
+// The catalog authorizes source calibration; this runtime revision also binds
+// emotion-specific references and invalidates pre-expression motion caches.
+inline constexpr const char *runtimeRevision = "emotion-linked-mouth-calibration-v3";
 inline constexpr int calibrationFrames = 150;
 inline constexpr int calibrationSeeds[] = {42, 1024, 2026};
 
@@ -65,22 +68,46 @@ inline std::string geometryRejection(const J &g, double yaw, double pitch) {
   if (gap>.08) return "source-open-mouth-preserved";
   return {};
 }
-inline std::string calibrationRejection(const J &value, const std::vector<float> &source) {
+inline std::string silenceStabilityRejection(const J &value) {
   try {
     const auto &r=value.at("referenceMouth");
-    if (!nearVector(r,r,18) || source.size()!=18) return "invalid-silence-reference";
-    for (float v : source) if (!std::isfinite(v)) return "invalid-silence-reference";
+    if (!nearVector(r,r,18)) return "invalid-silence-reference";
     for (const auto *k : {"seedSpreadMax","temporalDeviationQ90Max","sourceOffsetMax"})
       if (!value.at(k).is_number() || !std::isfinite(value.at(k).get<double>()) || value.at(k).get<double>()<0)
         return "invalid-silence-statistics";
     if (value.at("seedSpreadMax").get<double>()>.003 ||
         value.at("temporalDeviationQ90Max").get<double>()>.006)
       return "unstable-silence-prediction";
-    double offset=0;
-    for (int i=0;i<18;++i) offset=std::max(offset,std::abs(r[i].get<double>()-source[i]));
-    if (offset>.03) return "reference-offset-outside-validation";
     return {};
   } catch (const J::exception &) { return "invalid-silence-reference"; }
+}
+inline std::string calibrationRejection(const J &value, const std::vector<float> &source) {
+  const auto why = silenceStabilityRejection(value);
+  if (!why.empty()) return why;
+  if (source.size()!=18) return "invalid-silence-reference";
+  for (float v : source) if (!std::isfinite(v)) return "invalid-silence-reference";
+  const auto &r=value.at("referenceMouth");
+  double offset=0;
+  for (int i=0;i<18;++i) offset=std::max(offset,std::abs(r[i].get<double>()-source[i]));
+  if (offset>.03) return "reference-offset-outside-validation";
+  return {};
+}
+// An emotion can have a stable resting mouth different from the source image.
+// Keep the original source/neutral offset bound; separately require the selected
+// expression to be stable across seeds and time. Its resting displacement must
+// not be misclassified as a source-preparation failure.
+inline std::string emotionCalibrationRejection(const J &value, const J &neutral,
+                                               const std::vector<float> &source) {
+  const auto why = calibrationRejection(neutral, source);
+  if (!why.empty()) return "neutral-" + why;
+  return silenceStabilityRejection(value);
+}
+inline double emotionOffsetMax(const J &value, const J &neutral) {
+  double offset = 0;
+  for (int i=0;i<18;++i)
+    offset=std::max(offset,std::abs(value.at("referenceMouth").at(i).get<double>()-
+                                  neutral.at("referenceMouth").at(i).get<double>()));
+  return offset;
 }
 
 // Conservative energy test, not VAD: use only an existing near-silent prefix.

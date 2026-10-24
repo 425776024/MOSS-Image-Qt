@@ -1,4 +1,5 @@
 #include "liveportrait/ditto.h"
+#include "liveportrait/ditto_controls.h"
 #include "media_io.h"
 #include "page_face.h"
 #include "timeline_render.h"
@@ -27,6 +28,7 @@ int main(int argc,char **argv){
         fs::path image=request.at("image").get<std::string>(),audio=request.at("audio").get<std::string>();
         fs::path out=request.at("directory").get<std::string>();
         const auto mouthReference=request.value("mouthReference",std::string("auto"));
+        const auto controls=ditto::control_detail::normalize(request);
         if(mouthReference!="auto"&&mouthReference!="source")throw std::runtime_error("不支持的口型适配模式");
         if(!fs::is_regular_file(image)||!fs::is_regular_file(audio))throw std::runtime_error("人像或音频不存在");
         if(fs::exists(out/"result.json"))throw std::runtime_error("输出已存在");
@@ -84,7 +86,8 @@ int main(int argc,char **argv){
         avatar::writeJson(out/"plan.json",{
             {"version",1},{"totalSamples",count},{"fpsNum",25},{"fpsDen",1},{"seed",request.value("seed",1024)},
             {"includeAudio",true},
-            {"audioDriver",{{"engine","ditto-native-v1"},{"execution","local"},{"mouthReference",mouthReference}}},
+            {"audioDriver",{{"engine","ditto-native-v1"},{"execution","local"},{"mouthReference",mouthReference},
+                            {"emo",controls.at("emo")},{"use_d_keys",controls.at("use_d_keys")}}},
             {"segments",avatar::Json::array({{{"path",fs::absolute(audio).string()},{"inputStart",0},{"outputStart",0},{"sampleCount",count},{"gain",1.0}}})}
         });
         ditto::renderTimeline(models,out/"avatar",out/"plan.json",out/"result.json");

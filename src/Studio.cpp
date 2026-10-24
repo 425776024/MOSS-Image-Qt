@@ -490,7 +490,8 @@ void Studio::generateAvatar(double limit){
     if(!QImageReader(m_portrait).canRead()){fail("请选择可读取的人像图片");return;}
     m_jobDir=m_outputRoot+"/"+QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss")+"-ditto-"+QUuid::createUuid().toString(QUuid::Id128).left(6);
     QDir().mkpath(m_jobDir);
-    writeJson(m_jobDir+"/request.json",{{"models",m_models+"/ditto-original"},{"image",m_portrait},{"audio",m_audio},{"directory",m_jobDir},{"seed",m_seed},{"mouthReference",m_sound.settings()["mouthReference"].toString()},{"limitSeconds",limit}});
+    writeJson(m_jobDir+"/request.json",{{"models",m_models+"/ditto-original"},{"image",m_portrait},{"audio",m_audio},{"directory",m_jobDir},{"seed",m_seed},{"mouthReference",m_sound.settings()["mouthReference"].toString()},
+        {"emo",m_sound.settings()["emo"].toInt()},{"use_d_keys",QJsonObject::fromVariantMap(m_sound.settings()["use_d_keys"].toMap())},{"limitSeconds",limit}});
     writeJson(m_jobDir+"/job.json",{{"kind","avatar"},{"seed",m_seed},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}});
     start(engine("moss-ditto"),{"generate",m_jobDir+"/request.json"},"avatar");
 }
@@ -659,7 +660,8 @@ void Studio::renderPageVideo(){
     if(!QDir().mkpath(m_jobDir)){fail("无法创建视频输出目录");return;}
     if(!writeJson(m_jobDir+"/request.json",{{"models",m_models+"/ditto-original"},{"image",canvas},
         {"audio",audio},{"speech",!speech.isEmpty()},{"sfx",speech.isEmpty()?QString():effect},{"sfxGain",settings["sfxGain"].toDouble()},
-        {"directory",m_jobDir},{"seed",m_seed},{"mouthReference",settings["mouthReference"].toString()},{"limitSeconds",m_pageVideoLimit}})||
+        {"directory",m_jobDir},{"seed",m_seed},{"mouthReference",settings["mouthReference"].toString()},
+        {"emo",settings["emo"].toInt()},{"use_d_keys",QJsonObject::fromVariantMap(settings["use_d_keys"].toMap())},{"limitSeconds",m_pageVideoLimit}})||
        !writeJson(m_jobDir+"/job.json",{{"kind","page-video"},{"seed",m_seed},{"visual",QUrl::fromLocalFile(canvas).toString()},
         {"audio",audio},{"started",QDateTime::currentDateTime().toString(Qt::ISODate)}})){
         fail("无法保存配音视频任务");return;

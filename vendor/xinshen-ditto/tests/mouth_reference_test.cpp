@@ -45,6 +45,16 @@ int main() {
   try { select("force", catalog, "catalog", "source", "model", true, source, cfg); }
   catch (const std::runtime_error &) { rejected = true; }
   check(rejected);
+  check(isNeutralEmotion(neutralEmotionCondition()));
+  auto happyCondition=neutralEmotionCondition();
+  std::swap(happyCondition[0][3],happyCondition[0][4]);
+  check(!isNeutralEmotion(happyCondition));
+  cfg=original;
+  cfg["default_kwargs"]["emo"]=happyCondition;
+  const auto expression=select("auto",catalog,"catalog","source","model",true,source,cfg);
+  check(expression.at("strategy")=="source" && expression.at("reason")=="emotion-reference-required");
+  check(!cfg.contains("mouthReferenceExp"));
+  check(select("source",catalog,"catalog","source","model",true,source,cfg).at("reason")=="manual-source");
   // Outlier-resistant neutral estimate, with unstable seeds rejected.
   std::vector<std::vector<float>> runs(3,std::vector<float>(150*265,.01f));
   runs[0][30*265+202+6*3]=.5f;
@@ -52,6 +62,28 @@ int main() {
   auto summary=summarizeSilence(runs,neutral);
   check(calibrationRejection(summary,neutral).empty());
   check(nearVector(summary.at("referenceMouth"),neutral,18));
+  // A stable emotion resting displacement is not neutral/source drift. The
+  // original neutral anchor must still pass its unchanged offset validation.
+  auto happySummary=summary;
+  for (auto &v:happySummary["referenceMouth"]) v=v.get<float>()+.04f;
+  happySummary["sourceOffsetMax"]=.04;
+  check(calibrationRejection(happySummary,neutral)=="reference-offset-outside-validation");
+  check(emotionCalibrationRejection(happySummary,summary,neutral).empty());
+  check(std::abs(emotionOffsetMax(happySummary,summary)-.04)<1e-6);
+  auto unstableHappy=happySummary;
+  unstableHappy["seedSpreadMax"]=.004;
+  check(emotionCalibrationRejection(unstableHappy,summary,neutral)=="unstable-silence-prediction");
+  unstableHappy=happySummary;
+  unstableHappy["temporalDeviationQ90Max"]=.007;
+  check(emotionCalibrationRejection(unstableHappy,summary,neutral)=="unstable-silence-prediction");
+  check(emotionCalibrationRejection(happySummary,happySummary,neutral)=="neutral-reference-offset-outside-validation");
+  auto invalidHappy=happySummary;
+  invalidHappy["referenceMouth"][0]=std::numeric_limits<double>::quiet_NaN();
+  check(emotionCalibrationRejection(invalidHappy,summary,neutral)=="invalid-silence-reference");
+  check(emotionCalibrationRejection(happySummary,unstableHappy,neutral)=="neutral-unstable-silence-prediction");
+  auto otherExpression=expression;
+  otherExpression["emotionCondition"]=happyCondition;
+  check(!cacheMatches({{"mouthReference",chosen}},otherExpression));
   for (int f=25;f<125;++f) runs[1][f*265+202+6*3]=.02f;
   check(calibrationRejection(summarizeSilence(runs,neutral),neutral)=="unstable-silence-prediction");
   summary["referenceMouth"][0]=.2f;

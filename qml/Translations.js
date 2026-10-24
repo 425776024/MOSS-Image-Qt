@@ -2,6 +2,16 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "默认": "Default",
+    "人物表情": "Facial emotion",
+    "动作幅度": "Motion strength",
+    "口型与表情": "Lip / expression",
+    "点头": "Nod",
+    "转头": "Turn",
+    "歪头": "Tilt",
+    "位移": "Translation",
+    "轻蔑": "Contempt",
+    "重置幅度": "Reset strengths",
     "声音模板": "Voice templates",
     "搜索模板": "Search templates",
     "没有匹配的模板": "No matching templates",

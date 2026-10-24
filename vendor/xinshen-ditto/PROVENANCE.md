@@ -30,6 +30,14 @@ This refresh also includes the direct RGB8-to-CHW conversion that avoids the
 OpenCV/MediaPipe tensor-allocation crash observed in the previous integration.
 Moss adds a persisted per-page auto/source control and forwards it to the worker.
 
+On 2026-10-24 Moss added `emotion-linked-mouth-calibration-v3`. Expression
+references use the selected emotion's three-seed silence estimate; non-neutral
+references require a separately source-validated neutral estimate and retain the
+original temporal/seed stability bounds. The neutral source-offset bound is
+unchanged, but it is no longer applied to the expression's resting displacement.
+Neutral reviewed catalog profiles are not used for other emotions. This is a
+local adaptation, not a claim of upstream emotion-quality validation.
+
 Build dependencies: ONNX Runtime, OpenCV, OpenSSL, FFmpeg and macOS Core ML.
 The distributable must carry their applicable notices and actual linked libraries.
 This integration does not establish redistribution clearance for model assets.

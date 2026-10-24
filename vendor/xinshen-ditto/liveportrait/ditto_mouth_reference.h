@@ -21,6 +21,19 @@ inline bool nearVector(const J &a, const J &b, size_t size) {
   return true;
 }
 
+inline J neutralEmotionCondition() {
+  std::vector<float> emotion(8, float(1. / (std::exp(8.) + 7.)));
+  emotion[4] = float(std::exp(8.) / (std::exp(8.) + 7.));
+  return J::array({emotion});
+}
+inline bool isNeutralEmotion(const J &emotion) {
+  if (!emotion.is_array() || emotion.empty()) return false;
+  const auto neutral = neutralEmotionCondition().at(0);
+  for (const auto &frame : emotion)
+    if (!nearVector(frame, neutral, 8)) return false;
+  return true;
+}
+
 // A calibrated source is an exact, reviewed image/model pair, not a general
 // mouth-shape classifier. Unknown images and uncertain preparation keep the
 // source reference. In particular, an open/closed-mouth threshold alone failed
@@ -38,6 +51,13 @@ inline J select(const std::string &mode, const J &catalog,
                 {"sourceSha256", sourceHash}, {"reason", "unreviewed-source"}};
   if (mode == "source") { decision["reason"] = "manual-source"; return decision; }
   if (!still) { decision["reason"] = "video-source"; return decision; }
+  // Reviewed catalog profiles were measured with source-neutral conditioning.
+  // An explicit expression needs its own silence reference, including for
+  // portraits with a reviewed partial correction.
+  if (cfg.value("sourceConditioning", "") == "source-neutral-v1" &&
+      !isNeutralEmotion(cfg.at("default_kwargs").value("emo", neutralEmotionCondition()))) {
+    decision["reason"] = "emotion-reference-required"; return decision;
+  }
   try {
     if (catalog.is_null()) { decision["reason"] = "catalog-unavailable"; return decision; }
     if (catalog.at("version") != 1 || catalog.at("revision") != revision ||

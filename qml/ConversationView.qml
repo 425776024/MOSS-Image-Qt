@@ -453,8 +453,13 @@ Item {
     HomeDialog {
         id: parameters; objectName: "generationParametersDialog"; title: HomeTheme.t("生成参数"); modal: true; width: 420; anchors.centerIn: Overlay.overlay
         ColumnLayout { width: parent.width; spacing: 15
-            CanvasSizePicker { Layout.fillWidth: true; implicitHeight: 36; document: studio.document }
-            RowLayout { Layout.fillWidth: true; spacing: 10
+            AvatarMotionControls {
+                visible: root.thread.task === "avatar"; Layout.fillWidth: true; enabled: !studio.busy
+                expanded: true; options: studio.sound.settings
+                onOptionEdited: (key, value) => studio.sound.set(key, value)
+            }
+            CanvasSizePicker { visible: root.thread.task !== "avatar"; Layout.fillWidth: true; implicitHeight: 36; document: studio.document }
+            RowLayout { visible: root.thread.task !== "avatar"; Layout.fillWidth: true; spacing: 10
                 Text { text: HomeTheme.t("采样步数"); color: HomeTheme.secondary; font.pixelSize: 12 }
                 AppSlider { Layout.fillWidth: true; from: 1; to: 100; stepSize: 1; value: studio.steps; Accessible.name: HomeTheme.t("采样步数"); onMoved: studio.steps=value }
                 Text { text: studio.steps; color: HomeTheme.text; font.pixelSize: 12; Layout.preferredWidth: 24 }

@@ -9,17 +9,32 @@
 #include <QSaveFile>
 #include <QUuid>
 #include <QtEndian>
+#include <cmath>
 
 namespace {
 QJsonObject read(QString path){QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return QJsonDocument::fromJson(f.readAll()).object();}
+QVariantMap defaultMotionWeights(){return {{"exp",1.},{"pitch",1.},{"yaw",1.},{"roll",1.},{"t",1.}};}
+bool validAvatarEmotion(const QVariant &value){bool ok=false;const double number=value.toDouble(&ok);return ok&&std::isfinite(number)&&std::floor(number)==number&&number>=-1&&number<=7;}
+bool motionWeights(const QVariant &value,QVariantMap &normalized){
+    if(!value.canConvert<QVariantMap>())return false;
+    normalized=defaultMotionWeights();for(auto it=normalized.begin();it!=normalized.end();++it)it.value()=0.;
+    const auto input=value.toMap();
+    for(auto it=input.begin();it!=input.end();++it){bool ok=false;const double weight=it.value().toDouble(&ok);
+        if(!normalized.contains(it.key())||!ok||!std::isfinite(weight)||weight<0||weight>2)return false;
+        normalized[it.key()]=weight;
+    }return true;
+}
 }
 void SoundPlan::initialize(QString root){m_outputRoot=root;loadVoices();}
 void SoundPlan::restore(QJsonObject value){
     m_settings={{"voiceSource","none"},{"voiceId",""},{"speechText",""},{"sfxEnabled",false},
-        {"sfxPrompt",""},{"sfxDuration",5},{"sfxGain",.35},{"speechResult",""},{"sfxResult",""},{"mouthReference","auto"},{"emotion","中性"},{"dialect","standard"}};
+        {"sfxPrompt",""},{"sfxDuration",5},{"sfxGain",.35},{"speechResult",""},{"sfxResult",""},{"mouthReference","auto"},{"emotion","中性"},{"dialect","standard"},
+        {"emo",-1},{"use_d_keys",defaultMotionWeights()}};
     for(auto it=value.begin();it!=value.end();++it)if(m_settings.contains(it.key()))m_settings[it.key()]=it.value().toVariant();
     if(!QStringList{"none","import","tts"}.contains(m_settings["voiceSource"].toString()))m_settings["voiceSource"]="none";
     if(!QStringList{"auto","source"}.contains(m_settings["mouthReference"].toString()))m_settings["mouthReference"]="auto";
+    m_settings["emo"]=validAvatarEmotion(m_settings["emo"])?m_settings["emo"].toInt():-1;
+    QVariantMap weights;m_settings["use_d_keys"]=motionWeights(m_settings["use_d_keys"],weights)?weights:defaultMotionWeights();
     const auto style=VoiceStyle::normalize(m_settings);
     m_settings["emotion"]=style["emotion"];m_settings["dialect"]=style["dialect"];
     m_settings["sfxDuration"]=std::clamp(m_settings["sfxDuration"].toInt(),1,30);
@@ -31,6 +46,8 @@ void SoundPlan::set(QString key,QVariant value){
     if(!m_settings.contains(key)||key.endsWith("Result"))return;
     if(key=="voiceSource"&&!QStringList{"none","import","tts"}.contains(value.toString()))return;
     if(key=="mouthReference"&&!QStringList{"auto","source"}.contains(value.toString()))return;
+    if(key=="emo"){if(!validAvatarEmotion(value))return;value=value.toInt();}
+    if(key=="use_d_keys"){QVariantMap weights;if(!motionWeights(value,weights))return;value=weights;}
     if(key=="emotion"&&!VoiceStyle::emotions().contains(value.toString()))return;
     if(key=="dialect"&&!VoiceStyle::dialects().contains(value.toString()))return;
     if(key=="sfxDuration")value=std::clamp(value.toInt(),1,30);

@@ -57,7 +57,7 @@ set_source_files_properties(qml/HomeTheme.qml qml/StudioTheme.qml qml/VideoCutTh
 qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
     QML_FILES qml/HomeMcp.qml
     RESOURCES qml/Translations.js qml/VoiceDesignPresets.js
-    QML_FILES qml/GenerationAvatar.qml qml/AvatarDesignDialog.qml qml/VoiceStyleControls.qml qml/VoiceDesignDialog.qml
+    QML_FILES qml/GenerationAvatar.qml qml/AvatarDesignDialog.qml qml/VoiceStyleControls.qml qml/VoiceDesignDialog.qml qml/AvatarMotionControls.qml
     QML_FILES qml/ModelDownloadDialog.qml qml/HomeSection.qml qml/HomeChoiceCard.qml qml/CanvasSizePicker.qml qml/HomeDialog.qml qml/HomeNoticeDialog.qml qml/HomeImagePreview.qml qml/HomeMenu.qml
     QML_FILES qml/VideoCutTheme.qml qml/Glyph.qml qml/AppButton.qml qml/IconButton.qml qml/AppSlider.qml qml/AppCheckBox.qml qml/CardSurface.qml qml/AppSelect.qml qml/AppInputSurface.qml qml/AppMenuItem.qml qml/ConversationMessage.qml qml/ConversationVideo.qml
     QML_FILES qml/ConversationView.qml qml/ConversationInspector.qml qml/ConversationImageEditor.qml qml/ConversationAudio.qml qml/ConversationTimeline.qml qml/HomeTemplates.qml

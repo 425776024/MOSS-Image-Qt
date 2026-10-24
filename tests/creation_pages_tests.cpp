@@ -312,6 +312,24 @@ private slots:
         SoundPlan malformed;malformed.restore({{"mouthReference","invalid"}});
         QCOMPARE(malformed.settings()["mouthReference"].toString(),QString("auto"));
     }
+    void avatarControlsInvalidateVideoAndPersistPerPage() {
+        QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());
+        const auto audio=dir.filePath("voice.wav"),video=dir.filePath("old.mp4"),path=dir.filePath("old.moss.json");
+        for(const auto &file:{audio,video}){QFile f(file);QVERIFY(f.open(QIODevice::WriteOnly));f.write("fixture");}
+        Document doc;auto project=doc.json();project["video"]=QUrl::fromLocalFile(video).toString();
+        project["sound"]=QJsonObject{{"voiceSource","tts"},{"speechResult",audio}};json(path,project);
+        {
+            Studio s;s.loadProject(QUrl::fromLocalFile(path));QVERIFY(!s.pageVideoUrl().isEmpty());
+            s.sound()->set("emo",3);QVERIFY(s.pageVideoUrl().isEmpty());
+            s.sound()->set("use_d_keys",QVariantMap{{"exp",1.3},{"pitch",1.2},{"yaw",1.2},{"roll",1.2},{"t",1.}});
+            QCOMPARE(s.sound()->settings()["speechResult"].toString(),audio);
+            const auto page=s.currentPage();s.newPage();QCOMPARE(s.sound()->settings()["emo"].toInt(),-1);
+            s.selectPage(page);QCOMPARE(s.sound()->settings()["emo"].toInt(),3);s.flushWorkspace();
+        }
+        Studio reopened;QCOMPARE(reopened.sound()->settings()["emo"].toInt(),3);
+        QCOMPARE(reopened.sound()->settings()["use_d_keys"].toMap()["exp"].toDouble(),1.3);
+        QCOMPARE(reopened.sound()->settings()["speechResult"].toString(),audio);
+    }
     void voiceOnlyGenerationKeepsTheSharedImageAndSkipsAvatar() {
         QTemporaryDir dir;qputenv("MOSS_OUTPUT_ROOT",dir.path().toUtf8());
         const auto source=dir.filePath("image.png"),audio=dir.filePath("cached.wav");

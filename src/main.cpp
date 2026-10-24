@@ -43,7 +43,7 @@ int main(int argc,char **argv){
     // window after show() is too late: launching it can already steal focus.
     QStringList startupArguments;
     for(int i=1;i<argc;++i)startupArguments.append(QString::fromLocal8Bit(argv[i]));
-    const QStringList automatedModes={"--home-smoke","--smoke-ui","--window-test",
+    const QStringList automatedModes={"--home-smoke","--smoke-ui","--window-test","--avatar-controls-test",
         "--download-model-test","--conversation-test","--timeline-test","--generate-test","--edit-test",
         "--avatar-test","--page-video-test","--voice-only-test","--voice-design-test","--avatar-design-test"};
     bool backgroundTest=startupArguments.contains("--headless");
@@ -142,6 +142,67 @@ int main(int argc,char **argv){
         const auto at=args.indexOf("--editor-mode");
         const bool av=args.contains("--timeline-test")||args.contains("--avatar-test")||args.contains("--page-video-test")||args.contains("--voice-only-test");
         editorWindow->setProperty("creationMode",at>=0&&at+1<args.size()?args[at+1]:av?"av":"image");
+    }
+    if(args.contains("--avatar-controls-test")){
+        studio.newConversation();studio.conversation()->setTask("avatar");studio.prepareConversationSettings();
+        for(const auto &input:{qMakePair(QString("--source"),QString("target")),qMakePair(QString("--audio"),QString("audio"))}){
+            const int at=args.indexOf(input.first);if(at>=0&&at+1<args.size())studio.conversation()->importMedia(QUrl::fromLocalFile(args[at+1]),input.second);
+        }
+        QMetaObject::invokeMethod(homeWindow,"showEditor",Q_ARG(QVariant,QVariant("")));
+        if(args.contains("--minimum-window"))homeWindow->resize(homeWindow->minimumSize());
+        QTimer::singleShot(600,&app,[&]{
+            auto view=qvariant_cast<QObject *>(homeWindow->property("activeView"));
+            auto dialog=view?view->findChild<QObject *>("generationParametersDialog"):nullptr;
+            if(!dialog||!QMetaObject::invokeMethod(dialog,"open")){app.exit(5);return;}
+            QTimer::singleShot(400,&app,[&,dialog]{
+                const auto key=[&](int code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                auto emotion=dialog->findChild<QQuickItem *>("avatarEmotion");
+                if(!emotion){app.exit(5);return;}
+                emotion->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Down);key(Qt::Key_Down);
+                bool ok=studio.sound()->settings()["emo"].toInt()==3;
+                const auto findItem=[&](const QString &name){
+                    std::function<QQuickItem *(QQuickItem *)> visit=[&](QQuickItem *item)->QQuickItem *{
+                        if(item->isVisible()&&item->objectName()==name)return item;
+                        for(auto child:item->childItems())if(auto found=visit(child))return found;
+                        return nullptr;
+                    };return visit(homeWindow->contentItem());
+                };
+                QJsonArray rows;
+                for(const auto &channel:{"exp","pitch","yaw","roll","t"}){
+                    auto slider=findItem(QString("avatarGain_")+channel);
+                    if(!slider){ok=false;continue;}
+                    slider->forceActiveFocus(Qt::TabFocusReason);
+                    const auto name=QString::fromLatin1(channel);
+                    const int steps=name=="exp"?6:name=="t"?0:4;
+                    for(int step=0;step<steps;++step)key(Qt::Key_Right);
+                    if(!steps){key(Qt::Key_Right);key(Qt::Key_Left);}
+                    const auto actual=studio.sound()->settings()["use_d_keys"].toMap()[channel].toDouble();
+                    ok&=qAbs(actual-(1.+steps*.05))<.0001;
+                    const auto point=slider->mapToScene(QPointF());
+                    rows.append(QJsonObject{{"channel",channel},{"value",actual},{"x",point.x()},{"y",point.y()},{"width",slider->width()},{"height",slider->height()}});
+                }
+                auto disclosure=findItem("avatarMotionDisclosure");
+                if(disclosure){
+                    disclosure->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                    ok&=!disclosure->property("checked").toBool();
+                    if(!args.contains("--collapsed-controls"))key(Qt::Key_Space);
+                }else ok=false;
+                key(Qt::Key_Tab);ok&=homeWindow->activeFocusItem()!=nullptr;
+                const auto owner=studio.conversation()->id();
+                const auto current=studio.sound()->json();studio.newConversation();studio.prepareConversationSettings();
+                ok&=studio.sound()->settings()["emo"].toInt()==-1;
+                // Return to the controls owner and verify page-local persistence.
+                studio.openConversation(owner);studio.prepareConversationSettings();ok&=studio.sound()->json()==current;
+                QMetaObject::invokeMethod(dialog,"open");
+                const auto dir=qEnvironmentVariable("MOSS_EVIDENCE_ROOT",QString(MOSS_SOURCE_ROOT)+"/.local/evidence");QDir().mkpath(dir);
+                QTimer::singleShot(300,&app,[&,dir,ok,rows,current]{
+                    const bool saved=homeWindow->grabWindow().save(dir+"/avatar-controls.png");
+                    bool passed=ok&&saved;
+                    QFile file(dir+"/avatar-controls.json");if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(QJsonObject{{"passed",passed},{"platform",app.platformName()},{"language",workspace.language()},{"width",homeWindow->width()},{"height",homeWindow->height()},{"settings",current},{"sliders",rows}}).toJson());
+                    if(!passed||!args.contains("--keep-open"))app.exit(passed?0:5);
+                });
+            });
+        });
     }
     if(args.contains("--window-test")){
         QTimer::singleShot(400,&app,[&]{
