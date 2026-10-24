@@ -12,6 +12,8 @@ Windows 版目标为 **Windows 10 1903+ / Windows 11、x64**。Qt 6.10 支持 Wi
 
 不需要 Python、Qt SDK 或 CUDA Toolkit。模型在 App 中按需下载；显卡需安装提供 Vulkan / DirectX 12 的厂商驱动。Windows N 版可能需要系统 Media Feature Pack。
 
+Windows 模型下载仅使用 ModelScope。升级后，“自动选择”、hf-mirror 和 Hugging Face 的旧设置会自动迁移，已有模型和有效断点保留。安装包发布前会实际打开资源设置页，检查唯一选项为 ModelScope，并验证中英文、深浅主题、最小窗口与键盘操作。CUDA/cuDNN 加速组件仍使用独立的 GitHub Release 下载和缓存，与模型下载源分别管理。
+
 | 用途 | Windows 后端 | 验收状态 |
 | --- | --- | --- |
 | MOSS 图像生成、局部编辑、布局 | stable-diffusion.cpp Vulkan | 待实机生成 |
