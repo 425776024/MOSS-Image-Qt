@@ -25,6 +25,20 @@
 | --- | --- |
 | [<img src="assets/screenshots/zh-Hans/studio.png" alt="作品与图像创作" width="420" />](assets/screenshots/zh-Hans/studio.png) | [<img src="assets/screenshots/zh-Hans/voice-design.png" alt="声音设计与模板" width="420" />](assets/screenshots/zh-Hans/voice-design.png) |
 
+| 形象资源库 | 人物表情与动作幅度 |
+| --- | --- |
+| [<img src="assets/screenshots/zh-Hans/avatar-library.png" alt="内置数字人形象资源库" width="420" />](assets/screenshots/zh-Hans/avatar-library.png) | [<img src="assets/screenshots/zh-Hans/avatar-controls.png" alt="人物表情与分项动作幅度设置" width="420" />](assets/screenshots/zh-Hans/avatar-controls.png) |
+
+| 构图模板 | 创作资源管理 |
+| --- | --- |
+| [<img src="assets/screenshots/zh-Hans/layout.png" alt="可编辑构图模板" width="420" />](assets/screenshots/zh-Hans/layout.png) | [<img src="assets/screenshots/zh-Hans/models.png" alt="创作资源下载与管理" width="420" />](assets/screenshots/zh-Hans/models.png) |
+
+## 人像编辑对比
+
+| 编辑前 · 黑发原图 | 编辑后 · 紫青发色 |
+| --- | --- |
+| [<img src="assets/showcase/sichuan-portrait-before.jpg" alt="编辑前的黑发人像" width="360" />](assets/showcase/sichuan-portrait-before.jpg) | [<img src="assets/showcase/sichuan-portrait-after.png" alt="编辑后的紫青色发型人像" width="360" />](assets/showcase/sichuan-portrait-after.png) |
+
 ## 数字人视频
 
 视频含声音。左侧为官方原版，最右侧优化效果需 App Store 版本；GitHub 版使用官方原版模型。

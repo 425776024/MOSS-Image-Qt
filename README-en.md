@@ -25,6 +25,20 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 | --- | --- |
 | [<img src="assets/screenshots/en/studio.png" alt="Projects and images" width="420" />](assets/screenshots/en/studio.png) | [<img src="assets/screenshots/en/voice-design.png" alt="Voice design and templates" width="420" />](assets/screenshots/en/voice-design.png) |
 
+| Avatar library | Facial emotion and motion strength |
+| --- | --- |
+| [<img src="assets/screenshots/en/avatar-library.png" alt="Built-in avatar library" width="420" />](assets/screenshots/en/avatar-library.png) | [<img src="assets/screenshots/en/avatar-controls.png" alt="Facial emotion and individual motion controls" width="420" />](assets/screenshots/en/avatar-controls.png) |
+
+| Composition templates | Creative resources |
+| --- | --- |
+| [<img src="assets/screenshots/en/layout.png" alt="Editable composition templates" width="420" />](assets/screenshots/en/layout.png) | [<img src="assets/screenshots/en/models.png" alt="Creative resource downloads and management" width="420" />](assets/screenshots/en/models.png) |
+
+## Portrait editing: before and after
+
+| Before · original black hair | After · purple and cyan hair |
+| --- | --- |
+| [<img src="assets/showcase/sichuan-portrait-before.jpg" alt="Original portrait with black hair" width="360" />](assets/showcase/sichuan-portrait-before.jpg) | [<img src="assets/showcase/sichuan-portrait-after.png" alt="Edited portrait with purple and cyan hair" width="360" />](assets/showcase/sichuan-portrait-after.png) |
+
 ## Talking-avatar demos
 
 Both videos include sound. The left side shows the official model; the far-right optimized result requires the App Store version. GitHub builds use the official model.

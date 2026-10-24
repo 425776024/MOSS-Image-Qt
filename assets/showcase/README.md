@@ -8,6 +8,7 @@
 
 - `text-edit-before-after.png`：中英文文字替换对比，原图原样保留。
 - `portrait-edit-before-after.png`：局部发色编辑对比，原图原样保留。
+- `sichuan-portrait-before.jpg`、`sichuan-portrait-after.png`：作者在本次对话中提供并指定加入 README 的黑发原图与紫青发色编辑图，按原文件复制，未重新生成或修改像素。
 - `avatar-demo-01.mp4`：多种形象的口型对比，约 84 秒。
 - `avatar-demo-02.mp4`：视频人物的口型对比，约 20 秒。
 - 两张 JPG 是视频第 1 秒的封面。
