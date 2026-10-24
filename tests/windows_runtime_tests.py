@@ -65,13 +65,22 @@ class RuntimePackageTests(unittest.TestCase):
             root = Path(tmp); native, receipt = fixture(root)
             folder = root / 'artifacts'; manifest = runtime.build_components(native, folder, receipt['files'])
             assets = [dict(name=c['archive'], size=c['bytes'], digest='sha256:' + c['sha256']) for c in manifest['components']]
-            with patch.object(publisher.subprocess, 'run') as run, patch.object(publisher, 'api', return_value=dict(assets=assets, draft=False)), patch.object(publisher, 'gh') as gh:
+            with patch.object(publisher.subprocess, 'run') as run, patch.object(publisher, 'runtime_release_snapshot', return_value=dict(assets=assets, draft=False)), patch.object(publisher, 'gh') as gh:
                 run.return_value.returncode = 0
                 self.assertEqual(publisher.publish_runtime_components(folder, 'a' * 40), manifest)
                 gh.assert_not_called()
                 assets[0]['digest'] = 'sha256:' + '0' * 64
                 with self.assertRaises(ValueError): publisher.publish_runtime_components(folder, 'a' * 40)
                 gh.assert_not_called()
+
+    def test_new_draft_is_resolved_by_numeric_id_before_its_tag_exists(self):
+        location = f'https://api.github.com/repos/{publisher.REPO}/releases/12345'
+        with patch.object(publisher, 'gh', return_value=json.dumps(dict(apiUrl=location))), patch.object(publisher, 'api', return_value=dict(draft=True)) as api:
+            self.assertEqual(publisher.runtime_release_snapshot(), dict(draft=True))
+            api.assert_called_once_with('releases/12345')
+        with patch.object(publisher, 'gh', return_value=json.dumps(dict(apiUrl='https://example.com/releases/12345'))), patch.object(publisher, 'api') as api:
+            with self.assertRaises(ValueError): publisher.runtime_release_snapshot()
+            api.assert_not_called()
 
     def test_runtime_tag_does_not_trigger_windows_build_tags(self):
         self.assertFalse(runtime.RUNTIME_TAG.startswith(('v', 'windows-')))

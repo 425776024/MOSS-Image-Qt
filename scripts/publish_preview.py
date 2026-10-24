@@ -90,6 +90,16 @@ def latest_success(run):
     return bool(runs['workflow_runs']) and runs['workflow_runs'][0]['id'] == run['id']
 
 
+def runtime_release_snapshot():
+    # A draft has no Git tag yet, so releases/tags/<tag> returns 404.
+    # Resolve both drafts and public releases with gh, then use the numeric ID.
+    location = json.loads(gh('release', 'view', RUNTIME_TAG, '--repo', REPO, '--json', 'apiUrl'))['apiUrl']
+    match = re.fullmatch(r'https://api\.github\.com/repos/' + re.escape(REPO) + r'/(releases/[0-9]+)', location)
+    if not match:
+        raise ValueError('Unexpected GPU component release location')
+    return api(match[1])
+
+
 def publish_runtime_components(folder, sha):
     """Upload new content-addressed assets once; never replace existing DLL packs."""
     manifest = verify_components(folder)
@@ -103,8 +113,8 @@ def publish_runtime_components(folder, sha):
         except subprocess.CalledProcessError:
             # A tagged release and the development publisher may arrive together.
             # Continue only if the other publisher actually created the release.
-            api(f'releases/tags/{RUNTIME_TAG}')
-    release = api(f'releases/tags/{RUNTIME_TAG}')
+            runtime_release_snapshot()
+    release = runtime_release_snapshot()
     assets = {a['name']: a for a in release['assets']}
     for component in manifest['components']:
         name = component['archive']
@@ -114,7 +124,7 @@ def publish_runtime_components(folder, sha):
             except subprocess.CalledProcessError:
                 # Re-read and verify a concurrently uploaded asset; never clobber.
                 pass
-            assets = {a['name']: a for a in api(f'releases/tags/{RUNTIME_TAG}')['assets']}
+            assets = {a['name']: a for a in runtime_release_snapshot()['assets']}
         asset = assets.get(name, {})
         if asset.get('digest') != 'sha256:' + component['sha256'] or asset.get('size') != component['bytes']:
             raise ValueError(f'Published runtime asset differs from the pinned component: {name}')
