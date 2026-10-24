@@ -6,6 +6,8 @@
 #include <cstring>
 #include <iostream>
 #include <set>
+#include <functional>
+#include <dispatch/dispatch.h>
 
 namespace lp {
 namespace fs = std::filesystem;
@@ -95,6 +97,44 @@ struct RuntimeOptimization {
   bool fastPrediction = false;
   bool infrequentReshape = false;
 };
+void validatePlan(const fs::path& compiled, MLModelConfiguration* config, const std::string& component) {
+  if (@available(macOS 14.4, *)) {
+    __block MLComputePlan* plan = nil;
+    __block NSError* error = nil;
+    auto ready = dispatch_semaphore_create(0);
+    [MLComputePlan loadContentsOfURL:url(compiled) configuration:config
+        completionHandler:^(MLComputePlan* value, NSError* failure) {
+          plan = value; error = failure; dispatch_semaphore_signal(ready);
+        }];
+    if (dispatch_semaphore_wait(ready, dispatch_time(DISPATCH_TIME_NOW, 120LL * NSEC_PER_SEC)))
+      throw std::runtime_error("Core ML acceleration placement check timed out: " + component);
+    if (!plan) fail(error, "Inspect Core ML acceleration placement");
+    auto program = plan.modelStructure.program;
+    MLComputePlan* inspectedPlan = plan;
+    require(program != nil, "Core ML acceleration requires an inspectable MLProgram");
+    size_t gpu = 0, ane = 0;
+    std::vector<std::string> cpu;
+    std::function<void(MLModelStructureProgramBlock*)> visit = [&](MLModelStructureProgramBlock* block) {
+      for (MLModelStructureProgramOperation* op in block.operations) {
+        // Constants describe the graph/weights and do not run a neural kernel.
+        if (![op.operatorName isEqualToString:@"const"]) {
+          auto usage = [inspectedPlan computeDeviceUsageForMLProgramOperation:op];
+          auto preferred = usage.preferredComputeDevice;
+          if ([preferred isKindOfClass:[MLGPUComputeDevice class]]) ++gpu;
+          else if ([preferred isKindOfClass:[MLNeuralEngineComputeDevice class]]) ++ane;
+          else if (cpu.size() < 8) cpu.emplace_back(op.operatorName.UTF8String);
+        }
+        for (MLModelStructureProgramBlock* nested in op.blocks) visit(nested);
+      }
+    };
+    for (MLModelStructureProgramFunction* function in program.functions.allValues) visit(function.block);
+    std::cerr << avatar::Json{{"event", "accelerator-plan"}, {"component", component},
+        {"gpuOperations", gpu}, {"aneOperations", ane}, {"cpuOrUnknownOperations", cpu},
+        {"evidence", "CoreML-anticipated-placement; utilization-not-measured"}}.dump() + '\n';
+    if (!cpu.empty() || gpu + ane == 0)
+      throw std::runtime_error("Core ML model requires CPU or has unverified placement; CPU inference is disabled: " + component);
+  } else throw std::runtime_error("Apple Silicon acceleration placement checks require macOS 14.4 or newer");
+}
 RuntimeOptimization runtimeOptimization(const avatar::Json& manifest) {
   if (!manifest.contains("runtimeOptimization")) return {};
   const auto& options = manifest.at("runtimeOptimization");
@@ -140,6 +180,7 @@ MLModel* loadModel(const fs::path& directory, const fs::path& cache,
   }
   auto model = [MLModel modelWithContentsOfURL:url(compiled) configuration:config error:&error];
   if (!model) fail(error, "Load CoreML generator");
+  validatePlan(compiled, config, basename);
   return model;
 }
 id<MLFeatureProvider> sourceProvider(MLModel* model,
@@ -201,6 +242,23 @@ std::vector<float> faceValues(id<MLFeatureProvider> output, NSString* name) {
       result[(c * 512 + y) * 512 + x] = source[c * sc + y * sy + x * sx];
   return result;
 }
+}
+void validateCoreMLAcceleration(const fs::path& cache, const std::string& component) {
+  if (cache.empty() || !fs::is_directory(cache))
+    throw std::runtime_error("Core ML compiled cache is unavailable for placement verification: " + component);
+  @autoreleasepool {
+    auto config = [MLModelConfiguration new];
+    config.computeUnits = MLComputeUnitsCPUAndGPU;
+    config.allowLowPrecisionAccumulationOnGPU = NO;
+    bool inspected = false;
+    for (auto entry = fs::recursive_directory_iterator(cache); entry != fs::recursive_directory_iterator(); ++entry) {
+      if (!entry->is_directory() || entry->path().extension() != ".mlmodelc") continue;
+      validatePlan(entry->path(), config, component);
+      inspected = true;
+      entry.disable_recursion_pending();
+    }
+    if (!inspected) throw std::runtime_error("No inspectable Core ML compiled model; CPU inference is disabled: " + component);
+  }
 }
 struct CoreMLGenerator::State {
   id activity = nil;

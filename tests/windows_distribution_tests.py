@@ -26,6 +26,40 @@ package = module('windows_package', 'scripts/package_windows.py')
 
 
 class WindowsDistributionTest(unittest.TestCase):
+    def test_cuda_payload_is_isolated_and_requires_complete_dependencies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            native, destination = root / 'native', root / 'app'
+            (native / 'cuda').mkdir(parents=True)
+            destination.mkdir()
+            worker = root / 'worker.exe'; worker.write_bytes(b'worker')
+            (destination / 'onnxruntime.dll').write_bytes(b'directml-core')
+            with self.assertRaises(ValueError):
+                package.deploy_cuda_runtime(worker, native, destination)
+            for name in build.CUDA_REQUIRED_DLLS:
+                (native / 'cuda' / name).write_bytes(b'cuda-runtime')
+            package.deploy_cuda_runtime(worker, native, destination)
+            self.assertEqual((destination / 'onnxruntime.dll').read_bytes(), b'directml-core')
+            self.assertFalse((destination / 'cuda/onnxruntime.dll').exists())
+            self.assertEqual(list((destination / 'cuda').glob('*.dll')), [])
+            self.assertEqual((destination / 'cuda/moss-ditto.exe').read_bytes(), b'worker')
+
+    def test_cuda_archive_keeps_runtime_and_license_without_tools_or_tensorrt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); archive = root / 'ort.zip'
+            with zipfile.ZipFile(archive, 'w') as z:
+                z.writestr('sdk/lib/onnxruntime.dll', b'core')
+                z.writestr('sdk/lib/onnxruntime_providers_tensorrt.dll', b'not shipped')
+                z.writestr('sdk/include/api.h', b'not shipped')
+                z.writestr('sdk/LICENSE', b'license')
+            build.extract_cuda_runtime(archive, root / 'runtime', root / 'notices', {'onnxruntime.dll'})
+            self.assertEqual([p.name for p in (root / 'runtime').iterdir()], ['onnxruntime.dll'])
+            self.assertEqual((root / 'notices/ort/LICENSE').read_bytes(), b'license')
+            with zipfile.ZipFile(archive, 'w') as z:
+                z.writestr('../escaped.dll', b'invalid')
+            with self.assertRaises(ValueError):
+                build.extract_cuda_runtime(archive, root / 'runtime', root / 'notices')
+
     def test_flowedit_changes_invalidate_cached_engine_binaries(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

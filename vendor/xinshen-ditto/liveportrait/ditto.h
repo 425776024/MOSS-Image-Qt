@@ -2,6 +2,7 @@
 #include "../avatar_runtime.h"
 namespace ditto {
 avatar::Json runtimeCheck();
+avatar::Json cudaCheck();
 void validateMotion(const std::filesystem::path &,
                     const std::filesystem::path &,
                     const std::filesystem::path &);

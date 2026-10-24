@@ -128,6 +128,19 @@ ConvertTo-Json -InputObject @($results) -Compress
         raise ValueError('Uninstall did not remove the application cleanly while preserving user data')
 
 
+def deploy_cuda_runtime(worker, native, destination):
+    required = json.loads((ROOT / 'config/windows-dependencies.json').read_text())['cuda-runtime']['requiredDlls']
+    source = native / 'cuda'
+    missing = [name for name in required if not (source / name).is_file()]
+    if missing:
+        raise ValueError(f'Missing packaged CUDA runtime: {sorted(missing)}')
+    target = destination / 'cuda'
+    target.mkdir()
+    # Only the small, app-versioned worker belongs in the installer. Its pinned
+    # dependencies are independently published and cached by RuntimeManager.
+    shutil.copy2(worker, target / 'moss-ditto.exe')
+
+
 def package(qt, prefix, native, image_build, sfx_build, build):
     destination = ROOT / 'dist/windows/XAvatar'
     if destination.exists():
@@ -154,10 +167,17 @@ def package(qt, prefix, native, image_build, sfx_build, build):
             if target.exists() and target.read_bytes() != dll.read_bytes():
                 raise ValueError(f'DLL collision: {dll.name}')
             shutil.copy2(dll, target)
+    deploy_cuda_runtime(build / 'workers/moss-ditto.exe', native, destination)
+    from windows_runtime import build_components, verify_components
+    runtime_artifacts = ROOT / 'dist/windows-runtime-artifacts'
+    required = json.loads((ROOT / 'config/windows-dependencies.json').read_text())['cuda-runtime']['requiredDlls']
+    build_components(native, runtime_artifacts, required)
+    verify_components(runtime_artifacts)
+    shutil.copy2(runtime_artifacts / 'cuda-runtime.json', destination / 'cuda-runtime.json')
     shutil.copytree(ROOT / 'assets/voices', destination / 'assets/voices')
     shutil.copytree(ROOT / 'assets/avatars', destination / 'assets/avatars')
     licenses = destination / 'licenses'
-    shutil.copytree(native / 'licenses', licenses)
+    shutil.copytree(native / 'licenses', licenses, ignore=shutil.ignore_patterns('cuda'))
     for notice in (prefix / 'share').rglob('*'):
         if notice.is_file() and notice.name.lower().startswith(('copyright', 'license', 'copying', 'notice')):
             target = licenses / 'vcpkg' / notice.relative_to(prefix / 'share')
@@ -170,7 +190,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     shutil.copy2(ROOT / 'vendor/videocut-voice/PROVENANCE.md', licenses / 'voice')
     for source in ('LICENSE', 'THIRD_PARTY.md', 'docs/model-terms.md'):
         shutil.copy2(ROOT / source, licenses)
-    for source in ('test_windows.ps1', 'test_windows.cmd'):
+    for source in ('test_windows.ps1', 'test_windows.cmd', 'test_ditto_gpu.ps1'):
         shutil.copy2(ROOT / 'scripts' / source, destination)
     shutil.copy2(ROOT / 'docs/windows-release.md', destination / 'README-Windows.md')
     # The updater removes only files owned by the previous distribution. User
@@ -196,17 +216,22 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     # Also check all imported DLLs, including delay imports, in the package.
     dlls = []
     system = Path(os.environ['SystemRoot']) / 'System32'
-    for binary in destination.rglob('*'):
+    for binary in [*destination.rglob('*'), *(native / 'cuda').glob('*.dll')]:
         if binary.suffix.lower() not in ('.exe', '.dll'):
             continue
+        label = ('runtime-components/' + binary.name if binary.parent == native / 'cuda'
+                 else binary.relative_to(destination).as_posix())
         output = subprocess.check_output(['dumpbin', '/nologo', '/dependents', str(binary)], text=True)
         for dependency in re.findall(r'^\s+([\w.+-]+\.dll)\s*$', output, re.M | re.I):
             if dependency.lower().startswith(('api-ms-', 'ext-ms-')):
                 continue
+            if binary.parent == native / 'cuda' and dependency.lower() in {'nvcuda.dll', 'nvml.dll'}:
+                dlls.append({'file': label, 'dependency': dependency, 'providedBy': 'NVIDIA-driver'})
+                continue
             # Windows DLL lookup is case-insensitive; Path.exists follows it.
-            if not dependency_available(dependency, destination, system):
+            if not ((binary.parent / dependency).is_file() or dependency_available(dependency, destination, system)):
                 raise ValueError(f'Unresolved import: {binary.name}: {dependency}')
-            dlls.append({'file': binary.relative_to(destination).as_posix(), 'dependency': dependency})
+            dlls.append({'file': label, 'dependency': dependency})
     # Audit without inheriting Qt/plugin/search paths from the build shell.
     saved = os.environ.copy()
     try:
@@ -231,6 +256,12 @@ def package(qt, prefix, native, image_build, sfx_build, build):
             [str(destination / 'moss-ditto.exe'), 'runtime-check'], env=env, timeout=30, text=True))
         if not runtime.get('tensorCheck') or 'DmlExecutionProvider' not in runtime.get('providers', []):
             raise ValueError(f'Ditto runtime or DirectML provider missing: {runtime}')
+        cuda_env = dict(env, XINSHEN_CUDA_RUNTIME_DIR=str(native / 'cuda'),
+                        PATH=os.pathsep.join([str(native / 'cuda'), str(destination), env['PATH']]))
+        cuda_runtime = json.loads(subprocess.check_output(
+            [str(destination / 'cuda/moss-ditto.exe'), 'runtime-check'], env=cuda_env, timeout=30, text=True))
+        if not cuda_runtime.get('tensorCheck') or 'CUDAExecutionProvider' not in cuda_runtime.get('providers', []):
+            raise ValueError(f'Ditto CUDA runtime missing: {cuda_runtime}')
     finally:
         os.environ.clear()
         os.environ.update(saved)
@@ -242,6 +273,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     evidence.write_text(json.dumps({'platform': 'Windows x64', 'modelFree': True,
         'pythonFree': True, 'deployedSmoke': True, 'installerValidated': True,
         'installedStartupValidated': True, 'uninstallValidated': True, 'gpuInferenceValidated': False,
+        'cudaBundledInInstaller': False, 'cudaComponentsVerified': True,
         'imports': dlls}, indent=2) + '\n')
     with installer.open('rb') as f:
         checksum = hashlib.file_digest(f, 'sha256').hexdigest()

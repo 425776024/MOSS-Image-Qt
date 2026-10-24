@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Windows 10/11 x64 (Vulkan + DirectML)
+    name: Build Windows 10/11 x64 (Vulkan + CUDA + DirectML)
     runs-on: windows-2022
     timeout-minutes: 180
     env:
@@ -80,8 +80,24 @@ jobs:
             .local/ci-windows/build/ming/bin
             .local/ci-windows/build/engines-ready.txt
           key: windows-2022-x64-engines-${{ env.VCToolsVersion }}-${{ hashFiles('scripts/build_ci_windows.py', 'config/windows-dependencies.json', 'config/macos-dependencies.json', 'config/windows-vcpkg/vcpkg.json', 'config/windows.manifest', 'config/windows-manifest.cmake', 'scripts/prepare_flowedit.py', 'vendor/moss-flowedit/**') }}
+      - name: Restore verified CUDA components
+        id: cuda-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/native/cuda
+            .local/ci-windows/native/licenses/cuda
+          key: windows-cuda-components-${{ hashFiles('config/windows-dependencies.json', 'scripts/build_ci_windows.py') }}
       - name: Build native engines, deploy and validate the XAvatar installer
         run: python scripts/build_ci_windows.py
+      - name: Save verified CUDA components
+        if: always() && !cancelled() && steps.cuda-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci-windows/native/cuda/runtime-files.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            .local/ci-windows/native/cuda
+            .local/ci-windows/native/licenses/cuda
+          key: windows-cuda-components-${{ hashFiles('config/windows-dependencies.json', 'scripts/build_ci_windows.py') }}
       - name: Save completed engines even if later worker or packaging checks fail
         if: always() && !cancelled() && steps.engine-cache.outputs.cache-hit != 'true' && hashFiles('.local/ci-windows/build/engines-ready.txt') != ''
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -115,6 +131,14 @@ jobs:
             .local/ci-windows/vcpkg_installed/vcpkg/issue_body.md
           if-no-files-found: ignore
           include-hidden-files: true
+          retention-days: 14
+      - name: Upload independently versioned GPU components
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Windows-runtime-components
+          path: dist/windows-runtime-artifacts/
+          if-no-files-found: error
+          compression-level: 0
           retention-days: 14
       - name: Save completed dependency packages even if later checks fail
         if: always() && steps.native-cache.outputs.cache-hit != 'true' && hashFiles('.local/vcpkg-bincache/*.zip') != ''
@@ -163,3 +187,11 @@ jobs:
             gh release create "$RELEASE_TAG" release/* --verify-tag --draft \
               --title "Moss Studio $RELEASE_TAG" --generate-notes
           fi
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Windows-runtime-components
+          path: runtime-release
+      - name: Publish pinned runtime components for the draft installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -c "from pathlib import Path; from scripts.publish_preview import publish_runtime_components; import os; publish_runtime_components(Path('runtime-release'), os.environ['GITHUB_SHA'])"

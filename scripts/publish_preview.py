@@ -8,6 +8,10 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from windows_runtime import RUNTIME_TAG, verify_components
 
 REPO = '425776024/MOSS-Image-Qt'
 BRANCH = 'master'
@@ -86,6 +90,39 @@ def latest_success(run):
     return bool(runs['workflow_runs']) and runs['workflow_runs'][0]['id'] == run['id']
 
 
+def publish_runtime_components(folder, sha):
+    """Upload new content-addressed assets once; never replace existing DLL packs."""
+    manifest = verify_components(folder)
+    existing = subprocess.run(['gh', 'release', 'view', RUNTIME_TAG, '--repo', REPO,
+                               '--json', 'isDraft'], capture_output=True, text=True)
+    if existing.returncode:
+        try:
+            gh('release', 'create', RUNTIME_TAG, '--repo', REPO, '--target', sha, '--draft',
+               '--prerelease', '--latest=false', '--title', 'Windows GPU components',
+               '--notes', 'Optional runtime components downloaded automatically by XAvatar. Existing component assets are immutable.')
+        except subprocess.CalledProcessError:
+            # A tagged release and the development publisher may arrive together.
+            # Continue only if the other publisher actually created the release.
+            api(f'releases/tags/{RUNTIME_TAG}')
+    release = api(f'releases/tags/{RUNTIME_TAG}')
+    assets = {a['name']: a for a in release['assets']}
+    for component in manifest['components']:
+        name = component['archive']
+        if name not in assets:
+            try:
+                gh('release', 'upload', RUNTIME_TAG, folder / name, '--repo', REPO)
+            except subprocess.CalledProcessError:
+                # Re-read and verify a concurrently uploaded asset; never clobber.
+                pass
+            assets = {a['name']: a for a in api(f'releases/tags/{RUNTIME_TAG}')['assets']}
+        asset = assets.get(name, {})
+        if asset.get('digest') != 'sha256:' + component['sha256'] or asset.get('size') != component['bytes']:
+            raise ValueError(f'Published runtime asset differs from the pinned component: {name}')
+    if release['draft']:
+        gh('release', 'edit', RUNTIME_TAG, '--repo', REPO, '--draft=false', '--prerelease', '--latest=false')
+    return manifest
+
+
 def publish(run_id, *, allow_manual=False):
     if os.environ.get('GH_REPO', REPO) != REPO:
         raise ValueError('Unexpected repository')
@@ -111,10 +148,14 @@ def publish(run_id, *, allow_manual=False):
         folder = root / 'artifacts'
         gh('run', 'download', run_id, '--repo', REPO, '--name', artifact, '--dir', folder)
         assets = verified_assets(folder, platform, checksums, sha)
+        runtime_folder = root / 'runtime-components'
+        gh('run', 'download', run_id, '--repo', REPO, '--name', 'Windows-runtime-components', '--dir', runtime_folder)
+        # Runtime URLs must be live before the installer becomes downloadable.
+        runtime_manifest = publish_runtime_components(runtime_folder, sha)
         provenance = root / 'build-source.json'
         provenance.write_text(json.dumps({'commit': sha, 'runId': run_id,
             'workflow': run['path'], 'buildUrl': run['html_url'], 'builtAt': run['updated_at'],
-            'developmentPreview': True, 'notarized': False}, indent=2) + '\n')
+            'developmentPreview': True, 'notarized': False, 'cudaRuntimeId': runtime_manifest['id']}, indent=2) + '\n')
         assets.append(provenance)
         qualification = ('**macOS 开发测试包，未经 Apple 公证，仅有 ad-hoc 签名。** '
                          '需要已公证安装包时，请选择下载目录中的已公证发布版。\n\n'

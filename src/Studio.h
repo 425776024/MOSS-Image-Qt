@@ -1,6 +1,7 @@
 #pragma once
 #include "Document.h"
 #include "ModelManager.h"
+#include "RuntimeManager.h"
 #include "EditDocument.h"
 #include "LayerDocument.h"
 #include "SoundPlan.h"
@@ -242,6 +243,7 @@ private:
     QElapsedTimer m_timer;
     InferenceDiagnostics m_diagnostics;
     ModelManager m_modelManager;
+    RuntimeManager m_runtimeManager;
     QFile m_jobLog;
     QString m_models,m_outputRoot,m_status="准备创作",m_error,m_log,m_image,m_video,m_portrait,m_audio,m_backend="待运行";
     QString m_imageQuant="Q4_K";

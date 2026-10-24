@@ -6,6 +6,9 @@
 #include <vector>
 
 namespace lp {
+// Reject Core ML plans that assign inference operations to CPU. This is a
+// placement check, not a claim of measured hardware utilization.
+void validateCoreMLAcceleration(const std::filesystem::path& cache, const std::string& component);
 // Native MLProgram path: the bundled ORT bridge rejects fp16 GPU operators.
 class CoreMLGenerator {
  public:

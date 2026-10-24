@@ -3,6 +3,7 @@
 #include "media_io.h"
 #include "page_face.h"
 #include "timeline_render.h"
+#include "windows_accelerator_dispatch.h"
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -10,6 +11,17 @@ namespace fs=std::filesystem;
 int main(int argc,char **argv){
     try{
         avatar::installCancellation();
+#ifdef _WIN32
+        SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+        if (auto code = avatar::dispatchCuda(argc, argv)) return *code;
+        if (argc == 2 && std::string(argv[1]) == "cuda-check") {
+            try { std::cout << ditto::cudaCheck().dump() << std::endl; return 0; }
+            catch (const std::exception &e) {
+                std::cerr << avatar::Json{{"event","backend-unavailable"},{"backend","CUDA"},{"message",e.what()}}.dump() << std::endl;
+                return 2;
+            }
+        }
+#endif
         if(argc==2&&std::string(argv[1])=="runtime-check"){
             std::cout<<ditto::runtimeCheck().dump()<<std::endl;return 0;
         }

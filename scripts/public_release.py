@@ -34,6 +34,7 @@ PUBLIC_SCRIPTS = {
     "configure_appstore_upload.py", "appstore_keychain_service.swift",
     "build_ci_windows.py", "package_windows.py", "test_windows.ps1", "test_windows.cmd",
     "diagnose_windows_runtime.py", "publish_preview.py", "release_macos.py", "release_macos.command",
+    "windows_runtime.py", "install_runtime.ps1", "test_ditto_gpu.ps1",
     "update_macos.sh", "update_windows.ps1",
 }
 

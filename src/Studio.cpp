@@ -372,7 +372,7 @@ void Studio::fail(QString s){DiagnosticLog::instance().record("error","operation
 void Studio::start(QString exe,QStringList args,QString kind){
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
     m_remoteJob=false;
-    m_kind=kind;m_cancelled=false;m_busy=true;m_progress=0;m_backend="正在检测";m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();
+    m_kind=kind;m_cancelled=false;m_busy=true;m_progress=0;m_backend="正在检测";m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();m_timer.start();
     m_status=kind=="voice"?"正在合成页面配音…":kind=="sfx"?"正在生成音效…":kind=="page-video"?"正在检测画面并准备配音…":kind=="timeline"?"正在导出时间轴…":kind=="avatar"?"正在准备 Ditto…":"正在加载 MOSS-Image…";
     auto diagnosticParameters=readJson(m_jobDir+"/job.json");
     diagnosticParameters["imageQuant"]=m_imageQuant;
@@ -397,7 +397,29 @@ void Studio::start(QString exe,QStringList args,QString kind){
         env.insert("MOSS_FLOWEDIT_NMIN","0");env.insert("MOSS_FLOWEDIT_NAVG","1");
         env.insert("MOSS_FLOWEDIT_SOURCE_CFG",QString::number(editJob["cfg"].toDouble()));
     }
-    m_process.setProcessEnvironment(env);m_timer.start();persist();m_process.start(exe,args);emit changed();
+    auto launch=[this,exe,args,env](QString runtime) mutable {
+        if(!runtime.isEmpty())env.insert("XINSHEN_CUDA_RUNTIME_DIR",runtime);
+        m_process.setProcessEnvironment(env);m_progress=0;m_timer.start();persist();m_process.start(exe,args);emit changed();
+    };
+#ifdef Q_OS_WIN
+    const bool avatarInference=args.value(0)=="generate" ||
+        (args.value(0)=="generate-page" && readJson(args.last())["speech"].toBool(true));
+    if(QFileInfo(exe).fileName()=="moss-ditto.exe" && avatarInference && RuntimeManager::cudaAvailable()) {
+        const auto status=m_status;m_status="正在准备创作资源…";
+        m_runtimeManager.disconnect(this);
+        connect(&m_runtimeManager,&RuntimeManager::progress,this,[this](double value){m_progress=value;emit changed();});
+        connect(&m_runtimeManager,&RuntimeManager::completed,this,[this,launch,status](QString runtime,QString error,bool cancelled) mutable {
+            if(cancelled||!error.isEmpty()) {
+                m_cancelled=cancelled;m_workerError=error;finished(1,QProcess::NormalExit);return;
+            }
+            m_status=status;launch(runtime);
+        });
+        QFile manifest(QFileInfo(exe).absolutePath()+"/cuda-runtime.json");
+        const auto data=manifest.open(QIODevice::ReadOnly)?manifest.readAll():QByteArray();
+        emit changed();m_runtimeManager.prepare(data);return;
+    }
+#endif
+    launch({});
 }
 void Studio::startRemote(QStringList args,QString kind){
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
@@ -867,6 +889,7 @@ void Studio::finished(int code,QProcess::ExitStatus state){
 void Studio::cancel(){
     if(m_remoteJob){m_audioPipeline=false;m_remote.cancel();return;}
     m_cancelled=true;m_audioPipeline=false;
+    if(m_runtimeManager.busy()){m_status="正在取消…";emit changed();m_runtimeManager.cancel();return;}
     if(m_modelManager.busy()){m_modelManager.cancel();return;}
     if(m_process.state()!=QProcess::NotRunning){
         m_status="正在取消…";m_process.terminate();

@@ -127,6 +127,18 @@ The upstream inclusionAI model is MIT; its full license is retained under
 `vendor/videocut-voice/licenses/ming/`. Voice recording and preset rights remain
 separate from model rights. The retired Hojo backend, headers and model notices have been removed.
 
+## Windows CUDA runtime
+
+Windows Ditto downloads an isolated ONNX Runtime GPU 1.25.0 distribution (MIT),
+CUDA 12.8 runtime libraries and cuDNN 9.10 runtime libraries from NVIDIA's official
+redistributable archives. NVIDIA components retain their upstream license/EULA
+and notices inside each component's `licenses/` directory; versions and SHA-256 digests are pinned in
+`config/windows-dependencies.json`. Only runtime DLLs are shipped. The NVIDIA
+display driver is supplied by Windows/the hardware vendor. No CUDA Toolkit,
+Python, TensorRT, or model weights are bundled with this runtime. GPU DLLs are
+published as independently versioned optional components, downloaded on first
+use and retained outside the application directory across ordinary app updates.
+
 ## FlowEdit image editing
 
 `vendor/moss-flowedit/` contains the inference adapter and a small patch to the

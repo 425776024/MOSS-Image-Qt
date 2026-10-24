@@ -18,5 +18,50 @@
   "mediapipe-wheel": {
     "url": "https://files.pythonhosted.org/packages/5b/f6/763477e9aeed98accc984ed6ee3f11a21a0c5fd1d1c6586b8d07067748ff/mediapipe-0.10.35-py3-none-win_amd64.whl",
     "sha256": "b08f001cf3c3cd0d88d9ed68f3368dc8a4913f568281a93117f083115aa672ba"
+  },
+  "onnxruntime-cuda": {
+    "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.25.0/onnxruntime-win-x64-gpu-1.25.0.zip",
+    "sha256": "125c9fe408f41b9ae1ad7138dac5ebb19a85e65438d1e368d21b50e6abb32f4e"
+  },
+  "cuda-cudart": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.8.57-archive.zip",
+    "sha256": "2c7aa62a195d79229d4381c8bd0174a30502cf3d8124c6e94ee50a7fc8a1e9f4"
+  },
+  "cuda-cublas": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-12.8.3.14-archive.zip",
+    "sha256": "a2f990cf61f0086d942632f2455727240baa9378c2e9fa2bdda56ef81f6cf8ad"
+  },
+  "cuda-cufft": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/libcufft/windows-x86_64/libcufft-windows-x86_64-11.3.3.41-archive.zip",
+    "sha256": "04969fc26520dc085665bf6256d793ddceb277bd6f2401093fded781d9fa7151"
+  },
+  "cuda-curand": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/libcurand/windows-x86_64/libcurand-windows-x86_64-10.3.9.55-archive.zip",
+    "sha256": "239172718cca32f153ef6fd27e3950795463732b0f24df6282ba6bf207a9c29d"
+  },
+  "cuda-nvrtc": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvrtc/windows-x86_64/cuda_nvrtc-windows-x86_64-12.8.61-archive.zip",
+    "sha256": "e43603b09f8a52d681ceb814c00b655af19da53692ab91671dabbf8071c8f93d"
+  },
+  "cudnn": {
+    "url": "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.10.2.21_cuda12-archive.zip",
+    "sha256": "c1a4567d822ebda7373fa1f19255dff4942302de741f830160b6c7d1fb31af23"
+  },
+  "cuda-nvjitlink": {
+    "url": "https://developer.download.nvidia.com/compute/cuda/redist/libnvjitlink/windows-x86_64/libnvjitlink-windows-x86_64-12.8.61-archive.zip",
+    "sha256": "8258afaadbd9744d87070525067c497041dd52c6b22d11ba7297421fc8f6f39d"
+  },
+  "cuda-runtime": {
+    "requiredDlls": [
+      "onnxruntime.dll",
+      "onnxruntime_providers_shared.dll",
+      "onnxruntime_providers_cuda.dll",
+      "cudart64_12.dll",
+      "cublas64_12.dll",
+      "cublasLt64_12.dll",
+      "cudnn64_9.dll",
+      "cufft64_11.dll",
+      "curand64_10.dll"
+    ]
   }
 }

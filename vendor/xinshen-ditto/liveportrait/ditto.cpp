@@ -15,6 +15,9 @@
 #include "../frame_pipeline.h"
 #include "../media_io.h"
 #include "../onnx_session.h"
+#include "../onnx_device_policy.h"
+#include "../onnx_execution_report.h"
+#include "../accelerator_probe.h"
 #include <chrono>
 #include <atomic>
 #include <cerrno>
@@ -242,17 +245,64 @@ struct Net {
 #endif
   std::vector<std::string> inputs, outputs;
   std::string name;
+  std::string backend = "CPU";
+  bool profiling = false;
   double loadSeconds = 0, runSeconds = 0;
   size_t runs = 0;
   ~Net() {
     if (std::getenv("XINSHEN_INFERENCE_PROFILE"))
       std::cerr << "[ditto_net] " << name << " load_s=" << loadSeconds
                 << " runs=" << runs << " run_s=" << runSeconds << '\n';
+    if (!session) return;
+    try {
+      J report = {{"event", "backend"}, {"component", name}, {"backend", backend},
+                  {"phase", "completed"}, {"loadSeconds", loadSeconds},
+                  {"runSeconds", runSeconds}, {"runs", runs},
+                  {"gpu", backend == "CPU" ? "no" : "unknown"},
+                  {"evidence", "session-completed; node placement not measured"}};
+      if (profiling) {
+        Ort::AllocatorWithDefaultOptions allocator;
+        auto path = session.EndProfilingAllocated(allocator);
+        report.update(avatar::onnxExecutionReport(avatar::readJson(fs::u8path(path.get()))));
+      }
+      std::cerr << report.dump() + '\n';
+    } catch (const std::exception &e) {
+      // Diagnostic failures must not discard a successfully generated video.
+      std::cerr << J{{"event", "backend-profile-error"}, {"component", name},
+                     {"message", e.what()}}.dump() + '\n';
+    }
   }
   std::unique_ptr<Net> publicWarp, publicDecoder;
   Net(const fs::path &p, bool gpu = true, int cooperativeWorkers = 0)
       : name(p.filename().string()) {
     AccumulateTime timer{loadSeconds};
+#ifdef MOSS_ONNX_DIRECTML
+    const auto variable = avatar::modelDeviceVariable(name);
+    const char *all = std::getenv("XINSHEN_ONNX_DEVICE");
+    const char *model = std::getenv(variable.c_str());
+    const auto requested = avatar::windowsModelDevice(name, gpu, all ? all : "", model ? model : "");
+    gpu = requested != "cpu";
+    const auto providers = Ort::GetAvailableProviders();
+    backend = !gpu ? "CPU" : std::find(providers.begin(), providers.end(), "CUDAExecutionProvider") != providers.end() ? "CUDA" : "DirectML";
+    if ((requested == "cuda" && backend != "CUDA") || (requested == "directml" && backend != "DirectML"))
+      throw std::runtime_error("Requested model backend is unavailable in the selected worker runtime: " + requested);
+#else
+    const char *all = std::getenv("XINSHEN_ONNX_DEVICE");
+#if defined(__APPLE__)
+#if defined(__aarch64__)
+    avatar::requireAppleAcceleration(all ? all : "", true);
+#else
+    avatar::requireAppleAcceleration(all ? all : "", false);
+#endif
+    gpu = true;
+    std::string appleMode = all ? all : "";
+    std::transform(appleMode.begin(), appleMode.end(), appleMode.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    backend = appleMode == "metal" ? "Metal" : "CoreML";
+#else
+    if (all && std::string(all) == "cpu") gpu = false;
+#endif
+#endif
     if(name=="generator.onnx"&&!fs::exists(p)&&fs::exists(p.parent_path()/"warp.onnx")) {
       // Official pretrained weights, split ONNX layout. The opset-20 warp
       // is a public format conversion with unchanged weights, not a finetune.
@@ -263,7 +313,7 @@ struct Net {
       inputs={"feature_3d","kp_driving","kp_source"};return;
     }
 #if defined(__APPLE__)
-    if (gpu && name == "generator.onnx") {
+    if (gpu && backend != "Metal" && name == "generator.onnx") {
       native = lp::CoreMLGenerator::create(p);
       if (native) {
         inputs = {"feature_3d", "kp_driving", "kp_source"};
@@ -272,8 +322,9 @@ struct Net {
     }
 #endif
     auto selected = p;
+#if defined(__APPLE__)
     const char *device = std::getenv("XINSHEN_ONNX_DEVICE");
-    if (gpu && (!device || std::string(device) != "cpu") &&
+    if (gpu && backend == "CoreML" && (!device || std::string(device) != "cpu") &&
         (name == "generator.onnx" || name == "appearance.onnx")) {
       auto manifestPath = p.parent_path() / "coreml/manifest.json";
       if (fs::exists(manifestPath)) {
@@ -294,8 +345,20 @@ struct Net {
         require(found, "GPU graph missing");
       }
     }
+#endif
     auto &environment = runtimeEnvironment();
-    auto options = avatar::onnxOptions(selected, "ditto-v1", !gpu);
+    auto createSession = [&](const fs::path &graph) {
+    fs::path coremlCache;
+    auto options = avatar::onnxOptions(graph, "ditto-v2", !gpu, backend, &coremlCache);
+    if (const char *directory = std::getenv("XINSHEN_ONNX_PROFILE_DIR"); directory && *directory) {
+      static std::atomic<unsigned long long> sequence{0};
+      const auto prefix = fs::u8path(directory) / (name + "-" +
+          std::to_string(Clock::now().time_since_epoch().count()) + "-" +
+          std::to_string(sequence++));
+      fs::create_directories(prefix.parent_path());
+      options.EnableProfiling(prefix.c_str());
+      profiling = true;
+    }
     // These large CPU models benefit from more workers; small landmark and
     // stitching models retain the shared runtime's four-thread policy.
     if (!gpu && (name == "hubert.onnx" || name == "denoise.onnx" ||
@@ -316,7 +379,29 @@ struct Net {
       options.SetCustomJoinThreadFn(joinPriorityOrtThread);
     }
 #endif
-    session = Ort::Session(environment, selected.c_str(), options);
+    session = Ort::Session(environment, graph.c_str(), options);
+#if defined(__APPLE__)
+    if (backend == "CoreML") lp::validateCoreMLAcceleration(coremlCache, name);
+#endif
+    };
+#if defined(__APPLE__)
+    try { createSession(selected); }
+    catch (const std::exception &error) {
+      if (backend == "Metal" || appleMode == "coreml") throw;
+      std::cerr << J{{"event", "backend-unavailable"}, {"component", name},
+          {"backend", "CoreML"}, {"fallback", "Metal"}, {"message", error.what()}}.dump() + '\n';
+      session = Ort::Session{nullptr};
+      backend = "Metal";
+      profiling = false;
+      createSession(p);
+    }
+#else
+    createSession(selected);
+#endif
+    std::cerr << J{{"event", "backend"}, {"component", name}, {"backend", backend},
+        {"phase", "ready"}, {"availableProviders", Ort::GetAvailableProviders()},
+        {"gpu", backend == "CPU" ? "no" : "unknown"},
+        {"evidence", "session-created; node placement not measured"}}.dump() + '\n';
     Ort::AllocatorWithDefaultOptions a;
     for (size_t i = 0; i < session.GetInputCount(); ++i)
       inputs.emplace_back(session.GetInputNameAllocated(i, a).get());
@@ -618,9 +703,14 @@ struct Prep {
     const auto manifest = avatar::readJson(r / "manifest.json");
     const auto profile = manifest.value("preparation", J::object()).value("profile", std::string());
     require(profile.empty() || profile == "yunet-203-v1", "unknown face preparation profile");
-    if (profile == "yunet-203-v1")
+    if (profile == "yunet-203-v1") {
+#if defined(__APPLE__)
+      throw std::runtime_error("当前人像检测模型尚无已验证的 Apple Silicon 加速实现，CPU 推理已禁用");
+#else
       yunet = cv::FaceDetectorYN::create((r / "face_detection_yunet_2023mar.onnx").string(),
           "", {640,640}, .9f, .3f, 5000, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_TARGET_CPU);
+#endif
+    }
     else {
       det = std::make_unique<Net>(r / "detector.onnx", false);
       l106 = std::make_unique<Net>(r / "landmark106.onnx", false);
@@ -1625,6 +1715,34 @@ J runtimeCheck() {
   return {{"runtime", OrtGetApiBase()->GetVersionString()},
           {"providers", Ort::GetAvailableProviders()}, {"tensorCheck", true},
           {"gpuInferenceValidated", false}};
+}
+J cudaCheck() {
+#ifdef MOSS_ONNX_DIRECTML
+  auto &env = runtimeEnvironment();
+  auto options = avatar::onnxOptions("accelerator-probe", "", false, "CUDA");
+  options.AddConfigEntry("session.disable_cpu_ep_fallback", "1");
+  Ort::Session probe(env, avatar::acceleratorProbe, sizeof(avatar::acceleratorProbe), options);
+  float data[] = {1, 2, 3, 4};
+  float volume[] = {1, 2, 3, 4, 5, 6, 7, 8}, grid[] = {0, 0, 0};
+  const int64_t shape[] = {1, 1, 2, 2};
+  const int64_t volumeShape[] = {1, 1, 2, 2, 2}, gridShape[] = {1, 1, 1, 1, 3};
+  std::vector<Ort::Value> tensors;
+  tensors.push_back(Ort::Value::CreateTensor<float>(runtimeMemory(), data, 4, shape, 4));
+  tensors.push_back(Ort::Value::CreateTensor<float>(runtimeMemory(), volume, 8, volumeShape, 5));
+  tensors.push_back(Ort::Value::CreateTensor<float>(runtimeMemory(), grid, 3, gridShape, 5));
+  const char *inputs[] = {"x", "volume", "grid"}, *outputs[] = {"y", "sampled"};
+  auto result = probe.Run(Ort::RunOptions{nullptr}, inputs, tensors.data(), 3, outputs, 2);
+  require(result.size() == 2 && result[0].GetTensorTypeAndShapeInfo().GetElementCount() == 2 &&
+              result[1].GetTensorTypeAndShapeInfo().GetElementCount() == 1 &&
+              std::abs(result[0].GetTensorData<float>()[0] - 3.f) < 1e-5 &&
+              std::abs(result[0].GetTensorData<float>()[1] - 7.f) < 1e-5 &&
+              std::abs(result[1].GetTensorData<float>()[0] - 4.5f) < 1e-5,
+          "CUDA Conv/MatMul/5D GridSample execution check");
+  return {{"event", "accelerator-probe"}, {"backend", "CUDA"}, {"success", true},
+          {"evidence", "Conv-MatMul-5D-GridSample; CPU EP fallback disabled"}};
+#else
+  throw std::runtime_error("CUDA is available only in the Windows CUDA worker");
+#endif
 }
 J capabilities(const fs::path &models) {
   auto m = verify(models);

@@ -94,7 +94,68 @@ def unzip(archive, destination, prefix):
                 raise ValueError('Unsafe archive member')
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(z.read(name))
+            with z.open(name) as source, target.open('wb') as output:
+                shutil.copyfileobj(source, output, 1024 * 1024)
+
+
+CUDA_REQUIRED_DLLS = set(LOCK['cuda-runtime']['requiredDlls'])
+
+
+def extract_cuda_runtime(archive, destination, notices, only=None):
+    """Keep only redistributable runtime DLLs and notices; never headers/tools."""
+    destination.mkdir(parents=True, exist_ok=True)
+    notices.mkdir(parents=True, exist_ok=True)
+    runtime_files = []
+    with zipfile.ZipFile(archive) as z:
+        for name in z.namelist():
+            path = Path(name)
+            if path.is_absolute() or '..' in path.parts:
+                raise ValueError('Unsafe CUDA archive member')
+            if name.endswith('/'):
+                continue
+            runtime = path.suffix.lower() == '.dll' and (only is None or path.name in only)
+            notice = any(word in path.name.lower() for word in ('license', 'eula', 'notice'))
+            if not runtime and not notice:
+                continue
+            target = (destination if runtime else notices / archive.stem) / path.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                raise ValueError(f'Duplicate CUDA payload: {target.name}')
+            with z.open(name) as source, target.open('wb') as output:
+                shutil.copyfileobj(source, output, 1024 * 1024)
+            if runtime:
+                runtime_files.append(path.name)
+    return runtime_files
+
+
+def prepare_cuda_runtime():
+    # Separate ORT distributions have the same core DLL name. They must run in
+    # separate processes/directories. CUDA 1.25 retains the version-23 C API
+    # used by the worker and adds the required volumetric GridSample kernel.
+    runtime = NATIVE / 'cuda'
+    receipt = runtime / 'runtime-files.json'
+    names = ('onnxruntime-cuda', 'cuda-cudart', 'cuda-cublas', 'cuda-cufft',
+             'cuda-curand', 'cuda-nvrtc', 'cuda-nvjitlink', 'cudnn')
+    fingerprint = hashlib.sha256(json.dumps({n: LOCK[n] for n in (*names, 'cuda-runtime')}, sort_keys=True).encode()).hexdigest()
+    if receipt.is_file():
+        manifest = json.loads(receipt.read_text())
+        if manifest.get('dependencies') == fingerprint and manifest.get('components') and all(
+                (runtime / name).is_file() and digest(runtime / name) == sha
+                for name, sha in manifest.get('files', {}).items()) and CUDA_REQUIRED_DLLS <= set(manifest.get('files', {})):
+            return runtime
+        raise ValueError('Preserve/remove the old CUDA runtime before changing pinned dependencies')
+    if runtime.exists() and any(runtime.iterdir()):
+        raise ValueError('Incomplete CUDA runtime; preserve/remove it before rebuilding')
+    components = {}
+    for name in names:
+        archive = download(name + '.zip', LOCK[name])
+        only = {'onnxruntime.dll', 'onnxruntime_providers_shared.dll', 'onnxruntime_providers_cuda.dll'} if name == 'onnxruntime-cuda' else None
+        components[name] = extract_cuda_runtime(archive, runtime, NATIVE / 'licenses/cuda', only)
+    files = {p.name: digest(p) for p in sorted(runtime.glob('*.dll'))}
+    if not CUDA_REQUIRED_DLLS <= files.keys():
+        raise ValueError(f'Incomplete CUDA runtime: {CUDA_REQUIRED_DLLS - files.keys()}')
+    receipt.write_text(json.dumps({'dependencies': fingerprint, 'files': files, 'components': components}, indent=2) + '\n')
+    return runtime
 
 
 def cmake(source, build, *options):
@@ -196,6 +257,8 @@ def main(check_app_only=False, run_tests=False):
         if run_tests:
             test_build(BUILD)
         return
+
+    prepare_cuda_runtime()
 
     engine = checkout('stable-diffusion', LOCK['stable-diffusion'])
     run(sys.executable, ROOT / 'scripts/prepare_flowedit.py', engine)

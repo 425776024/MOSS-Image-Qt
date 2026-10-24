@@ -43,7 +43,11 @@ inline std::array<float, 8> eyeCondition(const std::filesystem::path &model,
 #else
   options.base_options.host_system = HOST_SYSTEM_LINUX;
 #endif
+#if defined(__APPLE__)
+  options.base_options.delegate = GPU;
+#else
   options.base_options.delegate = CPU;
+#endif
   options.running_mode = RunningMode::IMAGE;
   options.num_faces = 1;
   char *error = nullptr;

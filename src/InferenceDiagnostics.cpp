@@ -67,7 +67,7 @@ void InferenceDiagnostics::line(const QByteArray &bytes) {
     QString component = "default";
     if (name == "backend") {
         component = json["component"].toString("default");
-        backend = select(json, {"backend", "device", "gpu", "evidence", "availableProviders", "threads"});
+        backend = select(json, {"backend", "device", "gpu", "evidence", "availableProviders", "threads", "phase", "loadSeconds", "runSeconds", "runs", "providerExecution", "gpuUtilization"});
         // Worker protocols must explicitly report GPU evidence; a provider list is insufficient.
         if (!backend.contains("gpu")) backend["gpu"] = "unknown";
     } else if (!error && !warning) {
@@ -92,9 +92,9 @@ void InferenceDiagnostics::line(const QByteArray &bytes) {
         event("info", "backend-selected", backend);
     }
     if (name == "error") { event("error", "worker-error", {{"message", json["message"]}}); return; }
-    if (name == "backend-unavailable") { event("warning", "backend-unavailable", select(json,{"backend","message"})); return; }
+    if (name == "backend-unavailable") { event("warning", "backend-unavailable", select(json,{"backend","message","fallback"})); return; }
     if (!name.isEmpty()) {
-        event("info", "worker-event", select(json, {"event", "stage", "durationSeconds", "sampleRate", "engine", "route", "backend", "device", "gpu", "component", "availableProviders", "evidence"}));
+        event("info", "worker-event", select(json, {"event", "stage", "durationSeconds", "sampleRate", "engine", "route", "backend", "device", "deviceId", "gpu", "component", "availableProviders", "evidence", "message", "fallback", "gpuOperations", "aneOperations", "cpuOrUnknownOperations"}));
         return;
     }
     if (text.contains("generating image", Qt::CaseInsensitive)) stage("sampling");
@@ -109,7 +109,7 @@ QJsonObject InferenceDiagnostics::summary() const {
     bool cpu = false, gpu = false, unknown = false;
     for (const auto &item : m_backends) {
         const auto state = item.toObject()["gpu"].toString();
-        cpu |= state == "no"; gpu |= state == "yes"; unknown |= state == "unknown";
+        cpu |= state == "no" || state == "mixed"; gpu |= state == "yes" || state == "mixed"; unknown |= state == "unknown";
     }
     return {{"gpu", gpu ? (cpu ? "mixed" : "yes") : cpu && !unknown ? "no" : "unknown"}, {"components", m_backends}, {"gpuUtilization", "not_measured"}};
 }

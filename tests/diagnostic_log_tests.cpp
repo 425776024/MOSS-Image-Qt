@@ -101,6 +101,26 @@ private slots:
         }
         QVERIFY(failure);QVERIFY(stage);QVERIFY(finish);
     }
+    void dittoProfilePreservesMixedExecutionAndModelTimings() {
+        QTemporaryDir dir; DiagnosticLog log(dir.filePath("cache")); InferenceDiagnostics job(&log);
+        job.begin("avatar", "moss-ditto", false, {});
+        job.consume("{\"event\":\"backend\",\"component\":\"warp.onnx\",\"backend\":\"DirectML\",\"gpu\":\"unknown\",\"phase\":\"ready\"}\n");
+        QCOMPARE(job.summary()["gpu"].toString(), QString("unknown"));
+        job.consume("{\"event\":\"backend\",\"component\":\"warp.onnx\",\"backend\":\"DirectML\",\"gpu\":\"mixed\",\"phase\":\"completed\",\"runs\":20,\"runSeconds\":1.25,\"providerExecution\":{\"DmlExecutionProvider\":{\"kernelEvents\":40,\"durationUs\":1234}},\"evidence\":\"onnxruntime-kernel-profile\"}\n");
+        QCOMPARE(job.summary()["gpu"].toString(), QString("mixed"));
+        job.finish(true, false, 0, false, "");
+        QString error; QVERIFY(log.exportTo(dir.filePath("report.log"), &error));
+        bool measured = false;
+        for (const auto &entry : entries(dir.filePath("report.log"))) {
+            const auto data = entry["data"].toObject();
+            if (entry["event"] != "backend-selected" || data["phase"] != "completed") continue;
+            QCOMPARE(data["runs"].toInt(), 20);
+            QCOMPARE(data["runSeconds"].toDouble(), 1.25);
+            QVERIFY(data["providerExecution"].toObject().contains("DmlExecutionProvider"));
+            measured = true;
+        }
+        QVERIFY(measured);
+    }
     void realWorkerExitAndNoNewlineAreCaptured() {
         QTemporaryDir dir;DiagnosticLog log(dir.filePath("cache"));InferenceDiagnostics job(&log);
         QProcess process;process.setProcessChannelMode(QProcess::MergedChannels);
