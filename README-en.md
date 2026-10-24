@@ -17,7 +17,7 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 | Works | Multiple conversations, search, rename, duplicate, save, remove and restore; preview and export media |
 | Resources | First-run guidance, multiple-resource selection, resumable downloads, automatic source selection, verification and cleanup; Q4 images by default |
 | Agents / MCP | Connect local or LAN agents to manage works, generate content, upload/read media, and inspect tasks and resources |
-| Desktop | Chinese/English, light/dark appearance, adjustable three-panel workspace, and diagnostic-log export |
+| Desktop | Chinese/English, light/dark appearance, adjustable three-panel workspace, diagnostic-log export; version checks and community-edition updates with restart |
 
 ## Screenshots
 

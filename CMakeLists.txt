@@ -25,6 +25,10 @@ set(MOSS_BUILD_NUMBER "1" CACHE STRING "Monotonically increasing Apple bundle bu
 if(NOT MOSS_BUILD_NUMBER MATCHES "^[1-9][0-9]*$")
     message(FATAL_ERROR "MOSS_BUILD_NUMBER must be a positive integer")
 endif()
+execute_process(COMMAND git log -1 --format=%H WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE MOSS_BUILD_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+execute_process(COMMAND git log -1 --format=%cI WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE MOSS_BUILD_TIMESTAMP OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 include(CTest)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Network Multimedia Concurrent Svg)
 if(BUILD_TESTING)
@@ -32,11 +36,19 @@ if(BUILD_TESTING)
 endif()
 qt_standard_project_setup(REQUIRES 6.8)
 qt_add_executable(MossStudio MACOSX_BUNDLE
+    src/AppUpdate.cpp src/AppUpdate.h
     src/DiagnosticLog.cpp src/DiagnosticLog.h src/InferenceDiagnostics.cpp src/InferenceDiagnostics.h
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
     src/WorkspaceLibrary.cpp src/WorkspaceLibrary.h src/main.cpp src/ModelManager.cpp src/ModelManager.h src/Studio.cpp src/StudioTimeline.cpp src/Studio.h src/RemoteImageClient.cpp src/RemoteImageClient.h src/TimelineDocument.cpp src/TimelineDocument.h src/AudioDurationProbe.cpp src/AudioDurationProbe.h src/Document.cpp src/Document.h src/SoundPlan.cpp src/SoundPlan.h)
 qt_add_resources(MossStudio home_resources PREFIX "/home"
     FILES THIRD_PARTY.md assets/app-icon/xinshen-1024.png assets/home/wechat_contact_qr.png assets/home/wechat_official_account_qr.png)
+if(NOT MOSS_APP_STORE)
+    qt_add_resources(MossStudio update_helpers PREFIX "/updates"
+        FILES scripts/update_macos.sh scripts/update_windows.ps1)
+endif()
+target_compile_definitions(MossStudio PRIVATE MOSS_APP_VERSION="${PROJECT_VERSION}"
+    MOSS_BUILD_NUMBER="${MOSS_BUILD_NUMBER}" MOSS_BUILD_COMMIT="${MOSS_BUILD_COMMIT}"
+    MOSS_BUILD_TIMESTAMP="${MOSS_BUILD_TIMESTAMP}")
 if(WIN32)
     target_sources(MossStudio PRIVATE config/windows-app.rc)
     target_include_directories(MossStudio PRIVATE assets/app-icon)
@@ -55,6 +67,7 @@ if(APPLE)
 endif()
 set_source_files_properties(qml/HomeTheme.qml qml/StudioTheme.qml qml/VideoCutTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
+    QML_FILES qml/HomeUpdates.qml
     QML_FILES qml/HomeMcp.qml
     RESOURCES qml/Translations.js qml/VoiceDesignPresets.js
     QML_FILES qml/GenerationAvatar.qml qml/AvatarDesignDialog.qml qml/VoiceStyleControls.qml qml/VoiceDesignDialog.qml qml/AvatarMotionControls.qml
@@ -103,7 +116,7 @@ set_target_properties(MossStudio PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER "ai.ffclip.studio"
     MACOSX_BUNDLE_ICON_FILE "Xinshen.icns"
     MACOSX_BUNDLE_BUNDLE_VERSION "${MOSS_BUILD_NUMBER}"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0")
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 target_compile_definitions(MossStudio PRIVATE MOSS_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 if(BUILD_TESTING)
 function(moss_add_qt_test name target)
@@ -114,6 +127,15 @@ function(moss_add_qt_test name target)
         add_test(NAME "${name}" COMMAND "${target}")
     endif()
 endfunction()
+qt_add_executable(app_update_tests tests/app_update_tests.cpp src/AppUpdate.cpp src/AppUpdate.h)
+target_include_directories(app_update_tests PRIVATE src)
+target_link_libraries(app_update_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test)
+moss_add_qt_test(app_update app_update_tests)
+qt_add_executable(store_app_update_tests tests/app_update_tests.cpp src/AppUpdate.cpp src/AppUpdate.h)
+target_include_directories(store_app_update_tests PRIVATE src)
+target_compile_definitions(store_app_update_tests PRIVATE MOSS_APP_STORE=1)
+target_link_libraries(store_app_update_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test)
+moss_add_qt_test(store_app_update store_app_update_tests)
 qt_add_executable(user_file_export_tests tests/user_file_export_tests.cpp)
 target_include_directories(user_file_export_tests PRIVATE src)
 target_link_libraries(user_file_export_tests PRIVATE Qt6::Core Qt6::Test)

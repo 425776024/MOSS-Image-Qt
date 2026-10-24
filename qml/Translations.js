@@ -2,6 +2,7 @@
 
 // UI strings only. Imported user content is not translated.
 var english = {
+    "更新": "Updates",
     "默认": "Default",
     "人物表情": "Facial emotion",
     "动作幅度": "Motion strength",

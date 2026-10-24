@@ -142,6 +142,7 @@ ApplicationWindow {
                     SidebarRow { objectName: "homeMcpButton"; text: "MCP"; glyph: "server"; active: home.destination === "mcp"; onClicked: home.destination="mcp" }
                     SidebarRow { objectName: "homeModelsButton"; text: HomeTheme.t("模型资源"); shortText: HomeTheme.t("资源"); glyph: "model"; active: home.destination === "settings" && settings.section===1; onClicked: {settings.section=1;home.destination="settings"} }
                     SidebarRow { text: HomeTheme.t("设置"); glyph: "gear"; active: home.destination === "settings" && ![1,5,6].includes(settings.section); onClicked: {settings.section=0;home.destination="settings"} }
+                    SidebarRow { objectName: "homeUpdatesButton"; text: HomeTheme.t("更新")+(appUpdate.state==="available" ? " •" : ""); glyph: "refresh"; active: home.destination === "updates"; onClicked: home.destination="updates" }
                     SidebarRow { objectName: "homeAbout"; text: HomeTheme.t("关于"); glyph: "info"; active: home.destination === "about" || (home.destination === "settings" && settings.section===5); onClicked: {settings.section=5;home.destination="settings"} }
                     SidebarRow { objectName: "homeContact"; text: HomeTheme.t("联系我们"); shortText: HomeTheme.t("联系"); glyph: "contact"; active: home.destination === "contact" || (home.destination === "settings" && settings.section===6); onClicked: home.destination="contact" }
                 }
@@ -228,7 +229,7 @@ ApplicationWindow {
                 Item { id: threadHost; anchors.fill: parent; visible: home.destination === "chat" }
                 StackLayout {
                     anchors.fill: parent; visible: home.destination !== "chat"
-                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5,createVoice:6,mcp:7})[home.destination] || 0
+                    currentIndex: ({avatars:0,voices:1,createAvatar:2,contact:3,settings:4,about:4,templates:5,createVoice:6,mcp:7,updates:8})[home.destination] || 0
                     HomeAvatars { onUseAvatar: url=>home.openAvatar(url); onCreateAvatar: home.destination="createAvatar" }
                     HomeVoices { id: voicesLibrary; onCreateVoice: mode=>{voiceCreator.mode=mode;home.destination="createVoice"}; onUseVoice: id=>{studio.conversation.voiceId=id;studio.conversation.voiceOptions={emotion:studio.sound.settings.emotion,dialect:studio.sound.settings.dialect};home.showEditor("voice")} }
                     HomeAvatarCreator { onOpenLibrary: home.destination="avatars"; onCreateVideo: (source,audio,tts,text,voiceId)=>home.createAvatarVideo(source,audio,tts,text,voiceId) }
@@ -237,6 +238,7 @@ ApplicationWindow {
                     HomeTemplates { onTemplateUsed: home.showEditor("") }
                     HomeVoiceCreator { id: voiceCreator; onOpenLibrary: home.destination="voices"; onVoiceSaved: {voicesLibrary.builtin=false;home.destination="voices"} }
                     HomeMcp { }
+                    HomeUpdates { }
                 }
             }
             }

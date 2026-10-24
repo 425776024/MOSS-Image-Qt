@@ -11,6 +11,7 @@
 #include "WorkspaceLibrary.h"
 #include "McpService.h"
 #include "AudioWaveform.h"
+#include "AppUpdate.h"
 #include <QStyleHints>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -59,7 +60,7 @@ int main(int argc,char **argv){
     qunsetenv("MOSS_SETTINGS_ROOT");
 #endif
     if(backgroundTest)qInfo("Moss background test: offscreen rendering; no desktop window or input automation.");
-    app.setOrganizationName("MossStudio");app.setApplicationName("MossStudio");app.setApplicationVersion("0.1.0");
+    app.setOrganizationName("MossStudio");app.setApplicationName("MossStudio");app.setApplicationVersion(MOSS_APP_VERSION);
     app.setApplicationDisplayName(QString::fromUtf8("新身数字人"));
     app.setWindowIcon(QIcon(":/home/assets/app-icon/xinshen-1024.png"));
     DiagnosticLog::installQtHandler();
@@ -82,7 +83,9 @@ int main(int argc,char **argv){
     if(QFileInfo::exists(QCoreApplication::applicationDirPath()+"/assets/voices/catalog.json"))
         qputenv("MOSS_DISABLE_DEV_PATHS","1");
 #endif
-    Studio studio;WorkspaceLibrary workspace(studio.outputRoot());McpService mcp(&studio,&workspace);QQmlApplicationEngine engine;
+    Studio studio;WorkspaceLibrary workspace(studio.outputRoot());McpService mcp(&studio,&workspace);AppUpdate appUpdate;QQmlApplicationEngine engine;
+    appUpdate.canRestart=[&]{return !studio.busy() && !studio.models()->busy();};
+    QObject::connect(&appUpdate,&AppUpdate::restartRequested,&app,[&]{studio.flushWorkspace();app.quit();});
     app.setApplicationDisplayName(workspace.appName());
     QObject::connect(&workspace,&WorkspaceLibrary::preferencesChanged,&app,[&]{app.setApplicationDisplayName(workspace.appName());});
     const auto args=app.arguments();
@@ -100,6 +103,7 @@ int main(int argc,char **argv){
     engine.rootContext()->setContextProperty("studio",&studio);
     engine.rootContext()->setContextProperty("workspace",&workspace);
     engine.rootContext()->setContextProperty("mcp",&mcp);
+    engine.rootContext()->setContextProperty("appUpdate",&appUpdate);
     engine.addImageProvider("moss-canvas",new CanvasImageProvider(&studio));
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("MossStudio","Main");
@@ -121,6 +125,11 @@ int main(int argc,char **argv){
     QObject::connect(app.styleHints(),&QStyleHints::colorSchemeChanged,&app,updateAppearance);
 #endif
     if(mainWindow) mainWindow->show();
+    const int updateAt=args.indexOf("--complete-update");
+    if(updateAt>=0 && updateAt+1<args.size())QTimer::singleShot(2000,&app,[&,token=args[updateAt+1]]{
+        if(homeWindow && homeWindow->isVisible())AppUpdate::acknowledgeLaunch(token);
+    });
+    if(!backgroundTest)QTimer::singleShot(12000,&appUpdate,[&]{if(appUpdate.state()=="idle")appUpdate.check();});
     if(args.contains("--trace-window-moves")||qEnvironmentVariableIsSet("MOSS_TRACE_WINDOW_MOVES")){
         if(!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")||!qEnvironmentVariableIsSet("MOSS_EVIDENCE_ROOT"))return 5;
         auto moves=std::make_shared<QJsonArray>();
@@ -304,6 +313,28 @@ int main(int argc,char **argv){
         auto argument=[&](QString key,QString fallback){int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
         if(!args.contains("--preserve-preview")&&!args.contains("--home-smoke"))studio.document()->example();
         if(args.contains("--home-smoke")){
+            if(args.contains("--check-updates"))QTimer::singleShot(600,&app,[&]{
+                const auto key=[&](Qt::Key value){QKeyEvent press(QEvent::KeyPress,value,Qt::NoModifier),release(QEvent::KeyRelease,value,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);};
+                auto navigation=homeWindow->findChild<QQuickItem *>("homeUpdatesButton");
+                if(!navigation){app.exit(5);return;}
+                navigation->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);
+                if(homeWindow->property("destination")!="updates"){app.exit(5);return;}
+                auto timer=new QTimer(&app);timer->setInterval(100);
+                QObject::connect(timer,&QTimer::timeout,&app,[&,timer,attempt=0]() mutable {
+                    if(appUpdate.state()=="checking"){if(++attempt>300){timer->stop();app.exit(5);}return;}
+                    timer->stop();timer->deleteLater();
+                    auto check=homeWindow->findChild<QQuickItem *>("updateCheck");
+                    if(!check||!check->isEnabled()){app.exit(5);return;}
+                    check->forceActiveFocus(Qt::TabFocusReason);
+                    QKeyEvent press(QEvent::KeyPress,Qt::Key_Space,Qt::NoModifier),release(QEvent::KeyRelease,Qt::Key_Space,Qt::NoModifier);
+                    QCoreApplication::sendEvent(homeWindow,&press);QCoreApplication::sendEvent(homeWindow,&release);
+                    const bool checking=appUpdate.state()=="checking";
+                    QKeyEvent tab(QEvent::KeyPress,Qt::Key_Tab,Qt::NoModifier);QCoreApplication::sendEvent(homeWindow,&tab);
+                    const bool passed=checking&&homeWindow->activeFocusItem()&&homeWindow->activeFocusItem()!=check;
+                    homeWindow->setProperty("updateKeyboardPassed",passed);
+                    if(!passed)app.exit(5);
+                });timer->start();
+            });
             if(args.contains("--check-mcp"))QTimer::singleShot(600,&app,[&]{
                 if(!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")||!qEnvironmentVariableIsSet("MOSS_OUTPUT_ROOT")){app.exit(5);return;}
                 homeWindow->setProperty("destination","mcp");
@@ -644,7 +675,7 @@ int main(int argc,char **argv){
         if(args.contains("--store-screenshot"))mainWindow->resize(1440,900);
         const auto captureName=argument("--capture-name","layout-ui");
         const auto captureDialog=argument("--capture-dialog",QString());
-        QTimer::singleShot(1800,&app,[&,captureName,captureDialog]{
+        QTimer::singleShot(qBound(1800,argument("--capture-delay-ms","1800").toInt(),60000),&app,[&,captureName,captureDialog]{
             auto win=mainWindow;
             const auto dir=qEnvironmentVariable("MOSS_EVIDENCE_ROOT",QString(MOSS_SOURCE_ROOT)+"/.local/evidence");
             QDir().mkpath(dir);
@@ -682,6 +713,7 @@ int main(int argc,char **argv){
             };inspectButtons(homeWindow->contentItem());
             QFile geometry(dir+"/"+captureName+"-geometry.json");
             QJsonObject panels;
+            panels["updates"]=QJsonObject{{"state",appUpdate.state()},{"latest",QJsonObject::fromVariantMap(appUpdate.latest())},{"canInstall",appUpdate.canInstall()},{"keyboardPassed",homeWindow->property("updateKeyboardPassed").toBool()}};
             for(const auto &name:{"navigationRail","worksPane","conversationChatPanel","conversationInspector","conversationHistory","conversationComposer","avatarCreatorPanels","avatarPortraitPanel","avatarAudioPanel","voiceSearch","avatarSearch","voiceLibraryGrid","avatarLibraryGrid","voiceTemplatePane","voiceDesignEditor","voicePresetList"}){
                 auto item=QString(name).startsWith("conversation")&&active?active->findChild<QQuickItem *>(name):homeWindow->findChild<QQuickItem *>(name);
                 if(item){const auto p=item->mapToScene(QPointF());panels[name]=QJsonObject{{"x",p.x()},{"y",p.y()},{"width",item->width()},{"height",item->height()},{"visible",item->isVisible()}};}

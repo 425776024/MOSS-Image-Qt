@@ -173,6 +173,13 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     for source in ('test_windows.ps1', 'test_windows.cmd'):
         shutil.copy2(ROOT / 'scripts' / source, destination)
     shutil.copy2(ROOT / 'docs/windows-release.md', destination / 'README-Windows.md')
+    # The updater removes only files owned by the previous distribution. User
+    # files inside the installation folder survive the directory replacement.
+    (destination / 'update-files.json').write_text(json.dumps({
+        'product': 'ai.ffclip.studio',
+        'files': sorted([p.relative_to(destination).as_posix()
+                         for p in destination.rglob('*') if p.is_file()] + ['update-files.json']),
+    }, indent=2) + '\n', encoding='utf-8')
     # A portable package must never import a developer's model tree or Python.
     forbidden = {'.py', '.pyc', '.pyd', '.whl', '.gguf', '.onnx', '.safetensors', '.pth', '.pt', '.nupkg'}
     for path in destination.rglob('*'):
