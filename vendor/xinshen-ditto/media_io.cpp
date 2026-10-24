@@ -40,7 +40,8 @@ struct Input {
     stream = av_find_best_stream(format, type, -1, -1, nullptr, 0);
     check(stream, "Find requested stream");
     const auto* decoder = avcodec_find_decoder(format->streams[stream]->codecpar->codec_id);
-    if (!decoder) throw std::runtime_error("Media decoder unavailable");
+    if (!decoder) throw std::runtime_error(std::string("Media decoder unavailable: ") +
+        avcodec_get_name(format->streams[stream]->codecpar->codec_id));
     codec = avcodec_alloc_context3(decoder);
     if (!codec) throw std::runtime_error("Allocate media decoder");
     check(avcodec_parameters_to_context(codec, format->streams[stream]->codecpar), "Copy codec parameters");

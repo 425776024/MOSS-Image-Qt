@@ -6,7 +6,9 @@ import os
 from pathlib import Path
 import re
 import shutil
+import struct
 import subprocess
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,6 +50,44 @@ def check_worker_startup(binary, env):
     if result.returncode != 1 or 'usage:' not in (result.stdout + result.stderr):
         detail = (result.stdout + result.stderr)[-2000:]
         raise ValueError(f'Native worker failed to load: {binary.name}: {result.returncode}: {detail}')
+
+
+def check_media_io(worker, directory, env):
+    """Decode independent PNG fixtures, then encode and compare every pixel.
+
+    These are mandatory package checks, including when unit tests are disabled.
+    Fixtures use Python's zlib, not the FFmpeg encoder under test.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+
+    def chunk(kind, payload):
+        return (struct.pack('>I', len(payload)) + kind + payload +
+                struct.pack('>I', zlib.crc32(kind + payload)))
+
+    results = {}
+    for name, channels, color_type in (('rgb', 3, 2), ('rgba', 4, 6)):
+        colors = ((255, 0, 0, 255), (0, 255, 0, 128),
+                  (0, 0, 255, 0), (17, 31, 63, 64))
+        rows = b''.join(b'\x00' + b''.join(bytes(c[:channels]) for c in colors[y:y+2])
+                        for y in (0, 2))
+        source, output = directory / f'{name}.png', directory / f'{name}-roundtrip.png'
+        source.write_bytes(b'\x89PNG\r\n\x1a\n' +
+            chunk(b'IHDR', struct.pack('>IIBBBBB', 2, 2, 8, color_type, 0, 0, 0)) +
+            chunk(b'IDAT', zlib.compress(rows)) + chunk(b'IEND', b''))
+        result = subprocess.run([str(worker.resolve()), 'media-check', str(source.resolve()),
+            str(output.resolve())], cwd=directory, env=env, timeout=30,
+            capture_output=True, text=True, encoding='utf-8', errors='replace')
+        (directory / f'{name}.log').write_text(result.stdout + result.stderr, encoding='utf-8')
+        if result.returncode:
+            raise ValueError(f'Packaged PNG media check failed ({name}): '
+                             f'{result.returncode}: {(result.stdout + result.stderr)[-2000:]}')
+        report = json.loads(result.stdout)
+        expected = {'width': 2, 'height': 2, 'hasAlpha': channels == 4, 'pngRoundTrip': True}
+        if report != expected or not output.is_file() or output.stat().st_size == 0:
+            raise ValueError(f'Packaged PNG media check incomplete ({name}): {report}')
+        results[name] = report
+    (directory / 'media-check.json').write_text(json.dumps(results, indent=2) + '\n')
+    return results
 
 
 def build_installer(destination, artifacts):
@@ -117,6 +157,7 @@ ConvertTo-Json -InputObject @($results) -Compress
             raise ValueError(f'Incorrect shortcut target: {link!r}; expected {installed / "XAvatar.exe"}')
     run(installed / 'XAvatar.exe', '--home-smoke', '--minimum-window', '--check-initial-setup',
         '--ui-language', 'zh', cwd=test_root, env=installed_env, timeout=90)
+    media = check_media_io(installed / 'moss-ditto.exe', test_root / 'installed-media', installed_env)
     # Test uninstall without deleting files owned by the user.
     sentinel = test_root / 'works/uninstall-preserves-project.txt'
     sentinel.parent.mkdir(parents=True, exist_ok=True)
@@ -126,6 +167,7 @@ ConvertTo-Json -InputObject @($results) -Compress
         f'/LOG={test_root / "uninstaller.log"}', cwd=test_root, timeout=120)
     if (installed / 'XAvatar.exe').exists() or sentinel.read_text(encoding='utf-8') != 'user project':
         raise ValueError('Uninstall did not remove the application cleanly while preserving user data')
+    return media
 
 
 def deploy_cuda_runtime(worker, native, destination):
@@ -252,6 +294,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         # usage and return 1, just like our voice and Ditto workers.
         for worker in ('sa3-generate.exe', 'moss-voice.exe', 'moss-ditto.exe'):
             check_worker_startup(destination / worker, env)
+        media = check_media_io(destination / 'moss-ditto.exe', test_root / 'deployed-media', env)
         runtime = json.loads(subprocess.check_output(
             [str(destination / 'moss-ditto.exe'), 'runtime-check'], env=env, timeout=30, text=True))
         if not runtime.get('tensorCheck') or 'DmlExecutionProvider' not in runtime.get('providers', []):
@@ -271,13 +314,14 @@ def package(qt, prefix, native, image_build, sfx_build, build):
     artifacts = ROOT / 'dist/windows-artifacts'
     artifacts.mkdir(parents=True, exist_ok=True)
     installer = build_installer(destination, artifacts)
-    check_installer(installer, destination, test_root, env)
+    installed_media = check_installer(installer, destination, test_root, env)
     evidence = ROOT / 'dist/windows-bundle-audit.json'
     evidence.write_text(json.dumps({'platform': 'Windows x64', 'modelFree': True,
         'pythonFree': True, 'deployedSmoke': True, 'installerValidated': True,
         'installedStartupValidated': True, 'uninstallValidated': True, 'gpuInferenceValidated': False,
         'cudaBundledInInstaller': False, 'cudaComponentsVerified': True,
         'onnxRuntime': runtime, 'cudaRuntime': cuda_runtime,
+        'mediaIo': media, 'installedMediaIo': installed_media,
         'imports': dlls}, indent=2) + '\n')
     with installer.open('rb') as f:
         checksum = hashlib.file_digest(f, 'sha256').hexdigest()

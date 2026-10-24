@@ -101,6 +101,10 @@ python scripts/build_ci_windows.py
 依赖固定于 `config/windows-dependencies.json`、`config/windows-vcpkg/vcpkg.json`，跨平台上游提交沿用 `config/macos-dependencies.json`。vcpkg 只启用 LGPL FFmpeg 组件，不启用 GPL / nonfree / x264。MediaPipe 从校验后的官方 Windows wheel 提取 C DLL，分发不包含 Python。运行库与许可随安装程序携带。首轮 Windows CI 已通过 15 项 CTest、31 项 Python 分发测试、开发路径隔离启动、941 项 DLL 导入检查、公开源码边界及模型／Python 排除审计；Ditto 已验证 ONNX Runtime 1.23.0 初始化、CPU 张量及 DirectML provider 枚举。实际 GPU 推理及桌面验收仍以实机记录为准。
 
 常规打包默认不编译和运行单元测试，保留安装程序、中文目录、启动、快捷方式、卸载及文件校验。
+PNG 编解码是必需的发布检查：Windows FFmpeg 显式启用 `zlib`，否则即使 DLL 加载正常也没有 PNG 编解码器。
+打包和安装后分别使用实际分发的 `moss-ditto media-check` 读取独立生成的 RGB、带透明度的 RGBA PNG，
+写出 PNG 后重新读取并逐像素比较颜色与透明度；失败即停止发布。这些检查不依赖模型或 GPU，也不受 `run_tests` 开关影响。
+结果记录于 `windows-bundle-audit.json` 的 `mediaIo` / `installedMediaIo`，不能替代数字人推理及成片验收。
 排查问题时可手动触发工作流并勾选 `run_tests`，或本地运行 `python scripts/build_ci_windows.py --run-tests`。
 vcpkg 缓存保存已完成的依赖包，完整原生引擎单独缓存；工具链变化会使部分缓存失效，冷构建可能超过一小时。
 `master` 的 push 构建成功后自动发布。手动打包完成后，在 **Publish development downloads** 中填写该次 `run_id` 发布；

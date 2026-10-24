@@ -1,5 +1,6 @@
 """Exercise release boundaries without requiring a Windows build host."""
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -26,6 +27,55 @@ package = module('windows_package', 'scripts/package_windows.py')
 
 
 class WindowsDistributionTest(unittest.TestCase):
+    def test_media_gate_rejects_missing_decoder_and_invalid_pixels(self):
+        failures = (
+            (1, '', 'Media decoder unavailable: png'),
+            (1, '', 'PNG round-trip changed decoded pixels'),
+            (0, json.dumps({'width': 2, 'height': 2, 'hasAlpha': False, 'pngRoundTrip': False}), ''),
+        )
+        for code, stdout, stderr in failures:
+            with self.subTest(error=stdout + stderr), tempfile.TemporaryDirectory() as tmp:
+                result = subprocess.CompletedProcess([], code, stdout=stdout, stderr=stderr)
+                with patch.object(package.subprocess, 'run', return_value=result):
+                    with self.assertRaises(ValueError):
+                        package.check_media_io(Path('worker.exe'), Path(tmp), {})
+
+    def test_media_gate_checks_both_opaque_and_transparent_png(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            calls = []
+
+            def worker(args, **kwargs):
+                source, output = Path(args[-2]), Path(args[-1])
+                self.assertEqual(args[1], 'media-check')
+                self.assertEqual(kwargs['cwd'], root)
+                payload = source.read_bytes()
+                self.assertEqual(payload[:8], b'\x89PNG\r\n\x1a\n')
+                # Read the independent fixture's IHDR color type.
+                alpha = payload[25] == 6
+                calls.append(alpha)
+                output.write_bytes(payload)
+                return subprocess.CompletedProcess(args, 0, stdout=json.dumps({
+                    'width': 2, 'height': 2, 'hasAlpha': alpha, 'pngRoundTrip': True}), stderr='')
+
+            with patch.object(package.subprocess, 'run', side_effect=worker):
+                report = package.check_media_io(root / 'worker.exe', root, {})
+            self.assertEqual(calls, [False, True])
+            self.assertEqual(json.loads((root / 'media-check.json').read_text()), report)
+
+    def test_media_gate_rejects_silent_alpha_loss(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def worker(args, **kwargs):
+                Path(args[-1]).write_bytes(Path(args[-2]).read_bytes())
+                return subprocess.CompletedProcess(args, 0, stdout=json.dumps({
+                    'width': 2, 'height': 2, 'hasAlpha': False, 'pngRoundTrip': True}), stderr='')
+
+            with patch.object(package.subprocess, 'run', side_effect=worker):
+                with self.assertRaisesRegex(ValueError, 'incomplete \\(rgba\\)'):
+                    package.check_media_io(root / 'worker.exe', root, {})
+
     def test_cuda_payload_is_isolated_and_requires_complete_dependencies(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

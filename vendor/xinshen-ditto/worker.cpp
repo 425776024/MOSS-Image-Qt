@@ -25,6 +25,22 @@ int main(int argc,char **argv){
         if(argc==2&&std::string(argv[1])=="runtime-check"){
             std::cout<<ditto::runtimeCheck().dump()<<std::endl;return 0;
         }
+        if(argc==4&&std::string(argv[1])=="media-check"){
+            // Exercise the same decoder and preview encoder as generation,
+            // using deployed DLLs without loading a model or requiring a GPU.
+            const fs::path input=argv[2],output=argv[3];
+            if(fs::exists(output))throw std::runtime_error("Media check output already exists");
+            VideoReader reader(input);Image source;
+            if(!reader.next(source))throw std::runtime_error("Media check decoded no image");
+            writeImagePng(output,source);
+            VideoReader roundTrip(output);Image decoded;
+            if(!roundTrip.next(decoded)||decoded.width!=source.width||decoded.height!=source.height||
+               decoded.bgr!=source.bgr||decoded.alpha!=source.alpha)
+                throw std::runtime_error("PNG round-trip changed decoded pixels");
+            std::cout<<avatar::Json{{"width",source.width},{"height",source.height},
+                {"hasAlpha",!source.alpha.empty()},{"pngRoundTrip",true}}.dump()<<std::endl;
+            return 0;
+        }
         if(argc==3&&std::string(argv[1])=="capabilities"){
             std::cout<<ditto::capabilities(argv[2]).dump()<<std::endl;return 0;
         }
