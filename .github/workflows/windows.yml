@@ -46,8 +46,12 @@ jobs:
         with:
           path: .local/vcpkg-bincache
           key: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          # Exclude the obsolete exact key, which may contain an empty cache.
-          restore-keys: windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-
+          # vcpkg validates each binary package's dependency/toolchain ABI hash.
+          # CUDA-only lock changes must not discard unrelated FFmpeg/OpenCV builds.
+          # Keep the exact-key prefix first; the broad fallback also migrates old caches.
+          restore-keys: |
+            windows-2022-x64-native-${{ hashFiles('config/windows-vcpkg/vcpkg.json', 'config/windows-dependencies.json') }}-
+            windows-2022-x64-native-
       - name: Enter the MSVC 2022 x64 build environment
         shell: pwsh
         run: |
