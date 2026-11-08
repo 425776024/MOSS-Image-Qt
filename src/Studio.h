@@ -9,6 +9,7 @@
 #include "RemoteImageClient.h"
 #include "ConversationDocument.h"
 #include "InferenceDiagnostics.h"
+#include "PurchaseManager.h"
 #include <QObject>
 #include <QProcess>
 #include <QElapsedTimer>
@@ -25,6 +26,7 @@ class Studio:public QObject {
     Q_PROPERTY(SoundPlan* sound READ sound CONSTANT)
     Q_PROPERTY(TimelineDocument* timeline READ timeline CONSTANT)
     Q_PROPERTY(ModelManager* models READ models CONSTANT)
+    Q_PROPERTY(PurchaseManager* purchases READ purchases CONSTANT)
     Q_PROPERTY(QString modelRoot READ modelRoot NOTIFY changed)
     Q_PROPERTY(QString imageQuant READ imageQuant WRITE setImageQuant NOTIFY changed)
     Q_PROPERTY(QString imageDevice READ imageDevice WRITE setImageDevice NOTIFY changed)
@@ -85,6 +87,7 @@ public:
     QImage canvasImage() const;
     QString canvasCompositeUrl() const;
     ModelManager *models(){return &m_modelManager;}
+    PurchaseManager *purchases(){return &m_purchases;}
     QString modelRoot()const{return m_models;}
     QString imageQuant()const{return m_imageQuant;}
     void setImageQuant(QString quant);
@@ -199,6 +202,8 @@ signals:
     void conversationChanged();
     void templatesChanged();
 private:
+    PurchaseManager m_purchases;
+    bool requireCreativeAccess();
     double m_mouthCacheBytes=0;
     QString engine(QString name)const;
     void fail(QString text);

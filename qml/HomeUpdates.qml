@@ -33,7 +33,7 @@ Rectangle {
         anchors.fill: parent; anchors.margins: 22; spacing: 20
         HomeHeader {
             Layout.fillWidth: true; title: root.t("更新","Updates")
-            UpdateButton { objectName: "updateCheck"; text: root.t("检查更新","Check for Updates"); iconName: "refresh"; enabled: !root.busy; onClicked: appUpdate.check() }
+            UpdateButton { objectName: "updateCheck"; text: root.t("检查更新","Check updates"); iconName: "refresh"; enabled: !root.busy; onClicked: appUpdate.check() }
         }
         ScrollView {
             id: scroll; Layout.fillWidth: true; Layout.fillHeight: true; contentWidth: availableWidth; clip: true
@@ -53,12 +53,12 @@ Rectangle {
                         UpdateButton { visible: appUpdate.state==="downloading"; text: root.t("取消","Cancel"); onClicked: appUpdate.cancel() }
                         UpdateButton {
                             objectName: "updateInstall"; visible: !appUpdate.appleStore && appUpdate.state==="available" && appUpdate.canInstall
-                            primary: true; text: root.t("更新并重启","Update and Restart"); enabled: !studio.busy && !studio.models.busy
+                            primary: true; text: root.t("更新并重启","Update & restart"); enabled: !studio.busy && !studio.models.busy
                             onClicked: appUpdate.install()
                         }
                         UpdateButton {
                             objectName: "updateOpenSource"; visible: !root.working && (appUpdate.appleStore || !appUpdate.canInstall || appUpdate.state!=="available")
-                            text: appUpdate.appleStore ? root.t("打开 App Store","Open App Store") : root.t("查看下载","View Downloads")
+                            text: appUpdate.appleStore ? root.t("App Store","App Store") : root.t("下载","Downloads")
                             onClicked: appUpdate.openStore(false)
                         }
                     }
@@ -68,12 +68,12 @@ Rectangle {
                     Text { Layout.fillWidth: true; text: root.t("测试版的可用版本与自动更新由 TestFlight 管理。","TestFlight manages available beta builds and automatic updates."); color: HomeTheme.secondary; font.pixelSize: 13; wrapMode: Text.Wrap }
                     RowLayout { Layout.fillWidth: true
                         Item { Layout.fillWidth: true }
-                        UpdateButton { objectName: "updateTestFlight"; text: root.t("打开 TestFlight","Open TestFlight"); onClicked: appUpdate.openStore(true) }
+                        UpdateButton { objectName: "updateTestFlight"; text: root.t("TestFlight","TestFlight"); onClicked: appUpdate.openStore(true) }
                     }
                 }
                 Text {
                     visible: !appUpdate.appleStore; Layout.fillWidth: true
-                    text: root.t("更新成功后自动清理安装包与旧版本，保留作品、模型和设置。","After a successful update, the installer and previous version are removed. Projects, models and settings are kept.")
+                    text: root.t("作品、资源和设置会保留。","Projects, resources and settings are kept.")
                     color: HomeTheme.muted; font.pixelSize: 12; wrapMode: Text.Wrap
                 }
                 HomeSection {

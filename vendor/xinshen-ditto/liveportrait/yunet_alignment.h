@@ -4,18 +4,19 @@
 #include <opencv2/objdetect.hpp>
 #include <opencv2/imgproc.hpp>
 #include <cmath>
+#include <functional>
 #include <stdexcept>
 #include "../media_io.h"
 
 namespace yunet_alignment {
-inline cv::Mat initialAffine(const Image &image, const cv::Ptr<cv::FaceDetectorYN> &detector) {
+inline cv::Mat initialAffine(const Image &image, const std::function<cv::Mat(const cv::Mat &)> &detect) {
   if (image.width <= 0 || image.height <= 0) throw std::runtime_error("人像尺寸无效");
   cv::Mat bgr(image.height, image.width, CV_8UC3, const_cast<uint8_t *>(image.bgr.data()));
   const float ratio = std::min(640.f / image.width, 640.f / image.height);
   cv::Mat resized, canvas = cv::Mat::zeros(640,640,CV_8UC3), faces;
   cv::resize(bgr,resized,{int(std::round(image.width*ratio)),int(std::round(image.height*ratio))});
   resized.copyTo(canvas(cv::Rect(0,0,resized.cols,resized.rows)));
-  detector->detect(canvas,faces);
+  faces=detect(canvas);
   if (faces.empty()) throw std::runtime_error("未检测到人脸");
   if (faces.cols != 15 || faces.type() != CV_32F || !cv::checkRange(faces))
     throw std::runtime_error("YuNet 检测结果无效");
@@ -38,5 +39,8 @@ inline cv::Mat initialAffine(const Image &image, const cv::Ptr<cv::FaceDetectorY
   const float scale=224.f/side;
   return (cv::Mat_<double>(2,3) << scale*ux.x,scale*ux.y,112.-scale*center.dot(ux),
       scale*uy.x,scale*uy.y,112.-scale*center.dot(uy));
+}
+inline cv::Mat initialAffine(const Image &image, const cv::Ptr<cv::FaceDetectorYN> &detector) {
+  return initialAffine(image,[&](const cv::Mat &canvas){cv::Mat faces;detector->detect(canvas,faces);return faces;});
 }
 }

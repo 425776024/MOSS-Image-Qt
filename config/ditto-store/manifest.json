@@ -1,7 +1,7 @@
 {
   "version": 1,
   "engine": "ditto-native-v1",
-  "pipelineId": "21fdd6c611964ae9efee5650f6f33116e40f3a3f14f565ba0081066c54a4ff74",
+  "pipelineId": "684e8aecfaa53c9bc871dffce371c894b366cd1d090fa31be00b49974ecf767d",
   "upstreamCommit": "c3e47eee2e626500017a0556b470d6d4182f85e8",
   "audioModel": {
     "name": "focused-05000",
@@ -20,12 +20,12 @@
       "sha256": "31d22a5041326c31f19b78886939a634a5aedcaa5ab8b9b951a1167595d147db"
     },
     "denoise.onnx": {
-      "bytes": 193113121,
-      "sha256": "bb30d10ccc0ef8746c2623b558cebb8fa6e37dbc1ec0f7bdc04a7243fafa3164"
+      "bytes": 192398637,
+      "sha256": "7d49421632e45970e3eb61266ffcdc6edfdd08f6630fba8d84b91b6805033798"
     },
     "appearance.onnx": {
-      "bytes": 3355896,
-      "sha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6"
+      "bytes": 15975994,
+      "sha256": "131f49ca862939a1f804c9b3bf795af4b1abbd662ea11771bd127fbbc211f91e"
     },
     "motion.onnx": {
       "bytes": 112610626,
@@ -40,8 +40,8 @@
       "sha256": "94fca15fe5b67885edebfacbcadcac29e79238ac0d9ffbf0d688391cefb890be"
     },
     "warp.onnx": {
-      "bytes": 199684279,
-      "sha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099"
+      "bytes": 231435820,
+      "sha256": "38c6c90c3f05a3e42244fe698df0fdfc4ae3f76073e9523f9eb00eb346dfd216"
     },
     "config.json": {
       "bytes": 227896,
@@ -69,5 +69,26 @@
     "landmarkCropShiftY": -0.1,
     "sourceCropScale": 2.3,
     "sourceCropShiftY": -0.125
+  },
+  "gpuCompatibility": {
+    "version": 1,
+    "denoiseInput": "int32-time-cond",
+    "sourceModels": {
+      "appearance.onnx": {
+        "sourceSha256": "9f5823888fc155209d69cf5b3ad69502c553eaa500d28f07fd39a340bc5b7eb6",
+        "sha256": "131f49ca862939a1f804c9b3bf795af4b1abbd662ea11771bd127fbbc211f91e",
+        "bytes": 15975994
+      },
+      "warp.onnx": {
+        "sourceSha256": "1d08e0b26c8826953d6fdb6bba4196bf6e514a3173e259a8ac06eae7becff099",
+        "sha256": "38c6c90c3f05a3e42244fe698df0fdfc4ae3f76073e9523f9eb00eb346dfd216",
+        "bytes": 231435820
+      },
+      "denoise.onnx": {
+        "sourceSha256": "bb30d10ccc0ef8746c2623b558cebb8fa6e37dbc1ec0f7bdc04a7243fafa3164",
+        "sha256": "7d49421632e45970e3eb61266ffcdc6edfdd08f6630fba8d84b91b6805033798",
+        "bytes": 192398637
+      }
+    }
   }
 }

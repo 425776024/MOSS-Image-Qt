@@ -77,6 +77,7 @@ void Studio::sendConversation(){
     auto thread=m_conversation;if(!thread)return;
     if(busy()){thread->report("另一个创作任务正在运行，可继续编辑，完成后再发送。");return;}
     QStringList needed;const auto requestedTask=thread->task();
+    if(!requireCreativeAccess())return;
     if((requestedTask=="image"||requestedTask=="edit")&&m_imageDevice=="local")needed<<"image";
     if(requestedTask=="voice"||(requestedTask=="avatar"&&thread->audio().isEmpty()))needed<<"voice";
     if(requestedTask=="avatar")needed<<"ditto";

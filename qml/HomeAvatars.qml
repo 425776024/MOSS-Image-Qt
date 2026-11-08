@@ -50,20 +50,23 @@ Rectangle {
     }
     HomeDialog {
         id: renameDialog; objectName: "homeAvatarRenameDialog"; title: HomeTheme.t("重命名"); property string targetId: ""; anchors.centerIn: Overlay.overlay; width: 380; modal: true
+        defaultAction: renameSave
+        onOpened: {root.notice="";renameInput.forceActiveFocus();renameInput.selectAll()}
         ColumnLayout { width: parent.width; spacing: 16
             HomeField { id: renameInput; Layout.fillWidth: true; maximumLength: 120; Accessible.name: HomeTheme.t("形象名称") }
+            Text { visible: !!root.notice; Layout.fillWidth: true; text: root.notice; color: HomeTheme.danger; font.pixelSize: 12; wrapMode: Text.Wrap }
             RowLayout { Layout.alignment: Qt.AlignRight
                 HomeButton { text: HomeTheme.t("取消"); onClicked: renameDialog.close() }
-                HomeButton { text: HomeTheme.t("保存"); primary: true; enabled: renameInput.text.trim() !== ""; onClicked: { root.notice = workspace.renameAvatar(renameDialog.targetId, renameInput.text); if(!root.notice)renameDialog.close() } }
+                HomeButton { id: renameSave; text: HomeTheme.t("保存"); primary: true; enabled: renameInput.text.trim() !== ""; onClicked: { root.notice = workspace.renameAvatar(renameDialog.targetId, renameInput.text); if(!root.notice)renameDialog.close() } }
             }
         }
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
         HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置形象" : "我的形象"); detail: String(root.entries.length)
-            HomeButton { text: HomeTheme.t("设计数字人"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
-            HomeButton { text: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
-            HomeButton { text: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
+            HomeButton { text: HomeTheme.t("制作视频"); hint: HomeTheme.t("制作说话视频"); iconName: "play"; enabled: !studio.busy; onClicked: root.createAvatar() }
+            HomeButton { text: HomeTheme.t("生成"); hint: HomeTheme.t("文字生成形象"); iconName: "image"; primary: true; enabled: !studio.busy; onClicked: root.designAvatar() }
+            HomeButton { text: HomeTheme.t("导入"); hint: HomeTheme.t("导入形象"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importAvatar() }
         }
         RowLayout { Layout.fillWidth: true
             HomeTabs { labels: [HomeTheme.t("我的形象"),HomeTheme.t("内置形象")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.builtin=index===1;root.selectedId=""} }
@@ -111,7 +114,7 @@ Rectangle {
             RowLayout { Layout.fillWidth: true; spacing: 10
                 StudioIcon { name: "person"; Layout.preferredWidth: 18; Layout.preferredHeight: 18; ink: HomeTheme.secondary }
                 Text { Layout.fillWidth: true; text: root.selected.name || ""; elide: Text.ElideRight; font.pixelSize: 12; color: HomeTheme.text }
-                HomeButton { objectName: "useLibraryAvatar"; text: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useAvatar(root.selected.url) }
+                HomeButton { objectName: "useLibraryAvatar"; text: HomeTheme.t("使用"); hint: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useAvatar(root.selected.url) }
             }
         }
         RowLayout { visible: !!root.notice || workspace.canRestoreAvatar; Layout.fillWidth: true

@@ -1,0 +1,58 @@
+{
+  "identifier": "08B16068",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "3.00",
+      "familyShareable": false,
+      "internalID": "6832013509",
+      "localizations": [
+        {
+          "locale": "en_US",
+          "displayName": "Lifetime Unlock",
+          "description": "Unlock all creative features permanently."
+        },
+        {
+          "locale": "zh_CN",
+          "displayName": "永久解锁",
+          "description": "一次购买，永久使用全部创作功能。"
+        }
+      ],
+      "productID": "ai.ffclip.studio.avatar.lifetime",
+      "referenceName": "XAvatar Lifetime Unlock",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0",
+      "familyShareable": false,
+      "internalID": "3DAYTRIAL",
+      "productID": "ai.ffclip.studio.trial3days",
+      "referenceName": "3-day Trial",
+      "type": "NonConsumable",
+      "localizations": [
+        {
+          "locale": "en_US",
+          "displayName": "3-day Trial",
+          "description": "Try all creative features for 72 hours. No automatic charge."
+        },
+        {
+          "locale": "zh_CN",
+          "displayName": "3 天免费试用",
+          "description": "免费体验全部创作功能 72 小时，不会自动扣款。"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "6825373745",
+    "_developerTeamID": "5MW3CM6436",
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA"
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

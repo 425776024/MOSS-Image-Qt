@@ -57,29 +57,28 @@ Rectangle {
             Text { visible: !!root.notice; Layout.fillWidth: true; text: root.notice; color: HomeTheme.danger; wrapMode: Text.Wrap; font.pixelSize: 12 }
             RowLayout { Layout.alignment: Qt.AlignRight; spacing: 8
                 HomeButton { text: HomeTheme.t("取消"); quiet: true; onClicked: editDialog.close() }
-                HomeButton { objectName: "homeSaveVoice"; text: HomeTheme.t("保存音色"); primary: true; enabled: voiceName.text.trim()!=="" && transcript.text.trim()!=="" && root.audioUrl!==""; onClicked: root.saveVoice() }
+                HomeButton { objectName: "homeSaveVoice"; text: HomeTheme.t("保存"); hint: HomeTheme.t("保存音色"); primary: true; enabled: voiceName.text.trim()!=="" && transcript.text.trim()!=="" && root.audioUrl!==""; onClicked: root.saveVoice() }
             }
         }
     }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
         HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.builtin ? "内置音色" : "我的音色"); detail: String(root.entries.length)
-            HomeButton { text: HomeTheme.t("设计声音"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
-            HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importVoice() }
+            HomeButton { text: HomeTheme.t("设计"); hint: HomeTheme.t("设计声音"); iconName: "audio"; primary: true; enabled: !studio.busy; onClicked: root.designVoice() }
+            HomeButton { text: HomeTheme.t("导入"); hint: HomeTheme.t("导入音色"); iconName: "plus"; enabled: !studio.busy; onClicked: root.importVoice() }
         }
         RowLayout { Layout.fillWidth: true; spacing: 12
             HomeTabs { labels: [HomeTheme.t("我的音色"),HomeTheme.t("内置音色")]; currentIndex: root.builtin ? 1 : 0; onSelected: index=>{root.stopPreview();root.builtin=index===1} }
             HomeField { id: search; objectName: "voiceSearch"; Layout.preferredWidth: 200; Layout.minimumWidth: 160; Layout.maximumWidth: 220; search: true; placeholderText: HomeTheme.t("搜索音色"); Accessible.name: placeholderText }
             Item { Layout.fillWidth: true }
         }
-        VoiceStyleControls { Layout.fillWidth: true; options: studio.sound.settings; onOptionEdited: (key,value)=>studio.sound.set(key,value) }
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout { visible: root.entries.length===0; anchors.centerIn: parent; spacing: 16
-                HomeEmpty { title: search.text ? HomeTheme.t("没有匹配的音色") : HomeTheme.t("还没有音色"); description: search.text ? "" : HomeTheme.t("导入录音或用文字设计一个新声音。"); iconName: "audio" }
+                HomeEmpty { title: search.text ? HomeTheme.t("没有匹配的音色") : HomeTheme.t("还没有音色"); description: ""; iconName: "audio" }
                 RowLayout { visible: !search.text; Layout.alignment: Qt.AlignHCenter
-                    HomeButton { text: HomeTheme.t("导入音色"); iconName: "plus"; onClicked: root.importVoice() }
-                    HomeButton { text: HomeTheme.t("设计声音"); onClicked: root.designVoice() }
+                    HomeButton { text: HomeTheme.t("导入"); hint: HomeTheme.t("导入音色"); iconName: "plus"; onClicked: root.importVoice() }
+                    HomeButton { text: HomeTheme.t("设计"); hint: HomeTheme.t("设计声音"); onClicked: root.designVoice() }
                     HomeButton { visible: !root.builtin; text: HomeTheme.t("内置音色"); quiet: true; onClicked: root.builtin=true }
                 }
             }
@@ -108,7 +107,7 @@ Rectangle {
         HomeSection { objectName: "voicePreviewBar"; visible: !!root.playingId || root.entries.some(v=>v.id===studio.sound.settings.voiceId); Layout.fillWidth: true; padding: 10
             RowLayout { Layout.fillWidth: true; spacing: 10
                 IconButton { glyph: root.playingId ? "pause" : "play"; hint: HomeTheme.t("试听"); iconColor: HomeTheme.accent; enabled: !studio.busy; onClicked: root.preview(root.selectedVoice) }
-                Text { Layout.fillWidth: !root.playingId; Layout.maximumWidth: root.playingId ? 180 : Infinity; text: root.selectedVoice.name || ""; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 12 }
+                Text { Layout.fillWidth: !root.playingId; Layout.minimumWidth: 0; Layout.maximumWidth: root.playingId ? 100 : Infinity; text: root.selectedVoice.name || ""; elide: Text.ElideRight; color: HomeTheme.text; font.pixelSize: 12 }
                 Loader {
                     objectName: "voicePreviewWaveform"; Layout.fillWidth: true; Layout.preferredHeight: 24
                     visible: active; active: root.visible && !!root.playingId
@@ -119,7 +118,13 @@ Rectangle {
                     }
                 }
                 Text { visible: !!root.playingId; text: root.time(player.position)+" / "+root.time(player.duration); color: HomeTheme.secondary; font.pixelSize: 11 }
-                HomeButton { text: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useVoice(studio.sound.settings.voiceId) }
+                VoiceStyleControls {
+                    objectName: "voiceLibraryStyleControls"
+                    Layout.preferredWidth: 420; Layout.maximumWidth: 420
+                    options: studio.sound.settings
+                    onOptionEdited: (key,value)=>studio.sound.set(key,value)
+                }
+                HomeButton { objectName: "voiceLibraryUse"; text: HomeTheme.t("使用"); hint: HomeTheme.t("用于创作"); iconName: "arrow"; primary: true; enabled: !studio.busy; onClicked: root.useVoice(studio.sound.settings.voiceId) }
             }
         }
         RowLayout { visible: !!root.notice || studio.sound.canRestoreVoice; Layout.fillWidth: true

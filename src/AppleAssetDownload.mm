@@ -38,7 +38,10 @@ API_AVAILABLE(macos(26))
         if(!job||job->finished)return;
         job.downloadProgress=progress;
         if(job->cancelled)[progress cancel];
-        else if(job->owner)emit job->owner->progress(progress.fractionCompleted);
+        else if(job->owner) {
+            emit job->owner->networkProgress(progress.fractionCompleted);
+            emit job->owner->progress(progress.fractionCompleted);
+        }
     });
 }
 @end
@@ -90,6 +93,9 @@ void AppleAssetDownload::start(QString pack,QString relativePath,QString destina
                 if(error || job->cancelled) {
                     [job finish:error ? QString::fromNSString(error.localizedDescription) : QStringLiteral("下载已取消")]; return;
                 }
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if(job->owner)emit job->owner->networkFinished();
+                });
                 // Copy through a pack-scoped descriptor, not the merged namespace.
                 // Workers consume owned container files after ModelManager checks SHA-256.
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
@@ -132,5 +138,5 @@ void AppleAssetDownload::start(QString pack,QString relativePath,QString destina
                 });
             }];
         }];
-    } else emit completed(QStringLiteral("Apple 资源包需要 macOS 26 或更新版本，请手动选择镜像源"));
+    } else emit completed(QStringLiteral("Apple 资源包需要 macOS 26 或更新版本"));
 }

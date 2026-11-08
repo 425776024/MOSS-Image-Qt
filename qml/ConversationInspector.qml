@@ -21,6 +21,7 @@ Rectangle {
     signal editRequested(string id)
     signal avatarRequested(string id)
     signal audioRequested(string id)
+    signal cloneVoiceRequested(string source)
     signal packRequested(string id)
     signal reuseRequested(var entry)
     signal pickerRequested()
@@ -35,7 +36,7 @@ Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 44; Layout.leftMargin: 8; Layout.rightMargin: 8; spacing: 6
             IconButton { visible: root.editing || root.packing; glyph: "arrow"; rotation: 180; hint: HomeTheme.t("返回素材详情"); onClicked: root.previewRequested() }
             Text { objectName: "inspectorHeading"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.editing ? root.maskMode ? root.thread.editScope === "whole" ? HomeTheme.t("图生图") : HomeTheme.t("局部编辑") : HomeTheme.t("构图布局") : root.packing ? HomeTheme.t("打包视频") : HomeTheme.t("详情")+(root.detailType ? " · "+root.detailType : ""); font.pixelSize: 13; font.weight: Font.Medium; color: HomeTheme.text; elide: Text.ElideRight }
-            IconButton { visible: !root.editing && !root.packing && !!root.asset.id; glyph: "export"; hint: HomeTheme.t("导出素材"); onClicked: root.exportRequested(root.asset) }
+            HomeButton { visible: !root.editing && !root.packing && !!root.asset.id; iconName: "export"; text: HomeTheme.t("导出"); hint: HomeTheme.t("导出素材"); compact: true; quiet: true; onClicked: root.exportRequested(root.asset) }
             IconButton { glyph: "close"; hint: HomeTheme.t("收起详情面板"); onClicked: root.closeRequested() }
         }
         Rectangle { Layout.fillWidth: true; height: VideoCutTheme.hairline; color: HomeTheme.line }
@@ -128,6 +129,7 @@ Rectangle {
                         HomeButton { visible: root.asset.kind === "image"; text: HomeTheme.t("局部编辑"); iconName: "brush"; implicitHeight: 30; primary: true; enabled: !studio.busy; onClicked: root.editRequested(root.asset.id) }
                         HomeButton { visible: root.asset.kind === "image"; text: HomeTheme.t("让画面说话"); iconName: "person"; implicitHeight: 30; quiet: true; enabled: !studio.busy; onClicked: root.avatarRequested(root.asset.id) }
                         HomeButton { visible: root.asset.kind === "audio"; text: HomeTheme.t("用作配音"); iconName: "audio"; implicitHeight: 30; enabled: !studio.busy; onClicked: root.audioRequested(root.asset.id) }
+                        HomeButton { objectName: "cloneMediaVoice"; visible: root.asset.kind === "audio"; text: HomeTheme.t("克隆音色"); iconName: "volume"; implicitHeight: 30; quiet: true; enabled: !studio.busy; onClicked: root.cloneVoiceRequested(root.asset.url) }
                         HomeButton { text: root.thread.selected.includes(root.asset.id) ? HomeTheme.t("编辑打包") : HomeTheme.t("加入打包"); iconName: "layers"; implicitHeight: 30; quiet: true; onClicked: root.packRequested(root.asset.id) }
                     }
                     Rectangle { visible: !!root.sourceEntry.text && !!root.asset.id; Layout.fillWidth: true; height: 1; color: HomeTheme.line }

@@ -650,6 +650,11 @@ QString McpService::updateConversation(ConversationDocument *thread,
   return {};
 }
 QJsonObject McpService::execute(QString name, const QJsonObject &a) {
+  if (!m_studio->purchases()->accessAllowed()) {
+    const QSet<QString> available={"app_status","job_list","job_get","job_result","job_cancel","model_list","voice_list","avatar_list","work_list","work_get","asset_get","asset_export","media_read","media_preview","media_upload_status","media_upload_discard"};
+    if (!available.contains(name))
+      return failure("PURCHASE_REQUIRED", "Start the free 3-day trial, buy lifetime access, or restore purchases in the app.");
+  }
   auto models = m_studio->models();
   auto sound = m_studio->sound();
   const auto busy = [&] {
@@ -1331,6 +1336,8 @@ QJsonObject McpService::enqueue(QString kind, const QJsonObject &args) {
     const auto error = updateConversation(&candidate, args);
     if (!error.isEmpty())
       return failure("INVALID_ARGUMENT", error);
+    if (!m_studio->purchases()->accessAllowed())
+      return failure("PURCHASE_REQUIRED", "Activate the trial or lifetime access in the app before starting this job.");
     if (!candidate.beginRequest())
       return failure("INVALID_REQUEST", candidate.error());
     // Store the pre-request state, never a synthesized pending message.
@@ -1441,6 +1448,10 @@ void McpService::runNext() {
     job["error"] = message;
     finishJob(false);
   };
+  if (!m_studio->purchases()->accessAllowed()) {
+    abort("Trial expired or no verified purchase. Open the app to purchase or restore.");
+    return;
+  }
   if (kind == "voice_import" || kind == "avatar_import") {
     const auto source =
         QUrl::fromLocalFile(job["snapshot"].toObject()["path"].toString());

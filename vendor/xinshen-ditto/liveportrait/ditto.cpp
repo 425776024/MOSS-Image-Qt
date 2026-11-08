@@ -35,6 +35,7 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include "yunet_alignment.h"
+#include "yunet_decode.h"
 #include <random>
 #include <thread>
 namespace ditto {
@@ -325,7 +326,7 @@ struct Net {
 #if defined(__APPLE__)
     const char *device = std::getenv("XINSHEN_ONNX_DEVICE");
     if (gpu && backend == "CoreML" && (!device || std::string(device) != "cpu") &&
-        (name == "generator.onnx" || name == "appearance.onnx")) {
+        (name == "generator.onnx" || name == "appearance.onnx" || name == "warp.onnx" || name == "denoise.onnx")) {
       auto manifestPath = p.parent_path() / "coreml/manifest.json";
       if (fs::exists(manifestPath)) {
         auto manifest = avatar::readJson(manifestPath);
@@ -393,7 +394,7 @@ struct Net {
       session = Ort::Session{nullptr};
       backend = "Metal";
       profiling = false;
-      createSession(p);
+      createSession(selected);
     }
 #else
     createSession(selected);
@@ -442,6 +443,7 @@ struct Net {
     avatar::checkCancelled();
     require(data.size() == inputs.size() && shapes.size() == inputs.size(), "input count " + name);
     std::vector<Ort::Value> xs;
+    const int32_t step32=static_cast<int32_t>(step);
     std::vector<const char *> ins, outs;
     for (size_t i = 0; i < data.size(); ++i) {
       size_t n = 1;
@@ -451,7 +453,10 @@ struct Net {
       }
       require(data[i] && n == data[i]->size(), "shape " + name);
       ins.push_back(inputs[i].c_str());
-      if (inputs[i] == "time_cond")
+      if (inputs[i] == "time_cond" && session.GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType()==ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32) {
+        require(step>=0 && step<=999,"diffusion step range");
+        xs.push_back(Ort::Value::CreateTensor<int32_t>(runtimeMemory(),const_cast<int32_t *>(&step32),1,shapes[i].data(),shapes[i].size()));
+      } else if (inputs[i] == "time_cond")
         xs.push_back(Ort::Value::CreateTensor<int64_t>(
             runtimeMemory(), &step, 1, shapes[i].data(), shapes[i].size()));
       else
@@ -693,7 +698,7 @@ struct Source {
   cv::Mat affine;
 };
 struct Prep {
-  std::unique_ptr<Net> det, l106;
+  std::unique_ptr<Net> det, l106, acceleratedYunet;
   cv::Ptr<cv::FaceDetectorYN> yunet;
   Net l203, motion, appearance;
   Prep(const fs::path &r, bool gpuMotion = true)
@@ -705,7 +710,7 @@ struct Prep {
     require(profile.empty() || profile == "yunet-203-v1", "unknown face preparation profile");
     if (profile == "yunet-203-v1") {
 #if defined(__APPLE__)
-      throw std::runtime_error("当前人像检测模型尚无已验证的 Apple Silicon 加速实现，CPU 推理已禁用");
+      acceleratedYunet = std::make_unique<Net>(r / "face_detection_yunet_2023mar.onnx");
 #else
       yunet = cv::FaceDetectorYN::create((r / "face_detection_yunet_2023mar.onnx").string(),
           "", {640,640}, .9f, .3f, 5000, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_TARGET_CPU);
@@ -719,7 +724,14 @@ struct Prep {
   Source operator()(const Image &image) {
     cv::Mat im = rgb(image);
     cv::Mat a, inv, crop;
-    if (yunet) {
+    if (acceleratedYunet) {
+      a = yunet_alignment::initialAffine(image,[&](const cv::Mat &canvas) {
+        auto values=acceleratedYunet->run({tensor(canvas,1,false,0)},{{1,3,640,640}});
+        std::map<std::string,V> tensors;
+        for(size_t i=0;i<values.size();++i)tensors.emplace(acceleratedYunet->outputs.at(i),std::move(values[i]));
+        return yunet_alignment::decode(tensors);
+      });
+    } else if (yunet) {
       a = yunet_alignment::initialAffine(image, yunet);
     } else {
       int nw = 512, nh = int(512. * image.height / image.width);

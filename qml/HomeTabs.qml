@@ -21,7 +21,7 @@ Control {
                 Layout.fillWidth: root.segmented; hoverEnabled: true
                 Accessible.name: HomeTheme.t(modelData); Accessible.role: Accessible.PageTab; Accessible.selected: chosen
                 background: Rectangle { radius: 5; color: tab.chosen ? HomeTheme.field : tab.hovered ? HomeTheme.hover : "transparent"; border.color: tab.visualFocus ? HomeTheme.accent : tab.chosen ? HomeTheme.outline : "transparent" }
-                contentItem: Text { id: label; text: HomeTheme.t(tab.modelData); font.pixelSize: 12; font.weight: tab.chosen ? Font.Medium : Font.Normal; color: tab.chosen ? HomeTheme.text : HomeTheme.secondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { id: label; text: HomeTheme.t(tab.modelData); font.pixelSize: 12; font.weight: Font.Medium; color: tab.chosen ? HomeTheme.text : HomeTheme.secondary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.selected(index)
             }
         }

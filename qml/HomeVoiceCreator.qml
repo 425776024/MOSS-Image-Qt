@@ -82,7 +82,7 @@ Rectangle {
                         Accessible.name: presetName; Accessible.selected: chosen
                         onClicked: root.applyPreset(modelData)
                         background: Rectangle { radius: 6; color: preset.chosen ? Qt.alpha(HomeTheme.text,HomeTheme.dark ? .10 : .07) : preset.hovered ? HomeTheme.hover : "transparent"; border.color: preset.visualFocus ? HomeTheme.accent : "transparent" }
-                        contentItem: Text { id: presetLabel; text: preset.presetName; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter; color: HomeTheme.text; font.pixelSize: 13; font.weight: preset.chosen ? Font.Medium : Font.Normal }
+                        contentItem: Text { id: presetLabel; text: preset.presetName; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter; color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium }
                         ToolTip.visible: hovered && presetLabel.truncated; ToolTip.delay: 700; ToolTip.text: presetName
                     }
                 }
@@ -94,7 +94,7 @@ Rectangle {
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 22; spacing: 16
                 HomeHeader { Layout.fillWidth: true; title: HomeTheme.t(root.mode===1 ? "导入音色" : "设计声音")
-                    HomeButton { text: HomeTheme.t("返回音色库"); iconName: "audio"; quiet: true; onClicked: root.openLibrary() }
+                    HomeButton { text: HomeTheme.t("返回"); hint: HomeTheme.t("返回音色库"); iconName: "audio"; quiet: true; onClicked: root.openLibrary() }
                 }
                 HomeTabs { labels: [HomeTheme.t("文字设计"),HomeTheme.t("导入录音")]; currentIndex: root.mode; enabled: !studio.busy; onSelected: index=>root.mode=index }
                 ScrollView {
@@ -133,18 +133,18 @@ Rectangle {
                             enabled: !studio.busy; onEdited: text=>value=text
                         }
                         Text {
-                            visible: root.mode===0; Layout.fillWidth: true; text: HomeTheme.t("保存音色需要三至三十秒的试听；保存后可选择情绪或方言继续配音。")
+                            visible: root.mode===0; Layout.fillWidth: true; text: HomeTheme.t("试听需为 3–30 秒")
                             wrapMode: Text.Wrap; color: HomeTheme.muted; font.pixelSize: 11
                         }
                         Text { visible: !!root.notice || (root.mode===0 && !!studio.error); Layout.fillWidth: true; text: root.notice || studio.error; wrapMode: Text.Wrap; color: HomeTheme.danger; font.pixelSize: 12 }
                         Text { visible: root.generating; Layout.fillWidth: true; text: HomeTheme.t(studio.status); color: HomeTheme.secondary; font.pixelSize: 12 }
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
-                            HomeButton { visible: root.generating; text: HomeTheme.t("取消生成"); quiet: true; onClicked: studio.cancel() }
+                            HomeButton { visible: root.generating; text: HomeTheme.t("取消"); hint: HomeTheme.t("取消生成"); quiet: true; onClicked: studio.cancel() }
                             Item { Layout.fillWidth: true }
-                            HomeButton { objectName: "createdVoiceGenerate"; visible: root.mode===0; text: HomeTheme.t("生成试听"); enabled: !studio.busy && !!description.value.trim() && !!script.value.trim(); onClicked: root.generate() }
+                            HomeButton { objectName: "createdVoiceGenerate"; visible: root.mode===0; text: HomeTheme.t("生成"); hint: HomeTheme.t("生成试听"); enabled: !studio.busy && !!description.value.trim() && !!script.value.trim(); onClicked: root.generate() }
                             HomeButton {
-                                objectName: "createdVoiceSave"; text: HomeTheme.t("保存音色"); primary: true
+                                objectName: "createdVoiceSave"; text: HomeTheme.t("保存"); hint: HomeTheme.t("保存音色"); primary: true
                                 enabled: !studio.busy && !!voiceName.text.trim() && (root.mode===1 ? !!root.audioUrl && !!transcript.value.trim() : root.hasPreview)
                                 onClicked: root.save()
                             }

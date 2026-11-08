@@ -349,6 +349,7 @@ bool Studio::imageReady()const{
     return m_modelManager.ready("image");
 }
 bool Studio::ensureModels(QStringList capabilities){
+    if(!requireCreativeAccess())return false;
     if(m_modelManager.busy())return false;
     if(!m_modelManager.ensure(capabilities)){m_audioPipeline=false;return false;}
     for(const auto &id:capabilities){
@@ -370,6 +371,7 @@ void Studio::setPortrait(QString s){m_portrait=ownedWorkerInput(s);if(m_portrait
 void Studio::setAudio(QString s){m_audio=ownedWorkerInput(s);if(m_audio.isEmpty())m_error="无法导入音频，请重新选择文件";emit changed();}
 void Studio::fail(QString s){DiagnosticLog::instance().record("error","operation-error",{{"message",s}});m_error=s;m_status="操作未完成";if(!m_busy)m_audioPipeline=false;emit changed();}
 void Studio::start(QString exe,QStringList args,QString kind){
+    if(!requireCreativeAccess())return;
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
     m_remoteJob=false;
     m_kind=kind;m_cancelled=false;m_busy=true;m_progress=0;m_backend="正在检测";m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();m_timer.start();
@@ -422,6 +424,7 @@ void Studio::start(QString exe,QStringList args,QString kind){
     launch({});
 }
 void Studio::startRemote(QStringList args,QString kind){
+    if(!requireCreativeAccess())return;
     if(m_conversationJob)ConversationMediaStore::mark(m_jobDir);
     m_remoteJob=true;m_kind=kind;m_busy=true;m_cancelled=false;m_progress=0;m_backend="正在检测";
     m_error.clear();m_workerError.clear();m_log.clear();m_pending.clear();m_timer.start();
@@ -439,6 +442,7 @@ void Studio::startRemote(QStringList args,QString kind){
     emit changed();
 }
 void Studio::resumeRemoteImage(){
+    if(!requireCreativeAccess())return;
     if(!m_remote.available()||busy()||m_remote.busy()||!m_remote.ready())return;
     const auto directory=m_remote.latestPending();if(directory.isEmpty())return;
     const auto job=readJson(directory+"/job.json"),project=readJson(directory+"/project.json");
@@ -472,8 +476,14 @@ void Studio::resumeRemoteImage(){
     emit changed();
 }
 void Studio::generate(){generateImage(m_doc,"image",m_steps);}
+bool Studio::requireCreativeAccess(){
+    if(m_purchases.requireAccess())return true;
+    fail(m_purchases.ready()?"试用已结束，请买断后继续创作。":"正在检查购买状态，请稍后重试。");
+    return false;
+}
 void Studio::generateAvatarImage(QString description){
     if(busy())return;
+    if(!requireCreativeAccess())return;
     m_avatarDesignImage.clear();m_avatarDesignRecipe.clear();emit changed();
     description=description.trimmed();
     if(description.isEmpty()||description.size()>4000){fail("请填写人物形象描述（最多四千字）");return;}
@@ -482,6 +492,7 @@ void Studio::generateAvatarImage(QString description){
     generateImage(portrait,"avatar-image",16);
 }
 void Studio::generateImage(const Document &document,QString kind,int steps){
+    if(!requireCreativeAccess())return;
     if(busy())return;
     auto error=document.validationError();if(!error.isEmpty()){fail(error);return;}
     if(m_imageDevice=="local"&&!ensureModels({"image"}))return;
@@ -507,6 +518,7 @@ void Studio::generateImage(const Document &document,QString kind,int steps){
 }
 void Studio::generateAvatar(double limit){
     if(busy())return;
+    if(!requireCreativeAccess())return;
     if(!ensureModels({"ditto"}))return;
     if(!QFileInfo::exists(m_portrait)||!QFileInfo::exists(m_audio)){fail("请选择一张人像和一段驱动音频");return;}
     if(!QImageReader(m_portrait).canRead()){fail("请选择可读取的人像图片");return;}
@@ -579,6 +591,7 @@ void Studio::generateWithSound(bool repaint){
 }
 void Studio::generatePageVideo(double limit){
     if(busy())return;
+    if(m_sound.settings()["voiceSource"].toString()!="none"&&!requireCreativeAccess())return;
     m_trackGeneration.clear();
     if(!validateSound())return;
     m_audioPipeline=true;m_voiceDone=false;m_sfxDone=false;m_pageVideoLimit=limit;
@@ -655,8 +668,14 @@ void Studio::advanceAudioPipeline(){
             const auto worker=engine("sa3-generate");const auto models=m_models+"/sound-effects";
             if(!ensureModels({"sfx"}))return;
             if(!newJob("sfx")){fail("无法创建音效任务目录");return;}
-            writeJson(m_jobDir+"/job.json",{{"kind","sfx"},{"engine","stable-audio-3-medium-f16"},{"prompt",settings["sfxPrompt"].toString()},{"duration",settings["sfxDuration"].toInt()}});
-            start(worker,{"--model","medium","--models-dir",models,"--prompt",settings["sfxPrompt"].toString(),
+            writeJson(m_jobDir+"/job.json",{{"kind","sfx"},{"engine","stable-audio-3-small-sfx-q4-k-m-ae-f16-t5-q8"},{"prompt",settings["sfxPrompt"].toString()},{"duration",settings["sfxDuration"].toInt()}});
+            // Pin mixed-precision inputs: directory discovery can select older F16/F32 files.
+            start(worker,{"--model","small-sfx","--models-dir",models,
+                "--dit",models+"/stable-audio-3-small-sfx-dit-0.5B-v1.0-Q4_K_M.gguf",
+                "--same",models+"/stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+                "--t5",models+"/t5gemma-b-b-ul2-encoder-0.3B-v1.0-Q8_0.gguf",
+                "--cond",models+"/stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
+                "--tok",models+"/t5gemma-b-b-ul2-v1.0-vocab.gguf","--prompt",settings["sfxPrompt"].toString(),
                 "--duration",QString::number(settings["sfxDuration"].toInt()),"--steps","40","--seed",QString::number(m_seed),
                 "--out",m_jobDir+"/sfx.wav"},"sfx");return;
         }
@@ -670,6 +689,7 @@ void Studio::advanceAudioPipeline(){
 void Studio::renderPageVideo(){
     if(busy())return;
     const auto speech=effectiveSpeech();const auto settings=m_sound.settings();
+    if(!speech.isEmpty()&&!requireCreativeAccess())return;
     const auto effect=m_trackGeneration.isEmpty()&&settings["sfxEnabled"].toBool()?settings["sfxResult"].toString():QString();
     const auto audio=speech.isEmpty()?effect:speech;
     if(!hasCanvasContent()||!QFileInfo::exists(audio)){

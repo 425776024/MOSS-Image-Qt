@@ -2,8 +2,8 @@
 
 ## 发行渠道
 
-- 普通构建（GitHub/DMG）：新安装默认“自动选择”，在 Hugging Face 与 hf-mirror 间测速；保留已保存的手动选择。
-- `-DMOSS_APP_STORE=ON`：默认 `apple-assets`，独立设置键 `storeModelEndpoint`，不继承站外版来源。用户可明确选择 HTTP 自动选源、镜像或 Hugging Face；Apple 渠道失败不会擅自转到 HTTP。Apple-only 模型始终走 Apple。
+- 普通构建（GitHub/DMG）：新安装默认“自动选择”，按清单中的 Hugging Face 与 ModelScope 来源下载；保留已保存的手动选择。
+- `-DMOSS_APP_STORE=ON`：固定使用 `apple-assets`，独立设置键 `storeModelEndpoint`；旧镜像设置自动迁回 Apple。界面不显示下载源选择，失败后仍重试 Apple，不使用站外 HTTP 来源。
 - App Store 正式版最低系统为 macOS 26，面向 18 岁及以上用户。GitHub/DMG 的系统要求独立维护。
 
 ## 固定版本与安装
@@ -70,3 +70,26 @@ xcrun altool --upload-asset-pack /absolute/path/model-HASH.aar \
 `--notice vendor/videocut-voice/licenses/ming/Ming-MIT.txt` 和
 `--notice vendor/videocut-voice/PROVENANCE.md`。新 App 与新资源包必须配套发布；
 本地生成 `.aar` 不代表已上传、Apple 已处理或 TestFlight 下载已验收。
+
+## 2026-11-07 下载体验修复
+
+删除下载速度低于 1 MB/s 持续 10 秒就自动暂停的管理器策略，保留用户取消、传输层错误处理与断点恢复。
+对话框显示最近 5 秒的合计下载速度；HTTP 使用新增字节，Apple 使用下载阶段的进度估算，
+首个 Apple 进度作为缓存基线。本地复制与校验不计入速度，静默 5 秒后速度归零。
+Small SFX 五个文件共 846846464 字节，四个新包与已存在的词表包配套使用；数字人仍固定 focused-05000。
+上传记录见本地 `.local/appstore/small-sfx-20261107/asset-packs`；上传状态不代表已发布到正式商店。
+
+### Apple Silicon 数字人修复
+
+旧 Store 清单采用 `yunet-203-v1`，而旧 macOS 分支直接拒绝该检测器；本地旧版 `detector + landmark106` 路线的成功不能证明商店安装可用。
+现在 YuNet 使用同一 ONNX Runtime Core ML／Metal 后端，按命名输出解码并保留原裁剪几何；
+Core ML 对人像、镜像人像及空白图的测试通过，检测坐标与 OpenCV 参考最大差 0.0000305176。
+MediaPipe GPU 输入改用 RGBA，避免 CoreVideo 对 RGB 上传的致命错误。
+
+Store 覆盖清单同时更新 appearance、warp 与 denoise：前两者把 3D 算子等价展开为 GPU 支持的算子；
+去噪器仍来自原 focused-05000 权重，做常量折叠、稳定 Softplus 展开，并使用范围 0–999 的 int32 时间步。
+源 ONNX SHA-256、转换后 SHA-256 与字节数保存在 `config/ditto-store/manifest.json` 的 `gpuCompatibility` 中；
+`audioModel.trainingSteps` 保持 5000。普通公开模型清单不包含这些私人权重。
+
+本地证据位于 `.local/appstore/small-sfx-20261107`：转换前后对比、Apple 上传回执、原生窗口截图和实际生成结果。
+仅 Apple 上传回执不能证明商店全新安装下载和最终生成已经验收。

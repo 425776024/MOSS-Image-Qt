@@ -1,6 +1,6 @@
 # 新身数字人 / XAvatar Privacy Policy
 
-Updated: 2026-10-22 · 更新日期：2026 年 10 月 22 日
+Updated: 2026-11-07 · 更新日期：2026 年 11 月 7 日
 
 ## 中文
 
@@ -14,9 +14,13 @@ Updated: 2026-10-22 · 更新日期：2026 年 10 月 22 日
 
 ### 模型下载与外部服务
 
-App Store 版本默认从 Apple 托管的资源包下载模型。GitHub / DMG 版本自动在 ModelScope 和 Hugging Face 间测速选源；另保留 hf-mirror.com 手动选项。模型下载会向所选服务发送模型文件请求；服务提供方可以接收 IP 地址和完成请求所需的网络信息，但应用不会为下载模型而发送你的创作提示词、照片或语音。
+App Store 版本默认从 Apple 托管的资源包下载模型。GitHub / DMG 版本自动在 ModelScope 和 Hugging Face 间测速选源。模型下载会向所选服务发送模型文件请求；服务提供方可以接收 IP 地址和完成请求所需的网络信息，但应用不会为下载模型而发送你的创作提示词、照片或语音。
 
 Apple 和其他下载服务按照各自的隐私政策处理其服务数据。应用不含广告追踪或开发者使用情况分析功能。macOS、App Store 的诊断和分析设置由 Apple 管理。
+
+### App Store 购买
+
+App Store 版通过 Apple 的 App 内购买提供全功能 3 天免费试用和永久解锁。付款、购买恢复和退款由 Apple 处理；开发者不会收到你的银行卡信息。应用通过 StoreKit 在本机验证购买状态，不向开发者服务器上传收据或交易记录。试用不会自动续费；到期后需要主动购买永久解锁才能继续使用创作功能。
 
 ### 联系我们
 
@@ -36,9 +40,13 @@ Projects, preferences, models and operational logs are stored locally. You can d
 
 ### Model downloads and external services
 
-The App Store version downloads Apple-hosted model asset packs by default. GitHub / DMG releases automatically compare ModelScope and Hugging Face download speeds. hf-mirror.com remains a manual option. Downloading a model sends file requests to the selected provider, which can receive your IP address and network information needed to service those requests. The app does not send your creative prompts, photographs or voices as part of a model download.
+The App Store version downloads Apple-hosted model asset packs by default. GitHub / DMG releases automatically compare ModelScope and Hugging Face download speeds. Downloading a model sends file requests to the selected provider, which can receive your IP address and network information needed to service those requests. The app does not send your creative prompts, photographs or voices as part of a model download.
 
 Apple and other download providers handle their service data under their respective privacy policies. The app includes no advertising tracking or developer usage analytics. Apple manages macOS and App Store diagnostic and analytics settings.
+
+### App Store purchases
+
+The App Store edition offers a free 3-day trial and lifetime access to all features through an Apple In-App Purchase. Apple processes payment, restores and refunds; the developer does not receive your bank card details. The app verifies purchase status locally with StoreKit and does not upload receipts or transaction records to a developer server. The trial does not renew or charge automatically. Continued creative use after the trial requires a one-time lifetime purchase.
 
 ### Contact
 

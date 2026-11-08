@@ -69,6 +69,15 @@ Rectangle {
                     ColumnLayout {
                         width: Math.min(840,general.availableWidth); x: (general.availableWidth-width)/2; spacing: 14
                         HomeSection {
+                            Layout.fillWidth: true; visible: studio.purchases.storeEdition
+                            title: HomeTheme.t("购买与试用"); iconName: "person"
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Label { Layout.fillWidth: true; color: HomeTheme.secondary; wrapMode: Text.Wrap; text: HomeTheme.t(studio.purchases.lifetimeUnlocked ? "已永久解锁" : (studio.purchases.accessAllowed ? "免费试用中" : "试用已结束")) }
+                                HomeButton { objectName: "manageAvatarPurchase"; text: HomeTheme.t(studio.purchases.lifetimeUnlocked ? "管理购买" : "查看购买"); onClicked: studio.purchases.showUnlock() }
+                            }
+                        }
+                        HomeSection {
                             Layout.fillWidth: true; title: HomeTheme.t("外观"); iconName: "monitor"
                             RowLayout { Layout.fillWidth: true; spacing: 10
                                 Repeater { model: [{key:"system",title:HomeTheme.t("跟随系统")},{key:"light",title:HomeTheme.t("浅色")},{key:"dark",title:HomeTheme.t("深色")}]
@@ -117,10 +126,10 @@ Rectangle {
                             Layout.fillWidth: true; title: HomeTheme.t("诊断日志"); iconName: "document"
                             RowLayout {
                                 Layout.fillWidth: true; spacing: 12
-                                Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: HomeTheme.t("记录性能、计算设备和错误，最多保留 16 MiB。"); color: HomeTheme.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
+                                Item { Layout.fillWidth: true }
                                 HomeButton {
                                     objectName: "exportDiagnostics"
-                                    text: HomeTheme.t("导出日志")
+                                    text: HomeTheme.t("导出"); hint: HomeTheme.t("导出日志")
                                     focusPolicy: Qt.StrongFocus
                                     activeFocusOnTab: true
                                     onClicked: {
@@ -134,7 +143,7 @@ Rectangle {
                             Layout.fillWidth: true; title: HomeTheme.t("嘴形校准缓存"); iconName: "person"
                             RowLayout { Layout.fillWidth: true
                                 Text { Layout.fillWidth: true; text: (studio.mouthCacheBytes/1048576).toFixed(1)+" / "+studio.mouthCacheLimitMiB+" MiB"; color: HomeTheme.secondary; font.pixelSize: 12 }
-                                HomeButton { objectName: "clearMouthCache"; text: HomeTheme.t("清理缓存"); enabled: !studio.busy && studio.mouthCacheBytes>0; onClicked: root.cacheNotice=studio.clearMouthCache() }
+                                HomeButton { objectName: "clearMouthCache"; text: HomeTheme.t("清理"); hint: HomeTheme.t("清理缓存"); enabled: !studio.busy && studio.mouthCacheBytes>0; onClicked: root.cacheNotice=studio.clearMouthCache() }
                             }
                             Text { visible: !!root.cacheNotice; Layout.fillWidth: true; text: HomeTheme.t(root.cacheNotice); wrapMode: Text.Wrap; color: HomeTheme.secondary; font.pixelSize: 11 }
                         }
@@ -175,7 +184,7 @@ Rectangle {
                         Text { Layout.fillWidth: true; text: HomeTheme.t("本地 AI 图像与数字人创作"); color: HomeTheme.secondary; font.pixelSize: 13; wrapMode: Text.Wrap }
                         HomeButton {
                             objectName: "aboutWebsite"
-                            text: HomeTheme.english ? "Website: https://ffclip.com" : "官网：https://ffclip.com"
+                            text: HomeTheme.t("官网"); hint: "https://ffclip.com"
                             quiet: true
                             onClicked: Qt.openUrlExternally("https://ffclip.com")
                         }

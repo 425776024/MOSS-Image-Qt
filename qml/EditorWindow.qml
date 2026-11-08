@@ -9,7 +9,7 @@ ApplicationWindow {
     width: 1440; height: 900; minimumWidth: 1180; minimumHeight: 740
     visible: false; topPadding: 0; transientParent: null
     title: HomeTheme.t("新身数字人 · ") + (creationMode === "av" ? HomeTheme.t("音视频创作") : HomeTheme.t("图像创作"))
-    color: StudioTheme.background; font.family: "PingFang SC"; font.pixelSize: 13
+    color: StudioTheme.background; font: VideoCutTheme.bodyFont
     property string creationMode: "image"
     property int page: 0
     property bool navCollapsed: true

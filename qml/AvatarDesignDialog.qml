@@ -30,7 +30,7 @@ HomeDialog {
                     label: HomeTheme.t("人物描述"); placeholder: HomeTheme.t("描述人物的外貌、服装、表情、背景和画面风格…")
                     value: ""; enabled: !studio.busy; onEdited: text=>value=text
                 }
-                Text { Layout.fillWidth: true; text: HomeTheme.t("单人、清晰五官、正面或微侧脸的头肩人像，更适合制作数字人。"); color: HomeTheme.muted; wrapMode: Text.Wrap; font.pixelSize: 11 }
+                Text { Layout.fillWidth: true; text: HomeTheme.t("单人、清晰正脸效果更好"); color: HomeTheme.muted; wrapMode: Text.Wrap; font.pixelSize: 11 }
             }
             Rectangle {
                 Layout.preferredWidth: 250; Layout.fillHeight: true; radius: 8; color: HomeTheme.preview; border.color: HomeTheme.line; clip: true
@@ -44,8 +44,8 @@ HomeDialog {
             Layout.fillWidth: true; spacing: 8
             HomeButton { text: studio.busy && root.generatedHere ? HomeTheme.t("取消生成") : HomeTheme.t("取消"); quiet: true; onClicked: {if(studio.busy && root.generatedHere)studio.cancel();else root.close()} }
             Item { Layout.fillWidth: true }
-            HomeButton { objectName: "avatarDesignGenerate"; text: HomeTheme.t("生成形象"); enabled: !studio.busy && description.value.trim()!==""; onClicked: root.generate() }
-            HomeButton { objectName: "avatarDesignSave"; text: HomeTheme.t("保存到我的形象"); primary: true; enabled: !studio.busy && root.hasPreview && avatarName.text.trim()!==""; onClicked: root.save() }
+            HomeButton { objectName: "avatarDesignGenerate"; text: HomeTheme.t("生成"); hint: HomeTheme.t("生成形象"); enabled: !studio.busy && description.value.trim()!==""; onClicked: root.generate() }
+            HomeButton { objectName: "avatarDesignSave"; text: HomeTheme.t("保存"); hint: HomeTheme.t("保存到我的形象"); primary: true; enabled: !studio.busy && root.hasPreview && avatarName.text.trim()!==""; onClicked: root.save() }
         }
     }
 }

@@ -23,16 +23,15 @@ Rectangle {
                 Text { Layout.fillWidth: true; text: mcp.running ? (mcp.lanEnabled ? root.t("已开启 · 局域网 · ","Running · Local network · ") : root.t("已开启 · 仅限本机 · ","Running · This computer only · "))+mcp.toolCount+root.t(" 个接口"," tools") : root.t("让其他软件调用创作与资源管理功能。","Connect other apps to creation and resource management."); color: HomeTheme.secondary; font.pixelSize: 12; wrapMode: Text.Wrap }
             }
             Text { text: root.notice; color: HomeTheme.secondary; font.pixelSize: 12 }
-            HomeButton { objectName: "mcpToggle"; text: mcp.running ? root.t("关闭服务","Turn Off") : root.t("开启服务","Turn On"); primary: !mcp.running; focusPolicy: Qt.StrongFocus; activeFocusOnTab: true; onClicked: mcp.setEnabled(!mcp.running) }
+            HomeButton { objectName: "mcpToggle"; text: mcp.running ? root.t("关闭服务","Turn off") : root.t("开启服务","Turn on"); hint: root.t("开启后随应用启动；关闭服务不影响已提交的任务。","Starts with the app once enabled. Turning off keeps accepted jobs running."); primary: !mcp.running; focusPolicy: Qt.StrongFocus; activeFocusOnTab: true; onClicked: mcp.setEnabled(!mcp.running) }
         }
-        Text { Layout.fillWidth: true; text: root.t("首次手动开启后，随应用启动；退出应用时自动关闭。","After you enable it, the service starts with the app and stops when the app quits."); color: HomeTheme.muted; font.pixelSize: 12; wrapMode: Text.Wrap }
         RowLayout {
             Layout.fillWidth: true; spacing: 12
             AppCheckBox { objectName: "mcpLanToggle"; text: root.t("允许局域网连接","Allow Local Network"); checked: mcp.lanEnabled; onClicked: mcp.setLanEnabled(checked) }
             HomeCombo { objectName: "mcpLanAddress"; visible: mcp.lanEnabled && mcp.lanAddresses.length>1; Layout.preferredWidth: 160; model: mcp.lanAddresses; currentIndex: mcp.lanAddresses.indexOf(mcp.lanAddress); onActivated: mcp.setLanAddress(currentText); Accessible.name: root.t("局域网地址","Local network address") }
             Item { Layout.fillWidth: true }
         }
-        Text { Layout.fillWidth: true; visible: mcp.lanEnabled; text: mcp.lanAddresses.length ? root.t("仅用于可信局域网（HTTP 不加密）。另一台机器使用下方地址与访问凭证；连接失败时检查防火墙。","Use a trusted network (HTTP is unencrypted). Other computers need the address and credential below; check the firewall if connection fails.") : root.t("未发现局域网 IPv4 地址，请连接 Wi-Fi 或有线网络。","No local IPv4 address found. Connect to Wi-Fi or Ethernet."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+        Text { Layout.fillWidth: true; visible: mcp.lanEnabled; text: mcp.lanAddresses.length ? root.t("仅用于可信局域网，HTTP 未加密。","Use a trusted network. HTTP is unencrypted.") : root.t("未发现局域网 IPv4 地址，请连接 Wi-Fi 或有线网络。","No local IPv4 address found. Connect to Wi-Fi or Ethernet."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
         Text { visible: !!mcp.error; text: mcp.error; Layout.fillWidth: true; color: HomeTheme.danger; wrapMode: Text.Wrap; font.pixelSize: 12 }
         HomeSection {
             visible: mcp.running; Layout.fillWidth: true; padding: 12; contentSpacing: 8
@@ -44,18 +43,18 @@ Rectangle {
             }
             Flow {
                 Layout.fillWidth: true; spacing: 8
-                HomeButton { objectName: "mcpCopyPrompt"; text: root.t("复制接入提示词","Copy Setup Prompt"); primary: true; enabled: !mcp.lanEnabled || mcp.lanAddresses.length>0; onClicked: root.copy(mcp.connectionText(HomeTheme.english)) }
-                HomeButton { objectName: "mcpCopyConfig"; text: root.t("复制连接配置","Copy Configuration"); enabled: !mcp.lanEnabled || mcp.lanAddresses.length>0; onClicked: root.copy(mcp.configuration()) }
-                HomeButton { text: root.t("复制接口说明","Copy Tool Reference"); quiet: true; onClicked: root.copy(mcp.toolReference()) }
+                HomeButton { objectName: "mcpCopyPrompt"; text: root.t("复制接入提示词","Copy setup"); primary: true; enabled: !mcp.lanEnabled || mcp.lanAddresses.length>0; onClicked: root.copy(mcp.connectionText(HomeTheme.english)) }
+                HomeButton { objectName: "mcpCopyConfig"; text: root.t("复制配置","Copy config"); enabled: !mcp.lanEnabled || mcp.lanAddresses.length>0; onClicked: root.copy(mcp.configuration()) }
+                HomeButton { text: root.t("复制接口说明","Copy tools"); quiet: true; onClicked: root.copy(mcp.toolReference()) }
             }
-            Text { Layout.fillWidth: true; text: root.t("接入提示词与配置包含访问凭证。支持上传素材、图片预览和音视频下载；调用期间保持应用打开。","Setup includes the access credential. Supports uploads, image previews and media downloads; keep this app open."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+            Text { Layout.fillWidth: true; text: root.t("接入信息包含访问凭证，请勿公开。","Setup includes your access credential. Keep it private."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
         }
         RowLayout {
             Layout.fillWidth: true
             Text { text: root.t("实时调用","Live Activity"); color: HomeTheme.text; font.pixelSize: 13; font.weight: Font.Medium }
             Text { text: mcp.calls.count+root.t(" 条 · 本次运行最多保留 200 条"," calls · Latest 200 this session"); color: HomeTheme.muted; font.pixelSize: 11 }
             Item { Layout.fillWidth: true }
-            HomeButton { text: root.t("清空记录","Clear Activity"); quiet: true; compact: true; enabled: mcp.calls.count>0; onClicked: {root.selectedCall="";root.detail={};mcp.clearCalls()} }
+            HomeButton { text: root.t("清空","Clear"); quiet: true; compact: true; enabled: mcp.calls.count>0; onClicked: {root.selectedCall="";root.detail={};mcp.clearCalls()} }
         }
         SplitView {
             Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 160
@@ -110,6 +109,6 @@ Rectangle {
                 }
             }
         }
-        Text { Layout.fillWidth: true; text: root.t("关闭服务会停止接入，已提交的任务继续执行；退出应用会中断未完成任务。","Turning off disconnects clients; accepted jobs continue. Quitting interrupts unfinished jobs."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+        Text { Layout.fillWidth: true; text: root.t("执行任务时请保持应用打开。","Keep the app open while tasks run."); color: HomeTheme.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
     }
 }

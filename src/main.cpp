@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QFontDatabase>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -55,6 +56,16 @@ int main(int argc,char **argv){
         qputenv("QT_QUICK_BACKEND","software");
     }
     QGuiApplication app(argc,argv);
+    // Give plain QML Text and Controls the same system font. Medium is our
+    // UI readability choice; headings retain their explicit semibold weight.
+    auto interfaceFont=QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    interfaceFont.setStyleName(QString());
+    interfaceFont.setPixelSize(13);
+    interfaceFont.setWeight(QFont::Medium);
+    app.setFont(interfaceFont);
+#ifdef Q_OS_MACOS
+    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
+#endif
 #ifdef MOSS_APP_STORE
     qputenv("MOSS_DISABLE_DEV_PATHS","1");
     qunsetenv("MOSS_SETTINGS_ROOT");
@@ -143,6 +154,7 @@ int main(int argc,char **argv){
     // opt in explicitly so existing startup and inference checks stay isolated.
     if(!backgroundTest||args.contains("--check-initial-setup"))
         QTimer::singleShot(0,&app,[&]{
+            if(!studio.purchases()->accessAllowed())return;
             studio.models()->showInitialSetup();
             if(!studio.models()->initialSetup())QMetaObject::invokeMethod(homeWindow,"showQuickStart");
         });
@@ -646,7 +658,7 @@ int main(int argc,char **argv){
             if(!dialogKey.isEmpty())QTimer::singleShot(1100,&app,[&,dialogKey]{
                 if(app.platformName()!="offscreen"){qWarning()<<"Dialog key probe requires offscreen mode";app.exit(5);return;}
                 const int key=dialogKey=="return" ? Qt::Key_Return : dialogKey=="cancel" ? Qt::Key_Period : Qt::Key_Escape;
-                const auto modifiers=dialogKey=="cancel" ? Qt::MetaModifier : Qt::NoModifier;
+                const auto modifiers=dialogKey=="cancel" ? Qt::ControlModifier : Qt::NoModifier;
                 QKeyEvent press(QEvent::KeyPress,key,modifiers),release(QEvent::KeyRelease,key,modifiers);
                 QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);
             });

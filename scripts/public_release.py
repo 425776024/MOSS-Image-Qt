@@ -21,12 +21,14 @@ SOURCE_DOCS = ('LICENSE', 'README.md', 'README-en.md', 'THIRD_PARTY.md', 'CMakeL
 
 # Exact, hash-pinned showcase exceptions. Local exports remain forbidden.
 PUBLIC_DEMO_MEDIA = {
+    'assets/showcase/app-preview-en.mp4': '16a5c8e7efc64ecaf8112d8b472cf579109b4065c48710d318a23557933c77a7',
+    'assets/showcase/app-preview-zh.mp4': '1b25c4190d4cbd2cde87b826edb0f98cab54d54dab8f501d2834438fb2db51a6',
     'assets/showcase/avatar-demo-01.mp4': '19f00fc12efed60f4869010394d7da2c39fe536214a45ceb681575d1ff2c5137',
     'assets/showcase/avatar-demo-02.mp4': 'a5d3649fe6b6cf4e6f1e8750bb27fc826d6e66340a51dcecbbf112cdbc02f705',
 }
 
 PUBLIC_SCRIPTS = {
-    "prepare_flowedit.py",
+    "prepare_flowedit.py", "test_storekit.py",
     "audit_bundle.py", "build.sh", "build_media_dependencies.sh", "bundle_native.py",
     "package.sh", "prepare_audio.sh", "public_release.py", "run-local.sh", "run_background_test.sh",
     "prepare_ming.py", "prepare_ci_macos.py", "build_ci_macos.sh", "macos_distribution.py", "import_apple_secrets.py",

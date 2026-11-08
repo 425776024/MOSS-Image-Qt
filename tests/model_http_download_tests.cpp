@@ -228,8 +228,8 @@ private slots:
         QJsonObject file;for(const auto &v:QJsonDocument::fromJson(catalog.readAll()).object()["files"].toArray())
             if(v.toObject()["path"]=="voice/ming-3.0-tts-0.5b-q8_0.gguf")file=v.toObject();
         QVERIFY(!file.isEmpty());
-        const auto endpoint=qEnvironmentVariable("MOSS_LIVE_ENDPOINT","mirror");
-        const auto host=endpoint=="official"?QString("https://huggingface.co"):QString("https://hf-mirror.com");
+        const auto endpoint=qEnvironmentVariable("MOSS_LIVE_ENDPOINT","official");
+        const auto host=QString("https://huggingface.co");
         const QUrl url(host+"/"+file["repo"].toString()+"/resolve/"+file["revision"].toString()+"/"+file["file"].toString());
         const auto path=root+"/voice-sample-"+endpoint+".part",sha=file["sha256"].toString();
         const auto bytes=file["bytes"].toInteger();qint64 saved=0;
@@ -256,7 +256,7 @@ private slots:
         const auto relative="/"+file["repo"].toString()+"/resolve/"+file["revision"].toString()+"/"+file["file"].toString();
         QList<QUrl> urls{QUrl(file["modelscopeUrl"].toString()),QUrl("https://huggingface.co"+relative)};
         const auto endpoint=qEnvironmentVariable("MOSS_LIVE_ENDPOINT","auto");
-        if(endpoint=="modelscope")urls={urls[0]};else if(endpoint=="official")urls={urls[1]};else if(endpoint=="mirror")urls={QUrl("https://hf-mirror.com"+relative)};
+        if(endpoint=="modelscope")urls={urls[0]};else if(endpoint=="official")urls={urls[1]};
         const auto path=root+"/tokenizer-"+endpoint+".part";
         ModelHttpDownload first;QSignalSpy stopped(&first,&ModelHttpDownload::completed);
         connect(&first,&ModelHttpDownload::sourceSelected,this,[](QUrl url){qInfo()<<"Selected host:"<<url.host();});

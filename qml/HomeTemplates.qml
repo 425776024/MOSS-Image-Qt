@@ -15,7 +15,7 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 22; spacing: 16
         HomeHeader { Layout.fillWidth: true; title: HomeTheme.t("构图模板"); detail: String(studio.layoutTemplates.length)
-            HomeButton { text: HomeTheme.t("导入模板"); iconName: "plus"; onClicked: importer.open() }
+            HomeButton { text: HomeTheme.t("导入"); hint: HomeTheme.t("导入模板"); iconName: "plus"; onClicked: importer.open() }
         }
         Text { visible: !!root.message; Layout.fillWidth: true; text: root.message; color: HomeTheme.danger; font.pixelSize: 12; wrapMode: Text.Wrap }
         GridView {
@@ -58,7 +58,7 @@ Rectangle {
             RowLayout { Layout.fillWidth: true; spacing: 10
                 StudioIcon { Layout.preferredWidth: 18; Layout.preferredHeight: 18; name: "grid"; ink: HomeTheme.secondary }
                 Text { Layout.fillWidth: true; text: root.templateName(root.selected); font.pixelSize: 12; color: HomeTheme.text }
-                HomeButton { objectName: "useLibraryTemplate"; text: HomeTheme.t("使用模板"); primary: true; iconName: "arrow"; enabled: !studio.busy; onClicked: root.useTemplate(root.selected.id) }
+                HomeButton { objectName: "useLibraryTemplate"; text: HomeTheme.t("使用"); hint: HomeTheme.t("使用模板"); primary: true; iconName: "arrow"; enabled: !studio.busy; onClicked: root.useTemplate(root.selected.id) }
             }
         }
     }

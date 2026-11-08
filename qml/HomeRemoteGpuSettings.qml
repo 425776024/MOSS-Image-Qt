@@ -49,6 +49,6 @@ HomeSection {
                 HomeButton { text: HomeTheme.t("更改"); quiet: true; enabled: !studio.busy && !studio.remoteGpu.busy; onClicked: archiveDialog.open() }
             }
         }
-        HomeButton { objectName: "recoverRemoteImage"; visible: studio.remoteGpu.pendingCount>0; text: HomeTheme.t("回收未完成任务 · ")+studio.remoteGpu.pendingCount; enabled: !studio.busy && !studio.remoteGpu.busy && studio.remoteGpu.ready; onClicked: {studio.resumeRemoteImage();root.resumeRequested()} }
+        HomeButton { objectName: "recoverRemoteImage"; visible: studio.remoteGpu.pendingCount>0; text: HomeTheme.t("继续任务")+" · "+studio.remoteGpu.pendingCount; hint: HomeTheme.t("回收未完成任务 · ")+studio.remoteGpu.pendingCount; enabled: !studio.busy && !studio.remoteGpu.busy && studio.remoteGpu.ready; onClicked: {studio.resumeRemoteImage();root.resumeRequested()} }
     }
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(MossStudio VERSION 0.1.0 LANGUAGES CXX)
+project(MossStudio VERSION 0.1.1 LANGUAGES CXX)
 if(APPLE)
     enable_language(OBJCXX)
 endif()
@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 option(MOSS_APP_STORE "Build with container-only storage for the Mac App Store" OFF)
+include(config/validate-model-resources.cmake)
 if(MOSS_APP_STORE)
     # Apple-hosted model downloads are part of the Store edition's baseline.
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET OR CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "26.0")
@@ -36,6 +37,7 @@ if(BUILD_TESTING)
 endif()
 qt_standard_project_setup(REQUIRES 6.8)
 qt_add_executable(MossStudio MACOSX_BUNDLE
+    src/PurchaseManager.cpp src/PurchaseManager.h
     src/AppUpdate.cpp src/AppUpdate.h
     src/DiagnosticLog.cpp src/DiagnosticLog.h src/InferenceDiagnostics.cpp src/InferenceDiagnostics.h
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
@@ -67,6 +69,7 @@ if(APPLE)
 endif()
 set_source_files_properties(qml/HomeTheme.qml qml/StudioTheme.qml qml/VideoCutTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
+    QML_FILES qml/PurchaseDialog.qml
     QML_FILES qml/HomeUpdates.qml
     QML_FILES qml/HomeMcp.qml
     RESOURCES qml/Translations.js qml/VoiceDesignPresets.js
@@ -77,7 +80,7 @@ qt_add_qml_module(MossStudio URI MossStudio VERSION 1.0
     QML_FILES qml/EditorWindow.qml qml/HomeTheme.qml qml/HomeButton.qml qml/HomeField.qml qml/HomeHeader.qml qml/HomeTabs.qml qml/HomeEmpty.qml qml/HomeWorks.qml qml/HomeAvatars.qml qml/HomeVoices.qml qml/HomeVoiceCreator.qml qml/HomeAvatarCreator.qml qml/HomeSettings.qml qml/HomeModels.qml qml/HomeRemoteGpuSettings.qml qml/HomeCombo.qml qml/HomeContact.qml
     QML_FILES qml/WindowDragArea.qml qml/FrostedPanel.qml
     QML_FILES qml/RemoteGpuSettings.qml qml/CanvasObjectSettings.qml
-    QML_FILES qml/Main.qml qml/StudioButton.qml qml/StudioField.qml qml/LayoutCanvas.qml qml/RepaintCanvas.qml qml/RepaintSettings.qml qml/NarrationCanvas.qml qml/NarrationSettings.qml qml/CreationPage.qml qml/TrackTimeline.qml qml/TrackPreview.qml qml/BackgroundSettings.qml qml/InputArea.qml qml/StudioCombo.qml qml/CompositionPage.qml qml/StudioTheme.qml qml/StudioIcon.qml qml/TemplateCard.qml qml/CreationPages.qml qml/StudioSlider.qml qml/StudioSpinBox.qml qml/StudioCheckBox.qml
+    QML_FILES qml/ProjectTabs.qml qml/Main.qml qml/StudioButton.qml qml/StudioField.qml qml/LayoutCanvas.qml qml/RepaintCanvas.qml qml/RepaintSettings.qml qml/NarrationCanvas.qml qml/NarrationSettings.qml qml/CreationPage.qml qml/TrackTimeline.qml qml/TrackPreview.qml qml/BackgroundSettings.qml qml/InputArea.qml qml/StudioCombo.qml qml/CompositionPage.qml qml/StudioTheme.qml qml/StudioIcon.qml qml/TemplateCard.qml qml/CreationPages.qml qml/StudioSlider.qml qml/StudioSpinBox.qml qml/StudioCheckBox.qml
     SOURCES src/AudioWaveform.h src/AudioWaveform.cpp src/EditDocument.h src/EditDocument.cpp src/MaskCanvas.h src/MaskCanvas.cpp src/LayerDocument.h src/LayerDocument.cpp src/LayerCanvas.h src/LayerCanvas.cpp)
 target_include_directories(MossStudio PRIVATE src)
 set(MOSS_MCP_SOURCES src/McpService.cpp src/McpService.h src/McpHttpServer.cpp src/McpHttpServer.h src/McpCatalog.cpp src/McpCatalog.h src/McpCallModel.cpp src/McpCallModel.h src/McpMediaStore.cpp src/McpMediaStore.h)
@@ -92,6 +95,19 @@ if(MOSS_APP_STORE)
     target_link_options(MossStudio PRIVATE "SHELL:-weak_framework BackgroundAssets")
     set(MOSS_BACKGROUND_ASSETS_PLIST "<key>BAAppGroupID</key><string>group.ai.ffclip.studio.assets</string><key>BAHasManagedAssetPacks</key><true/><key>BAUsesAppleHosting</key><true/>")
     find_program(MOSS_SWIFTC swiftc REQUIRED)
+    set(MOSS_STOREKIT_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/libMossStoreKit.dylib")
+    add_custom_command(OUTPUT "${MOSS_STOREKIT_LIBRARY}"
+        COMMAND ${MOSS_SWIFTC} -parse-as-library -emit-library -O -target arm64-apple-macos26.0
+            -module-name MossStoreKit -Xlinker -install_name -Xlinker @rpath/libMossStoreKit.dylib
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/apple/StorePurchases.swift" -o "${MOSS_STOREKIT_LIBRARY}"
+        DEPENDS src/apple/StorePurchases.swift VERBATIM)
+    add_custom_target(moss_storekit DEPENDS "${MOSS_STOREKIT_LIBRARY}")
+    add_dependencies(MossStudio moss_storekit)
+    target_link_libraries(MossStudio PRIVATE "${MOSS_STOREKIT_LIBRARY}")
+    set_property(TARGET MossStudio APPEND PROPERTY BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}" "@executable_path/../Frameworks")
+    add_custom_command(TARGET MossStudio POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:MossStudio>/Contents/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy "${MOSS_STOREKIT_LIBRARY}" "$<TARGET_BUNDLE_DIR:MossStudio>/Contents/Frameworks/")
     configure_file(config/apple-assets/Extension-Info.plist.in "${CMAKE_CURRENT_BINARY_DIR}/Assets-Info.plist")
     set(MOSS_ASSET_EXTENSION "${CMAKE_CURRENT_BINARY_DIR}/XinshenAssets.appex")
     add_custom_command(OUTPUT "${MOSS_ASSET_EXTENSION}/Contents/MacOS/XinshenAssets"
@@ -128,6 +144,12 @@ function(moss_add_qt_test name target)
     endif()
 endfunction()
 qt_add_executable(app_update_tests tests/app_update_tests.cpp src/AppUpdate.cpp src/AppUpdate.h)
+qt_add_executable(purchase_manager_tests tests/purchase_manager_tests.cpp src/PurchaseManager.cpp src/PurchaseManager.h)
+target_include_directories(purchase_manager_tests PRIVATE src)
+target_compile_definitions(purchase_manager_tests PRIVATE MOSS_APP_STORE=1)
+target_link_libraries(purchase_manager_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Test)
+moss_add_qt_test(purchase_manager purchase_manager_tests)
+set_tests_properties(purchase_manager PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
 target_include_directories(app_update_tests PRIVATE src)
 target_link_libraries(app_update_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test)
 moss_add_qt_test(app_update app_update_tests)
@@ -158,6 +180,7 @@ target_include_directories(layer_tests PRIVATE src)
 target_link_libraries(layer_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Svg Qt6::Test)
 moss_add_qt_test(layers layer_tests)
 qt_add_executable(creation_pages_tests tests/creation_pages_tests.cpp
+    src/PurchaseManager.cpp src/PurchaseManager.h
     src/DiagnosticLog.cpp src/DiagnosticLog.h src/InferenceDiagnostics.cpp src/InferenceDiagnostics.h
     src/ConversationDocument.cpp src/ConversationDocument.h src/StudioConversation.cpp src/ConversationMediaStore.cpp src/ConversationMediaStore.h
     src/ModelManager.cpp src/ModelManager.h src/Studio.cpp src/StudioTimeline.cpp src/Studio.h src/RemoteImageClient.cpp src/RemoteImageClient.h src/TimelineDocument.cpp src/TimelineDocument.h src/AudioDurationProbe.cpp src/AudioDurationProbe.h src/Document.cpp src/Document.h src/SoundPlan.cpp src/SoundPlan.h
@@ -193,6 +216,13 @@ qt_add_executable(audio_waveform_tests tests/audio_waveform_tests.cpp src/AudioW
 target_include_directories(audio_waveform_tests PRIVATE src)
 target_link_libraries(audio_waveform_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::Multimedia Qt6::Test)
 moss_add_qt_test(audio_waveform audio_waveform_tests)
+qt_add_executable(conversation_media_tests tests/conversation_media_tests.cpp
+    src/ConversationDocument.cpp src/ConversationDocument.h
+    src/ConversationMediaStore.cpp src/ConversationMediaStore.h
+    src/AudioDurationProbe.cpp src/AudioDurationProbe.h)
+target_include_directories(conversation_media_tests PRIVATE src)
+target_link_libraries(conversation_media_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Multimedia Qt6::Test)
+moss_add_qt_test(conversation_media conversation_media_tests)
 endif()
 
 foreach(model_target MossStudio creation_pages_tests)
@@ -209,7 +239,13 @@ target_link_libraries(model_manager_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Networ
 qt_add_resources(model_manager_tests model_resources PREFIX "/models" FILES config/models.json
     config/ditto-original/config.json config/ditto-original/schedule.json config/ditto-original/manifest.json)
 moss_add_qt_test(model_manager model_manager_tests)
+qt_add_executable(model_download_dialog_tests tests/model_download_dialog_tests.cpp src/ModelManager.cpp src/ModelManager.h src/ModelHttpDownload.cpp src/ModelHttpDownload.h)
+target_include_directories(model_download_dialog_tests PRIVATE src)
+target_link_libraries(model_download_dialog_tests PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Network Qt6::Concurrent Qt6::Test)
+moss_add_qt_test(model_download_dialog model_download_dialog_tests)
+
 if(Python3_Interpreter_FOUND)
+    add_test(NAME model_resource_integrity COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/model_resource_integrity_tests.py")
     add_test(NAME public_release COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/public_release_tests.py")
     add_test(NAME macos_distribution COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/macos_distribution_tests.py")
 endif()

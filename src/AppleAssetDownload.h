@@ -11,6 +11,8 @@ public:
     void cancel();
 signals:
     void progress(double fraction);
+    void networkProgress(double fraction);
+    void networkFinished();
     void completed(QString error);
 private:
     void *m_job=nullptr;

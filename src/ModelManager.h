@@ -6,6 +6,7 @@
 #include <QPointer>
 #include <QFile>
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QLockFile>
 #include <memory>
 #include <QSet>
@@ -20,6 +21,7 @@ struct ModelAsset {
     QString downloadSha256,conversion;
     qint64 transferBytes() const { return downloadBytes?downloadBytes:bytes; }
     QString transferSha256() const { return downloadSha256.isEmpty()?sha256:downloadSha256; }
+    QList<QUrl> downloadUrls(const QString &endpoint) const;
 };
 
 // The catalog is the sole authority for downloads, deletion and release packaging.
@@ -38,10 +40,12 @@ class ModelManager : public QObject {
     Q_PROPERTY(bool sfxTermsAccepted READ sfxTermsAccepted NOTIFY changed)
     Q_PROPERTY(bool sfxTermsRequired READ sfxTermsRequired NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
+    Q_PROPERTY(bool paused READ paused NOTIFY changed)
     Q_PROPERTY(bool locked READ locked NOTIFY changed)
     Q_PROPERTY(QString status READ status NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
     Q_PROPERTY(double progress READ progress NOTIFY changed)
+    Q_PROPERTY(double downloadBytesPerSecond READ downloadBytesPerSecond NOTIFY changed)
     Q_PROPERTY(double partialBytes READ partialBytes NOTIFY changed)
     Q_PROPERTY(QString requestDescription READ describeRequest NOTIFY changed)
     Q_PROPERTY(QVariantMap requestInfo READ requestInfo NOTIFY changed)
@@ -71,11 +75,13 @@ public:
     Q_INVOKABLE void showInitialSetup();
     Q_INVOKABLE void setRequested(QStringList capabilities);
     bool busy() const { return m_busy; }
+    bool paused() const { return m_paused; }
     bool locked() const { return m_busy||m_inference; }
     void setInferenceBusy(bool value) { m_inference=value; }
     QString status() const { return m_status; }
     QString error() const { return m_error; }
     double progress() const { return m_progress; }
+    double downloadBytesPerSecond() const { return m_downloadRate; }
     double partialBytes() const;
     QStringList requested() const { return m_requested; }
     bool sfxTermsAccepted() const;
@@ -114,19 +120,25 @@ private:
     void advance(ModelAsset asset);
     void fail(ModelAsset asset,QString error);
     void updateProgress(QString path,qint64 bytes);
+    void stopDownloads();
+    void observeDownload(const QString &path,qint64 bytes);
     QString m_root,m_endpoint,m_quant="Q4_K",m_status,m_error;
     QStringList m_requested;
     QList<ModelAsset> m_assets,m_queue;
     QVariantList m_groups;
     bool m_busy=false,m_cancelled=false,m_inference=false,m_verifyOnly=false;
-    bool m_stopping=false;
+    bool m_stopping=false,m_paused=false;
     bool m_initialSetup=false,m_setupOffered=false;
     QSet<QString> m_active;
     QHash<QString,qint64> m_activeBytes;
     int m_index=0;
     qint64 m_total=0,m_done=0;
     double m_progress=0;
-    QElapsedTimer m_refreshTimer;
+    QElapsedTimer m_refreshTimer,m_rateClock;
+    QTimer m_rateTimer;
+    QHash<QString,qint64> m_rateBytes;
+    QList<QPair<qint64,qint64>> m_rateSamples;
+    double m_downloadRate=0;
     std::unique_ptr<QLockFile> m_lock;
     QUrl m_testTransport;
 };

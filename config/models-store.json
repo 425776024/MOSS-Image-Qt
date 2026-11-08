@@ -11,18 +11,18 @@
       "group": "ditto",
       "path": "ditto-original/manifest.json",
       "resource": ":/models/config/ditto-store/manifest.json",
-      "bytes": 2396,
-      "sha256": "eb1c62bfbfc7e2d2c35adab00525d322c46538119468ede67907bb5e2452846f"
+      "bytes": 3223,
+      "sha256": "5c40f8e26ff4d256cbfba2f82fc981e46e66f9ec22774cbac7035338d4b3405f"
     },
     {
       "group": "ditto",
       "path": "ditto-original/denoise.onnx",
       "repo": "",
-      "revision": "focused-05000",
+      "revision": "focused-05000-gpu-v1",
       "file": "denoise.onnx",
       "appleOnly": true,
-      "bytes": 193113121,
-      "sha256": "bb30d10ccc0ef8746c2623b558cebb8fa6e37dbc1ec0f7bdc04a7243fafa3164"
+      "bytes": 192398637,
+      "sha256": "7d49421632e45970e3eb61266ffcdc6edfdd08f6630fba8d84b91b6805033798"
     },
     {
       "group": "ditto",
@@ -33,6 +33,26 @@
       "appleOnly": true,
       "bytes": 3758596,
       "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/appearance.onnx",
+      "repo": "",
+      "revision": "apple-gpu-v1",
+      "file": "appearance.onnx",
+      "appleOnly": true,
+      "bytes": 15975994,
+      "sha256": "131f49ca862939a1f804c9b3bf795af4b1abbd662ea11771bd127fbbc211f91e"
+    },
+    {
+      "group": "ditto",
+      "path": "ditto-original/warp.onnx",
+      "repo": "",
+      "revision": "apple-gpu-v1",
+      "file": "warp.onnx",
+      "appleOnly": true,
+      "bytes": 231435820,
+      "sha256": "38c6c90c3f05a3e42244fe698df0fdfc4ae3f76073e9523f9eb00eb346dfd216"
     }
   ]
 }

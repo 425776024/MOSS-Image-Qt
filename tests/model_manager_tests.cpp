@@ -10,6 +10,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QCryptographicHash>
+#include <QRegularExpression>
 
 class ModelManagerTests:public QObject {
     Q_OBJECT
@@ -30,6 +31,58 @@ class ModelManagerTests:public QObject {
     }
     QByteArray read(QString path) {QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return f.readAll();}
 private slots:
+    void slowDownloadContinuesAndResumesAfterCancel_data() {
+        QTest::addColumn<bool>("sendSlowData");
+        QTest::newRow("no-response")<<false;
+        QTest::newRow("slow-with-restored-prefix")<<true;
+    }
+    void slowDownloadContinuesAndResumesAfterCancel() {
+        QFETCH(bool,sendSlowData);
+        QTemporaryDir root;QTcpServer server;QVERIFY(server.listen(QHostAddress::LocalHost));
+        const QByteArray body((sendSlowData?16:4)*1024*1024,'p');bool resume=false;bool resumedAtOffset=false;
+        connect(&server,&QTcpServer::newConnection,this,[&]{
+            auto socket=server.nextPendingConnection();
+            connect(socket,&QTcpSocket::readyRead,socket,[&,socket]{
+                const auto request=socket->property("request").toByteArray()+socket->readAll();socket->setProperty("request",request);
+                if(!request.contains("\r\n\r\n")||socket->property("handled").toBool())return;
+                socket->setProperty("handled",true);
+                const auto match=QRegularExpression("Range: bytes=([0-9]+)-([0-9]+)",QRegularExpression::CaseInsensitiveOption).match(QString::fromLatin1(request));
+                const qint64 offset=match.captured(1).toLongLong(),end=match.captured(2).toLongLong()+1;
+                if(!resume&&!sendSlowData)return;
+                socket->write("HTTP/1.1 206 Partial Content\r\nContent-Range: bytes "+QByteArray::number(offset)+"-"+QByteArray::number(end-1)+"/"+QByteArray::number(body.size())+"\r\nContent-Length: "+QByteArray::number(end-offset)+"\r\n\r\n");
+                if(resume) {resumedAtOffset=offset>0;socket->write(body.mid(offset,end-offset));socket->disconnectFromHost();return;}
+                auto timer=new QTimer(socket);timer->setInterval(200);
+                connect(timer,&QTimer::timeout,socket,[socket]{socket->write(QByteArray(512,'p'));});timer->start();
+            });
+            connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);
+        });
+        QJsonObject asset{{"group","ditto"},{"path","ditto/model.bin"},{"file","file"},{"bytes",body.size()},
+            {"sha256",QString::fromLatin1(QCryptographicHash::hash(body,QCryptographicHash::Sha256).toHex())}};
+        const auto data=QJsonDocument(QJsonObject{{"groups",QJsonArray{QJsonObject{{"id","ditto"}}}},{"files",QJsonArray{asset}}}).toJson();
+        const auto part=root.filePath("ditto/model.bin.part");
+        if(sendSlowData)write(part,body.left(12*1024*1024));
+        ModelManager manager(nullptr,data,QUrl(QString("http://127.0.0.1:%1/").arg(server.serverPort())));manager.setRoot(root.path());
+        manager.requestDownload("ditto");QSignalSpy done(&manager,&ModelManager::completed),offered(&manager,&ModelManager::downloadRequested);
+        manager.startDownload();
+        // Cross the former 10-second speed floor. Neither slow progress nor an
+        // initially silent connection should force a source-selection dialog.
+        QTest::qWait(11500);
+        QVERIFY(manager.busy());QVERIFY(!manager.paused());
+        if(sendSlowData){QVERIFY(manager.downloadBytesPerSecond()>0);QVERIFY(manager.downloadBytesPerSecond()<10000);}
+        else QCOMPARE(manager.downloadBytesPerSecond(),0.0);
+        QVERIFY(manager.error().isEmpty());QCOMPARE(done.size(),0);QCOMPARE(offered.size(),0);
+        manager.cancel();QTRY_VERIFY_WITH_TIMEOUT(!manager.busy(),4000);
+        QCOMPARE(manager.downloadBytesPerSecond(),0.0);
+        QCOMPARE(done.size(),1);QVERIFY(!done[0][0].toBool());QCOMPARE(offered.size(),0);
+        QVERIFY(!manager.locked());
+        QVERIFY(QFileInfo::exists(part+".ranges.json"));
+        if(sendSlowData)QVERIFY(QFileInfo(part).size()>12*1024*1024);
+        resume=true;manager.setEndpoint("https://modelscope.cn");manager.startDownload();
+        QVERIFY(!manager.paused());QTRY_VERIFY_WITH_TIMEOUT(!manager.busy(),4000);
+        QVERIFY2(manager.error().isEmpty(),qPrintable(manager.error()));QVERIFY(done.last()[0].toBool());
+        QCOMPARE(read(root.filePath("ditto/model.bin")),body);QVERIFY(manager.ready("ditto"));
+        QCOMPARE(resumedAtOffset,sendSlowData);QVERIFY(!QFileInfo::exists(part+".ranges.json"));
+    }
     void warpConversionDownloadsAndRecoversConvertedPartial() {
         const auto source=QByteArray::fromBase64("CAo6fwotCgF4CgRncmlkEgF5IgpHcmlkU2FtcGxlKhMKBG1vZGUiCGJpbGluZWFyoAEDCi0KAXkKBGdyaWQSAXoiCkdyaWRTYW1wbGUqEwoEbW9kZSIIYmlsaW5lYXKgAQMSB2ZpeHR1cmUqFggCEAEiCAAAgD8AAABAQgZ0ZW5zb3JCBAoAEBE=");
         const auto expected=QByteArray::fromBase64("CAk6eworCgF4CgRncmlkEgF5IgpHcmlkU2FtcGxlKhEKBG1vZGUiBmxpbmVhcqABAworCgF5CgRncmlkEgF6IgpHcmlkU2FtcGxlKhEKBG1vZGUiBmxpbmVhcqABAxIHZml4dHVyZSoWCAIQASIIAACAPwAAAEBCBnRlbnNvckIECgAQFA==");
@@ -69,22 +122,76 @@ private slots:
         const auto converted=WarpModelConversion::convert(source);QCOMPARE(converted.size(),warp.bytes);
         QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(converted,QCryptographicHash::Sha256).toHex()),warp.sha256);
     }
-    void allPublicNetworkModelsHaveMatchingProviderCandidates() {
-        int count=0;for(const auto &a:ModelManager::assets())if(!a.repo.isEmpty()) {
-            ++count;QVERIFY(!a.modelscopeUrl.isEmpty());QCOMPARE(a.transferSha256().size(),64);
-            const QUrl url(a.modelscopeUrl);QCOMPARE(url.host(),QString("modelscope.cn"));QVERIFY(a.transferBytes()>0);
-        }QCOMPARE(count,20);
+    void liveDittoSupportFiles_data() {
+        QTest::addColumn<QString>("endpoint");
+        QTest::newRow("modelscope")<<QString("https://modelscope.cn");
+        QTest::newRow("huggingface")<<QString("https://huggingface.co");
+        QTest::newRow("automatic")<<QString("auto");
     }
-    void mediumCatalogHasCompletePinnedDownloadSet() {
+    void liveDittoSupportFiles() {
+        const auto evidence=qEnvironmentVariable("MOSS_LIVE_DITTO_SUPPORT");
+        if(evidence.isEmpty())QSKIP("Opt-in pinned Ditto support download: set MOSS_LIVE_DITTO_SUPPORT");
+        QFETCH(QString,endpoint);
+        QFile catalogFile(QFINDTESTDATA("../config/models.json"));QVERIFY(catalogFile.open(QIODevice::ReadOnly));
+        auto data=QJsonDocument::fromJson(catalogFile.readAll()).object();QJsonArray support;
+        qint64 bytes=0;
+        for(const auto &value:data["files"].toArray()) {
+            const auto file=value.toObject();
+            if(file["group"]=="ditto"&&(!file["resource"].toString().isEmpty()||file["path"].toString().contains("yunet"))) {
+                support.append(file);bytes+=file["bytes"].toInteger();
+            }
+        }
+        QCOMPARE(support.size(),4);QCOMPARE(bytes,qint64(465746));data["files"]=support;
+        const auto root=evidence+"/"+QString::fromLatin1(QTest::currentDataTag());
+        QVERIFY(QDir().mkpath(root));ModelManager manager(nullptr,QJsonDocument(data).toJson());
+        manager.setRoot(root);manager.setEndpoint(endpoint);manager.requestDownload("ditto");
+        QSignalSpy done(&manager,&ModelManager::completed);manager.startDownload();
+        QTRY_VERIFY_WITH_TIMEOUT(!manager.busy(),90000);
+        QVERIFY2(manager.error().isEmpty(),qPrintable(manager.error()));QVERIFY(!manager.paused());
+        QCOMPARE(done.size(),1);QVERIFY(done[0][0].toBool());QVERIFY(manager.ready("ditto"));
+        for(const auto &value:support) {
+            const auto file=value.toObject();const auto body=read(root+"/"+file["path"].toString());
+            QCOMPARE(body.size(),file["bytes"].toInteger());
+            QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(body,QCryptographicHash::Sha256).toHex()),file["sha256"].toString());
+        }
+    }
+    void publicNetworkModelsHavePinnedProviderCandidates() {
+        int count=0,modelscope=0;for(const auto &a:ModelManager::assets())if(!a.repo.isEmpty()) {
+            ++count;QCOMPARE(a.transferSha256().size(),64);QVERIFY(a.transferBytes()>0);
+            QVERIFY(!a.revision.isEmpty());QVERIFY(!a.file.isEmpty());
+            // Small's four new files have no verified ModelScope mirror.
+            if(a.modelscopeUrl.isEmpty()){QCOMPARE(a.group,QString("sfx"));continue;}
+            ++modelscope;
+            const QUrl url(a.modelscopeUrl);QCOMPARE(url.host(),QString("modelscope.cn"));QVERIFY(a.transferBytes()>0);
+        }QCOMPARE(count,20);QCOMPARE(modelscope,16);
+    }
+    void missingModelScopeMirrorUsesPinnedHuggingFace() {
+        ModelAsset asset;asset.repo="owner/model";asset.revision=QString(40,'a');asset.file="weights.gguf";
+        const QUrl upstream("https://huggingface.co/owner/model/resolve/"+asset.revision+"/weights.gguf");
+        QCOMPARE(asset.downloadUrls("https://modelscope.cn"),QList<QUrl>{upstream});
+        QCOMPARE(asset.downloadUrls("auto"),QList<QUrl>{upstream});
+        asset.modelscopeUrl="https://modelscope.cn/api/v1/models/mirror/model/repo?Revision=pinned&FilePath=weights.gguf";
+        const QUrl mirror(asset.modelscopeUrl);
+        QCOMPARE(asset.downloadUrls("https://modelscope.cn"),QList<QUrl>{mirror});
+        QCOMPARE(asset.downloadUrls("https://huggingface.co"),QList<QUrl>{upstream});
+        const QList<QUrl> automatic={mirror,upstream};QCOMPARE(asset.downloadUrls("auto"),automatic);
+        QVERIFY(asset.downloadUrls("apple-assets").isEmpty());
+        asset.appleOnly=true;QVERIFY(asset.downloadUrls("https://modelscope.cn").isEmpty());
+    }
+    void smallCatalogHasCompletePinnedDownloadSet() {
+        QStringList expected={"stable-audio-3-small-sfx-dit-0.5B-v1.0-Q4_K_M.gguf",
+            "stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
+            "stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+            "t5gemma-b-b-ul2-encoder-0.3B-v1.0-Q8_0.gguf","t5gemma-b-b-ul2-v1.0-vocab.gguf"};
         int count=0;qint64 bytes=0;
         for(const auto &a:ModelManager::assets())if(a.group=="sfx") {
-            ++count;bytes+=a.bytes;QVERIFY(!a.path.contains("small-sfx"));
-            const QUrl url(a.modelscopeUrl);QCOMPARE(url.scheme(),QString("https"));
-            QCOMPARE(url.host(),QString("modelscope.cn"));
-            QVERIFY(url.path().contains("LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF"));
+            ++count;bytes+=a.bytes;QVERIFY(expected.removeOne(a.file));
+            QCOMPARE(a.path,"sound-effects/"+a.file);
             QVERIFY(!a.revision.isEmpty());QCOMPARE(a.sha256.size(),64);
+            const auto urls=a.downloadUrls("https://modelscope.cn");QCOMPARE(urls.size(),1);
+            QCOMPARE(urls.first().host(),a.modelscopeUrl.isEmpty()?QString("huggingface.co"):QString("modelscope.cn"));
         }
-        QCOMPARE(count,5);QCOMPARE(bytes,qint64(5754163808LL));
+        QVERIFY(expected.isEmpty());QCOMPARE(count,5);QCOMPARE(bytes,qint64(846846464LL));
     }
     void catalogProviderUrlDownloadsAndVerifiesBeforeInstall() {
         QTemporaryDir root;QTcpServer server;QVERIFY(server.listen(QHostAddress::LocalHost));
@@ -104,7 +211,7 @@ private slots:
             {"bytes",payload.size()},{"sha256",QString::fromLatin1(QCryptographicHash::hash(payload,QCryptographicHash::Sha256).toHex())},
             {"modelscopeUrl",QString("http://127.0.0.1:%1/api/v1/models/test/repo?Revision=pinned&FilePath=medium.gguf").arg(server.serverPort())}};
         const auto data=QJsonDocument(QJsonObject{{"groups",QJsonArray{QJsonObject{{"id","sfx"}}}},{"files",QJsonArray{asset}}}).toJson();
-        ModelManager manager(nullptr,data);manager.setRoot(root.path());manager.acceptSfxTerms();
+        ModelManager manager(nullptr,data);manager.setRoot(root.path());manager.setEndpoint("https://modelscope.cn");manager.acceptSfxTerms();
         manager.requestDownload("sfx");manager.startDownload();QTRY_VERIFY_WITH_TIMEOUT(!manager.busy(),5000);
         QVERIFY2(manager.error().isEmpty(),qPrintable(manager.error()));
         QVERIFY(request.startsWith("GET /api/v1/models/test/repo?Revision=pinned&FilePath=medium.gguf "));
@@ -139,6 +246,22 @@ private slots:
         manager.setImageQuant("Q8_0");
         QCOMPARE(manager.resources().first().toMap()["missingBytes"].toLongLong(),payload.size());
         QCOMPARE(manager.resources().first().toMap()["totalBytes"].toLongLong(),payload.size()*2);
+    }
+    void dittoSupportRemainderDoesNotReplaceFullResourceSize() {
+        QTemporaryDir root;ModelManager manager;manager.setRoot(root.path());qint64 total=0;
+        for(const auto &asset:ModelManager::assets())if(asset.group=="ditto") {
+            total+=asset.bytes;
+            if(!asset.resource.isEmpty()||asset.path.contains("yunet"))continue;
+            // Sparse placeholders reproduce the installed-size check without downloading 2 GB.
+            const auto path=root.filePath(asset.path);QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
+            QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly));QVERIFY(file.resize(asset.bytes));
+        }
+        QVariantMap ditto;
+        for(const auto &value:manager.resources())if(value.toMap()["id"]=="ditto")ditto=value.toMap();
+        QCOMPARE(ditto["totalBytes"].toLongLong(),total);QCOMPARE(total,qint64(2303667175LL));
+        QCOMPARE(ditto["missingBytes"].toLongLong(),qint64(465746));
+        QVERIFY(ditto["totalSize"].toString()!=ditto["size"].toString());
+        manager.requestDownload("ditto");QCOMPARE(manager.requestInfo()["size"],ditto["size"]);
     }
     void multiSelectionKeepsSoundTermsExplicitAndDeduplicatesImageFiles() {
         QTemporaryDir root;ModelManager manager(nullptr,catalog().replace("ditto","sfx"));manager.setRoot(root.path());
@@ -181,6 +304,14 @@ private slots:
         QVERIFY(restored.sfxTermsAccepted());
         QSettings().setValue("sfxModelTermsVersion","obsolete");
         QVERIFY(!manager.sfxTermsAccepted());
+    }
+    void obsoleteMirrorPreferenceMigratesToAuto() {
+        QSettings().setValue("modelEndpoint","https://hf-mirror.com");
+        ModelManager manager(nullptr,catalog());QCOMPARE(manager.endpoint(),QString("auto"));
+        QCOMPARE(QSettings().value("modelEndpoint").toString(),QString("auto"));
+        QVERIFY(!manager.sourceValues().contains("https://hf-mirror.com"));
+        QVERIFY(manager.sourceValues().contains("https://modelscope.cn"));
+        manager.setEndpoint("https://hf-mirror.com");QCOMPARE(manager.endpoint(),QString("auto"));
     }
     void publicChannelDefaultsToAutoAndRejectsApple() {
         ModelManager first(nullptr,catalog());
@@ -321,6 +452,15 @@ private slots:
     void officialCatalogIsPinnedAndPrivatePathsAreAbsent() {
         const auto files=ModelManager::assets();QVERIFY(!files.isEmpty());
         for(const auto &f:files){QVERIFY(f.bytes>0);QCOMPARE(f.sha256.size(),64);QVERIFY(!f.path.startsWith("ditto/"));QVERIFY(!f.path.contains("5000"));if(f.resource.isEmpty())QCOMPARE(f.revision.size(),40);}
+    }
+    void embeddedResourcesMatchPinnedBytes() {
+        int count=0;
+        for(const auto &asset:ModelManager::assets())if(!asset.resource.isEmpty()) {
+            ++count;const auto body=read(asset.resource);
+            QCOMPARE(body.size(),asset.bytes);
+            QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(body,QCryptographicHash::Sha256).toHex()),asset.sha256);
+        }
+        QCOMPARE(count,3);
     }
     void legacyVoiceFilesDoNotSatisfyMingDownload() {
         QTemporaryDir root;ModelManager m;m.setRoot(root.path());

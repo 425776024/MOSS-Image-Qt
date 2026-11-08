@@ -44,7 +44,7 @@ HomeDialog {
                 label: HomeTheme.t("试听文案"); placeholder: HomeTheme.t("写一段希望这个声音读出的文字")
                 value: "你好，很高兴与你见面。让我们用声音记录生活，把每一个故事讲给你听。"; enabled: !studio.busy; onEdited: text=>value=text
             }
-            Text { Layout.fillWidth: true; text: HomeTheme.t("保存音色需要三至三十秒的试听；保存后可选择情绪或方言继续配音。"); wrapMode: Text.Wrap; color: HomeTheme.muted; font.pixelSize: 11 }
+            Text { Layout.fillWidth: true; text: HomeTheme.t("试听需为 3–30 秒"); wrapMode: Text.Wrap; color: HomeTheme.muted; font.pixelSize: 11 }
             ConversationAudio { visible: root.hasPreview; Layout.fillWidth: true; source: root.hasPreview ? studio.voiceDesignAudio : ""; active: root.opened && !studio.busy; compact: true }
             Text { visible: !!root.notice || !!studio.error; Layout.fillWidth: true; text: root.notice || studio.error; color: HomeTheme.danger; wrapMode: Text.Wrap; font.pixelSize: 12 }
             Text { visible: studio.busy && root.generatedHere; Layout.fillWidth: true; text: HomeTheme.t(studio.status); color: HomeTheme.secondary; font.pixelSize: 12 }
@@ -52,8 +52,8 @@ HomeDialog {
                 Layout.fillWidth: true; spacing: 8
                 HomeButton { text: studio.busy && root.generatedHere ? HomeTheme.t("取消生成") : HomeTheme.t("取消"); quiet: true; onClicked: {if(studio.busy && root.generatedHere)studio.cancel();else root.close()} }
                 Item { Layout.fillWidth: true }
-                HomeButton { objectName: "voiceDesignGenerate"; text: HomeTheme.t("生成试听"); enabled: !studio.busy && description.value.trim()!=="" && script.value.trim()!==""; onClicked: root.generate() }
-                HomeButton { objectName: "voiceDesignSave"; text: HomeTheme.t("保存音色"); primary: true; enabled: !studio.busy && root.hasPreview && voiceName.text.trim()!==""; onClicked: root.save() }
+                HomeButton { objectName: "voiceDesignGenerate"; text: HomeTheme.t("生成"); hint: HomeTheme.t("生成试听"); enabled: !studio.busy && description.value.trim()!=="" && script.value.trim()!==""; onClicked: root.generate() }
+                HomeButton { objectName: "voiceDesignSave"; text: HomeTheme.t("保存"); hint: HomeTheme.t("保存音色"); primary: true; enabled: !studio.busy && root.hasPreview && voiceName.text.trim()!==""; onClicked: root.save() }
             }
         }
     }

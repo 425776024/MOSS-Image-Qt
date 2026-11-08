@@ -13,9 +13,18 @@
 模型中心可切换目录；`MOSS_MODEL_ROOT` 可显式指定测试或离线目录。
 旧版 `modelRoot` 设置与源码 `.local/models` 不会被自动采用。
 
-普通版默认“自动选择”：全部 20 个公开网络文件均有 ModelScope 与 Hugging Face 固定来源。两边使用各自的仓库和 revision，同一任务的传输字节与摘要一致，可跨源续传。对这两个来源并发做真实 Range 小样本下载，包含重定向后的文件传输，每源最多 2 MiB、最长 4 秒，按有效吞吐量选择来源；结果按仓库 revision、来源和本机网络短期缓存 10 分钟，网络变化、失败或低速换源时失效。手动选择仍锁定指定提供方；hf-mirror 保留为手动兼容选项，不再参与自动选源。
+普通版默认“自动选择”：20 个公开网络文件均有 Hugging Face 固定来源，其中 16 个也有已核验的 ModelScope 地址。两边使用各自的仓库和 revision，同一任务的传输字节与摘要一致，可跨源续传。对这两个来源并发做真实 Range 小样本下载，包含重定向后的文件传输，每源最多 2 MiB、最长 4 秒，按有效吞吐量选择来源；结果按仓库 revision、来源和本机网络短期缓存 10 分钟，网络变化、失败或低速换源时失效。手动选择 Hugging Face 时仅使用该来源；选择 ModelScope 时优先使用其固定地址，清单没有 ModelScope 地址的文件回退 Hugging Face；hf-mirror 已移除，旧设置自动迁移为“自动选择”。
 
-音效默认使用 Stable Audio 3 Medium F16，配套 SAME-L、conditioner 与共用 T5Gemma 两个文件，共 5,754,163,808 字节。推理调用 `--model medium`，不再回退 Small SFX；App Store 资源包也从同一清单生成。旧 Small 权重不会计入 Medium 就绪状态。
+音效默认使用 Stable Audio 3 Small SFX：DiT Q4_K_M、SAME-S F16、T5Gemma Q8_0、F32 conditioner 与词表，共 846,846,464 字节（约 846.85 MB）。推理调用 `--model small-sfx` 并显式指定五个文件，避免同目录旧 F16/F32 文件被自动选中。App Store 资源包与离线包均从同一清单生成，资源包 ID 由文件摘要决定。旧 Medium 文件不会计入 Small 就绪状态，也不会自动删除。
+
+新 Small 权重的 Hugging Face 固定版本、大小与 SHA-256 已核对；暂未找到匹配这四个新文件的 ModelScope 镜像，只有未变更的词表保留原 ModelScope 地址。选择 ModelScope 时，没有已核验镜像的文件自动使用 Hugging Face 固定地址；有镜像的文件继续使用 ModelScope。
+
+### 2026-11-02 Small 切换验证
+
+- 五个本地权重的大小、SHA-256 与上游固定版本元数据一致；Apple 资源清单库存校验通过。
+- 从当前工作区导出的干净源码构建了 macOS 应用和模型管理测试；三项针对性测试通过，覆盖 Small 文件组合、下载源身份及 ModelScope 缺少镜像时回退 Hugging Face。资源完整性与 Apple 资源包脚本的七项测试通过。
+- 实际应用通过 `--conversation-test --task sfx`，中文提示“安静房间里敲木门三次”生成 5 秒、44.1 kHz 双声道音频，任务记录确认为 `stable-audio-3-small-sfx-q4-k-m-ae-f16-t5-q8`。音频非静音，PCM 峰值未削波；未作听感或中文语义准确性结论。
+- 证据：`.local/small-sfx-migration/`。本次为 macOS 离屏流程验收，未验证 Windows/GPU、未重打或发布安装包，也未替换已安装应用。
 
 同时下载两个文件；不小于 8 MiB 的 HTTP 文件使用最多四路不重叠 Range（最多八路文件连接）。收到有效的首个 `206 Content-Range` 后才打开其余连接。服务器忽略 Range 时安全退回单连接，不会将重复响应拼入文件。小文件只用一路。
 
@@ -36,7 +45,7 @@ Hugging Face 与手动镜像使用相同的固定仓库 revision；ModelScope �
 语音不自动退回 CPU。其他平台的 worker 依次尝试 CUDA、HIP、Vulkan；
 没有可用 GPU 后端时提示失败，具体编译支持与初始化原因写入诊断日志。
 当前 Ming 原生运行时不提供 Core ML 后端。
-开源版和 App Store 版共用该清单；Store 的默认 Apple 下载渠道见
+开源版和 App Store 版共用该清单；Store 的唯一 Apple 下载渠道见
 [Apple 资源包说明](apple-model-assets.md)。已有 Hojo/FST 文件不算 Ming 就绪，
 本次移除了旧 Hojo 源码及本项目中经哈希确认的旧模型文件；
 已生成音频、音色参考录音和对应文本继续保留。
@@ -158,3 +167,45 @@ python3 scripts/public_release.py source /absolute/path/to/new-public-source
 - 新构建完整 App 自动选源完成 HuBERT 与 Warp 下载/原生转换，约 62.69 秒后数字人全部文件通过安装摘要校验。随后由完整 App 对话数字人流程输出 H.264/AAC、1024×1024、2 秒/50 帧 MP4，耗时约 73.54 秒；50 个解码帧均不同，抽帧检查无明显渲染破损。此为功能与导出通路验证，不代表口型/长期质量验收。
 - 模型管理、创作页面、HTTP 下载和公开发布四组 CTest 全通过（约 20.52 秒），Store 渠道组通过。新增测试覆盖低于门槛直接换源、全部低速择优与防抖、跨源断点字节保持、原生 Warp 转换及转换后断点恢复。
 - 校验/转换记录、日志、视频及测试结果位于 `.local/modelscope-implementation/`。验证用权重与下载临时文件已清理，输出媒体保留。未替换已安装 App、未签名发布，Windows 实机/安装包尚未验证。
+
+## 慢速下载恢复
+
+下载期间按实际新增字节计速，滚动 10 秒窗口平均低于 1,000,000 bytes/s
+（包括完全没有响应）会暂停整组下载并保存断点。计时跨自动换源、连接重试保留，
+不把已有断点、校验或安装计作下载流量；只有校验在运行时不触发慢速暂停。
+暂停后原对话框展开单选下载源：自动选择、ModelScope、Hugging Face；
+选中后点击“下载”续传。App Store 渠道额外保留 Apple 资源包选项，私有资源仍只能由 Apple 提供。
+
+2026-10-24 验证：完整应用编译通过；下载管理与 HTTP 两组 CTest 通过，覆盖无响应、
+低速、12 MiB 旧断点不计为网速、暂停后选源续传与摘要校验。旧 hf-mirror 设置在普通版
+和 Store 渠道迁移为自动选择，源列表和显式来源设置均拒绝该镜像。四组中英文/深浅主题
+在 960×640 测试窗口检查单选互斥、进度、按钮可见性与 Return 续传和 Esc 关闭；macOS 原生窗口在应用最小尺寸 1080×600 单独验证
+空格选源、鼠标续传和关闭。Store 渠道回归通过；未完成 Windows 实机、
+Apple 真机资源包下载和新版安装包发布。记录见 `.local/test-evidence/download-pause/`。
+
+## Windows 数字人小文件补齐失败（2026-10-24）
+
+数字人完整清单为 2,303,667,175 字节。大模型已存在但三个配置文件和 YuNet
+尚未安装时，待补齐恰好为 465,746 字节（465.75 kB），不是完整模型大小。
+对话框现在分别显示完整资源大小和待补齐大小，并在失败时按需展开可复制的真实错误。
+内置配置校验失败会提示更新应用，避免把本地配置问题统一描述为网络中断。
+
+复现了 Git for Windows `core.autocrlf=true` 导致的确定性构建缺陷：
+`config.json` 由 227,816 字节变成 236,411 字节，`manifest.json` 由 2,074
+字节变成 2,140 字节，使应用内嵌资源的大小和 SHA-256 不符合清单。
+`.gitattributes` 已固定普通版和 Store 版配置的 LF；CMake 在嵌入前始终校验
+清单资源，关闭测试的发布构建也会拒绝错误大小、错误摘要或缺失的配置。
+
+验证记录位于 `.local/ditto-download-20261024/`：
+
+- 真实 Git Windows 换行过滤模拟：修复前配置不匹配；修复后两渠道全部五个内嵌文件匹配。
+- 应用使用的 ModelManager / Qt 下载器，分别在 ModelScope、Hugging Face、自动选择下
+  完整安装四个支持文件，每个文件均通过固定大小与 SHA-256 校验。
+- 模型管理、HTTP 下载、生产 QML 对话框和资源完整性四组回归通过；资源完整性测试
+  包含 Windows 换行过滤、CRLF 损坏及同大小损坏阻止构建。
+- 生产 QML 在 macOS 原生窗口和离屏环境检查中文/英文、深色/浅色、1080×600
+  最小窗口下的大小区分、错误详情、选源、失败后重试和完成；原生鼠标与离屏键盘通过。
+- 提供仅含四个公开支持文件和许可证的临时补齐 ZIP，文件内容逐个复核清单摘要。
+
+未取得该 Windows 用户的原始错误详情，尚不能证明截图来自哪条具体错误；
+未构建或发布 Windows 新安装包，也未在其设备上验证解压补齐和数字人生成。

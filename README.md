@@ -21,17 +21,25 @@
 
 ## 界面预览
 
-| 作品与图像创作 | 声音设计与模板 |
-| --- | --- |
-| [<img src="assets/screenshots/zh-Hans/studio.png" alt="作品与图像创作" width="420" />](assets/screenshots/zh-Hans/studio.png) | [<img src="assets/screenshots/zh-Hans/voice-design.png" alt="声音设计与模板" width="420" />](assets/screenshots/zh-Hans/voice-design.png) |
+最新界面截图与预览录屏（2026-11-07，build 9）。录屏展示作品、构图、图像编辑、数字人和声音页面；不包含 build 10 新增的购买对话框。
 
-| 形象资源库 | 人物表情与动作幅度 |
+[观看中文预览视频 · 24 秒](assets/showcase/app-preview-zh.mp4) · [英文预览视频](assets/showcase/app-preview-en.mp4)
+
+| 作品与图像创作 | 内置声音 |
 | --- | --- |
-| [<img src="assets/screenshots/zh-Hans/avatar-library.png" alt="内置数字人形象资源库" width="420" />](assets/screenshots/zh-Hans/avatar-library.png) | [<img src="assets/screenshots/zh-Hans/avatar-controls.png" alt="人物表情与分项动作幅度设置" width="420" />](assets/screenshots/zh-Hans/avatar-controls.png) |
+| [<img src="assets/screenshots/zh-Hans/studio.png" alt="作品与图像创作" width="420" />](assets/screenshots/zh-Hans/studio.png) | [<img src="assets/screenshots/zh-Hans/voices.png" alt="内置声音" width="420" />](assets/screenshots/zh-Hans/voices.png) |
+
+| 数字人视频 | 导入形象 |
+| --- | --- |
+| [<img src="assets/screenshots/zh-Hans/avatar.png" alt="数字人视频" width="420" />](assets/screenshots/zh-Hans/avatar.png) | [<img src="assets/screenshots/zh-Hans/avatar-import.png" alt="导入形象" width="420" />](assets/screenshots/zh-Hans/avatar-import.png) |
 
 | 构图模板 | 创作资源管理 |
 | --- | --- |
-| [<img src="assets/screenshots/zh-Hans/layout.png" alt="可编辑构图模板" width="420" />](assets/screenshots/zh-Hans/layout.png) | [<img src="assets/screenshots/zh-Hans/models.png" alt="创作资源下载与管理" width="420" />](assets/screenshots/zh-Hans/models.png) |
+| [<img src="assets/screenshots/zh-Hans/templates.png" alt="构图模板" width="420" />](assets/screenshots/zh-Hans/templates.png) | [<img src="assets/screenshots/zh-Hans/resources.png" alt="创作资源管理" width="420" />](assets/screenshots/zh-Hans/resources.png) |
+
+| 图像编辑 | 构图编辑 |
+| --- | --- |
+| [<img src="assets/screenshots/zh-Hans/image-edit.png" alt="图像编辑" width="420" />](assets/screenshots/zh-Hans/image-edit.png) | [<img src="assets/screenshots/zh-Hans/layout.png" alt="构图编辑" width="420" />](assets/screenshots/zh-Hans/layout.png) |
 
 ## 人像编辑对比
 
@@ -54,6 +62,8 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 [下载原始视频一](assets/showcase/avatar-demo-01.mp4) · [下载原始视频二](assets/showcase/avatar-demo-02.mp4)
 
 ## 下载
+
+[**从 Mac App Store 下载新身数字人**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
 
 [**前往 Releases 下载安装包、查看更新与校验和**](https://github.com/425776024/MOSS-Image-Qt/releases)
 

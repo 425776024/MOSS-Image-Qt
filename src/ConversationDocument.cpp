@@ -13,6 +13,11 @@
 #include <QSaveFile>
 #include <QUuid>
 #include <QTimer>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QMimeData>
+#include <QImage>
+#include <QTemporaryDir>
 #include <cmath>
 
 namespace {
@@ -101,7 +106,7 @@ void ConversationDocument::probe(QString id){
     QTimer::singleShot(15000,player,&QObject::deleteLater);
     player->setSource(QUrl(source));
 }
-QString ConversationDocument::importMedia(QUrl source,QString purpose){
+QString ConversationDocument::importMedia(QUrl source,QString purpose,QString displayName){
     if(!source.isLocalFile()||!QFileInfo(source.toLocalFile()).isFile()){report("请选择本机可读取的素材文件");return {};}
     const auto path=source.toLocalFile(),mime=QMimeDatabase().mimeTypeForFile(path).name();
     const auto kind=QImageReader(path).canRead()?QString("image"):mime.startsWith("audio/")?QString("audio"):mime.startsWith("video/")?QString("video"):QString();
@@ -110,9 +115,42 @@ QString ConversationDocument::importMedia(QUrl source,QString purpose){
     QFile input(path);QSaveFile output(dest);if(!QDir().mkpath(directory)||!input.open(QIODevice::ReadOnly)||!output.open(QIODevice::WriteOnly)){report("无法保存导入素材");return {};}
     while(!input.atEnd()){const auto data=input.read(1024*1024);if(data.isEmpty()||output.write(data)!=data.size()){report("保存导入素材失败");return {};}}
     if(!output.commit()){report("保存导入素材失败");return {};}
-    const auto id=addAsset(dest,kind);markTemporary(id,directory);addResults({id},purpose=="sfx"?"sfx":"import","导入素材");
+    const auto id=addAsset(dest,kind);
+    if(!displayName.trimmed().isEmpty()) {
+        for(auto &value:m_assets){auto row=value.toMap();if(row["id"]==id){row["name"]=displayName.trimmed();value=row;break;}}
+        emit assetsChanged();
+    }
+    markTemporary(id,directory);addResults({id},purpose=="sfx"?"sfx":"import","导入素材");
     if(purpose=="target")chooseTarget(id);else if(purpose=="audio")chooseAudio(id);else if(purpose=="pack")toggleSelected(id);
     m_error.clear();touch();return id;
+}
+bool ConversationDocument::pasteMedia(){
+    const auto mime=QGuiApplication::clipboard()->mimeData();if(!mime)return false;
+    const auto task=m_task;
+    const auto purpose=[&](const QString &kind){
+        if(task=="pack")return QString("pack");
+        if((task=="avatar"||task=="edit")&&kind=="image")return QString("target");
+        if(task=="avatar"&&kind=="audio")return QString("audio");
+        return QString();
+    };
+    bool handled=false;QStringList failures;QSet<QString> seen;
+    // File URLs take precedence over a file manager's thumbnail image or text.
+    if(mime->hasUrls())for(const auto &source:mime->urls()){
+        if(!source.isLocalFile())continue;
+        const auto path=source.toLocalFile();if(seen.contains(path))continue;seen.insert(path);
+        const auto type=QMimeDatabase().mimeTypeForFile(path).name();
+        const auto kind=QImageReader(path).canRead()?QString("image"):type.startsWith("audio/")?QString("audio"):type.startsWith("video/")?QString("video"):QString();
+        if(kind.isEmpty())continue;
+        handled=true;if(importMedia(source,purpose(kind)).isEmpty())failures<<m_error;
+    }
+    if(!handled&&!mime->hasUrls()&&mime->hasImage()){
+        handled=true;const auto image=qvariant_cast<QImage>(mime->imageData());QTemporaryDir temporary;
+        const auto path=temporary.filePath("clipboard.png");
+        if(image.isNull()||!temporary.isValid()||!image.save(path))failures<<"无法读取剪贴板图片，请重新复制。";
+        else if(importMedia(QUrl::fromLocalFile(path),purpose("image"),"粘贴的图片").isEmpty())failures<<m_error;
+    }
+    if(!failures.isEmpty()){failures.removeDuplicates();report(failures.join('\n'));}
+    return handled;
 }
 void ConversationDocument::addResults(const QStringList &ids,QString task,QString text){
     if(ids.isEmpty())return; m_messages.append(QVariantMap{{"id",uid()},{"role","assistant"},{"task",task},{"text",text},{"assetIds",ids},{"status","complete"}});

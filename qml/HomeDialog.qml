@@ -17,8 +17,7 @@ Dialog {
     parent: Overlay.overlay
     anchors.centerIn: Overlay.overlay
     closePolicy: Popup.CloseOnEscape
-    font.family: ".AppleSystemUIFont"
-    font.pixelSize: 13
+    font: VideoCutTheme.bodyFont
     Overlay.modal: Rectangle { color: "#33000000" }
     Shortcut {
         sequences: ["Return", "Enter"]
@@ -27,7 +26,8 @@ Dialog {
             && !(root.contentItem.Window.window && root.contentItem.Window.window.activeFocusItem && root.contentItem.Window.window.activeFocusItem.inputMethodComposing === true)
         onActivated: root.defaultAction.clicked()
     }
-    Shortcut { sequence: "Meta+."; enabled: root.opened && root.activeFocus && root.closePolicy !== Popup.NoAutoClose; onActivated: root.reject() }
+    // Qt maps Ctrl to Command on macOS.
+    Shortcut { sequence: "Ctrl+."; enabled: root.opened && root.activeFocus && root.closePolicy !== Popup.NoAutoClose; onActivated: root.reject() }
     background: Rectangle {
         id: sheet
         radius: 12

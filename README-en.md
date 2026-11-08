@@ -21,17 +21,25 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 
 ## Screenshots
 
-| Projects and images | Voice design and templates |
-| --- | --- |
-| [<img src="assets/screenshots/en/studio.png" alt="Projects and images" width="420" />](assets/screenshots/en/studio.png) | [<img src="assets/screenshots/en/voice-design.png" alt="Voice design and templates" width="420" />](assets/screenshots/en/voice-design.png) |
+Latest screenshots and UI recordings (2026-11-07, build 9). The recordings show projects, composition, image editing, avatars and voices; they do not include the purchase dialog added in build 10.
 
-| Avatar library | Facial emotion and motion strength |
+[Watch English preview · 24 seconds](assets/showcase/app-preview-en.mp4) · [Chinese preview](assets/showcase/app-preview-zh.mp4)
+
+| Projects and images | Built-in voices |
 | --- | --- |
-| [<img src="assets/screenshots/en/avatar-library.png" alt="Built-in avatar library" width="420" />](assets/screenshots/en/avatar-library.png) | [<img src="assets/screenshots/en/avatar-controls.png" alt="Facial emotion and individual motion controls" width="420" />](assets/screenshots/en/avatar-controls.png) |
+| [<img src="assets/screenshots/en/studio.png" alt="Projects and images" width="420" />](assets/screenshots/en/studio.png) | [<img src="assets/screenshots/en/voices.png" alt="Built-in voices" width="420" />](assets/screenshots/en/voices.png) |
+
+| Talking avatar | Import an avatar |
+| --- | --- |
+| [<img src="assets/screenshots/en/avatar.png" alt="Talking avatar" width="420" />](assets/screenshots/en/avatar.png) | [<img src="assets/screenshots/en/avatar-import.png" alt="Import an avatar" width="420" />](assets/screenshots/en/avatar-import.png) |
 
 | Composition templates | Creative resources |
 | --- | --- |
-| [<img src="assets/screenshots/en/layout.png" alt="Editable composition templates" width="420" />](assets/screenshots/en/layout.png) | [<img src="assets/screenshots/en/models.png" alt="Creative resource downloads and management" width="420" />](assets/screenshots/en/models.png) |
+| [<img src="assets/screenshots/en/templates.png" alt="Composition templates" width="420" />](assets/screenshots/en/templates.png) | [<img src="assets/screenshots/en/resources.png" alt="Creative resources" width="420" />](assets/screenshots/en/resources.png) |
+
+| Image editing | Composition editor |
+| --- | --- |
+| [<img src="assets/screenshots/en/image-edit.png" alt="Image editing" width="420" />](assets/screenshots/en/image-edit.png) | [<img src="assets/screenshots/en/layout.png" alt="Composition editor" width="420" />](assets/screenshots/en/layout.png) |
 
 ## Portrait editing: before and after
 
@@ -54,6 +62,8 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 [Download original video 1](assets/showcase/avatar-demo-01.mp4) · [Download original video 2](assets/showcase/avatar-demo-02.mp4)
 
 ## Download
+
+[**Download XAvatar on the Mac App Store**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
 
 [**Get installers, release notes, and checksums**](https://github.com/425776024/MOSS-Image-Qt/releases)
 

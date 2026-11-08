@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include "mediapipe/tasks/c/vision/face_landmarker/face_landmarker.h"
 
 namespace ditto::condition_detail {
@@ -54,8 +55,16 @@ inline std::array<float, 8> eyeCondition(const std::filesystem::path &model,
   const auto created = MpFaceLandmarkerCreate(&options, &state.detector, &error);
   check(created, error);
   error = nullptr;
-  const auto im = MpImageCreateFromUint8Data(kMpImageFormatSrgb, rgbCrop.cols,
-      rgbCrop.rows, rgbCrop.data, int(rgbCrop.total() * 3), &state.image, &error);
+  // CoreVideo's GPU upload requires four channels; SRGB aborts in MediaPipe.
+  cv::Mat pixels=rgbCrop;
+  auto format=kMpImageFormatSrgb;
+#if defined(__APPLE__)
+  cv::cvtColor(rgbCrop,pixels,cv::COLOR_RGB2RGBA);
+  format=kMpImageFormatSrgba;
+#endif
+  if(!pixels.isContinuous())pixels=pixels.clone();
+  const auto im = MpImageCreateFromUint8Data(format, pixels.cols,
+      pixels.rows, pixels.data, int(pixels.total()*pixels.elemSize()), &state.image, &error);
   check(im, error);
   error = nullptr;
   const auto detected = MpFaceLandmarkerDetectImage(

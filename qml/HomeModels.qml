@@ -16,7 +16,7 @@ Item {
     readonly property var sourceLabels: ({
         "apple-assets": "App Store",
         "auto": HomeTheme.t("自动选择"),
-        "https://hf-mirror.com": "hf-mirror.com",
+        "https://modelscope.cn": "ModelScope",
         "https://huggingface.co": "Hugging Face"
     })
     readonly property var resources: [
@@ -92,6 +92,7 @@ Item {
                         }
                     }
                     RowLayout {
+                        visible: studio.models.sourceValues.length>1
                         Layout.fillWidth: false; spacing: 8
                         Text { text: HomeTheme.t("下载源"); color: HomeTheme.text; font.pixelSize: 13 }
                         HomeCombo {

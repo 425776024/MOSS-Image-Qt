@@ -55,7 +55,8 @@ public:
     Q_INVOKABLE QVariantMap asset(QString id) const;
     Q_INVOKABLE void chooseTarget(QString id);
     Q_INVOKABLE void chooseAudio(QString id);
-    Q_INVOKABLE QString importMedia(QUrl url, QString purpose="");
+    Q_INVOKABLE QString importMedia(QUrl url, QString purpose="", QString displayName="");
+    Q_INVOKABLE bool pasteMedia();
     Q_INVOKABLE void toggleSelected(QString id);
     Q_INVOKABLE void moveClip(QString id, double start);
     Q_INVOKABLE void arrange();

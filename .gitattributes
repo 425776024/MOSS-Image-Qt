@@ -4,3 +4,8 @@ vendor/xinshen-ditto/LICENSE.LivePortrait whitespace=-blank-at-eol
 
 # Git for Windows must preserve the patch format consumed by git apply.
 vendor/moss-flowedit/engine.patch text eol=lf
+
+# Embedded model configuration is byte-pinned by config/models*.json.
+# CRLF checkout would invalidate the packaged size and SHA-256 on Windows.
+config/ditto-original/*.json text eol=lf
+config/ditto-store/*.json text eol=lf

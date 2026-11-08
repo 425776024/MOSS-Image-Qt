@@ -29,7 +29,7 @@
     {
       "id": "sfx",
       "title": "Stable Audio · 音效",
-      "description": "Medium、T5Gemma 和音频解码组件"
+      "description": "Small SFX Q4、T5Gemma Q8 和 F16 音频解码组件"
     }
   ],
   "files": [
@@ -178,43 +178,39 @@
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf",
-      "repo": "thepatch/stable-audio-3-medium-GGUF",
-      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
-      "file": "stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf",
-      "sha256": "3f49edcbc724815339166323ca58a85bdb21215c5dee0237e396231b1c3ee50f",
-      "bytes": 2908081472,
-      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=e0ea49f46e17a9c0cb66090e8bde2d5bcd4f1f3d&FilePath=stable-audio-3-medium-dit-1.5B-v1.0-F16.gguf"
+      "path": "sound-effects/stable-audio-3-small-sfx-dit-0.5B-v1.0-Q4_K_M.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-dit-0.5B-v1.0-Q4_K_M.gguf",
+      "bytes": 316195520,
+      "sha256": "09eaa89a98d2b483dafb1b0ec26dadccd7a0a38a2c0839582915f910c6040a13"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-medium-conditioner-v1.0-F32.gguf",
-      "repo": "thepatch/stable-audio-3-medium-GGUF",
-      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
-      "file": "stable-audio-3-medium-conditioner-v1.0-F32.gguf",
-      "sha256": "8482cc42559f665db517fd469e0dd073de36071ebbdbe0ef4d38b5392fe6c724",
+      "path": "sound-effects/stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-conditioner-v1.0-F32.gguf",
       "bytes": 793184,
-      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=88076517086245d49414aa36d9b801d9c48b1f9c&FilePath=stable-audio-3-medium-conditioner-v1.0-F32.gguf"
+      "sha256": "c4f253c47d8feadb236619b2fe72a5df9c6a99751382738ed4b96be7ad1bc517"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/stable-audio-3-medium-same-l-v1.0-F16.gguf",
-      "repo": "thepatch/stable-audio-3-medium-GGUF",
-      "revision": "380a7b25ba6b3b12563b01193227580a9ae7dac0",
-      "file": "stable-audio-3-medium-same-l-v1.0-F16.gguf",
-      "sha256": "78d0592a7e1c6bce72d8177b2d291b820f6aafa4a428d5d61ada53286df1fc86",
-      "bytes": 1705121536,
-      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=5ff393d7f94caaca56eb64b77cae14b12c052038&FilePath=stable-audio-3-medium-same-l-v1.0-F16.gguf"
+      "path": "sound-effects/stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+      "repo": "thepatch/stable-audio-3-small-sfx-GGUF",
+      "revision": "fcbd756cde8f9cc4d0213433d868063593d6ca22",
+      "file": "stable-audio-3-small-sfx-same-s-v1.0-F16.gguf",
+      "bytes": 216721696,
+      "sha256": "e1854b7045a059f355639e0b92dd52a5f8701becb4a8a599035adb43124f4c89"
     },
     {
       "group": "sfx",
-      "path": "sound-effects/t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf",
+      "path": "sound-effects/t5gemma-b-b-ul2-encoder-0.3B-v1.0-Q8_0.gguf",
       "repo": "thepatch/t5gemma-b-b-ul2-GGUF",
       "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
-      "file": "t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf",
-      "sha256": "23868718e395c555608e33128994c39a23d509281011e52173ff28a64ab6c43c",
-      "bytes": 1126329120,
-      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=3b80a197c83bc547e8cff07bf2b6c9a2d7d873c6&FilePath=t5gemma-b-b-ul2-encoder-0.3B-v1.0-F32.gguf"
+      "file": "t5gemma-b-b-ul2-encoder-0.3B-v1.0-Q8_0.gguf",
+      "bytes": 299297568,
+      "sha256": "3a182ed5d3c9d551069dd715f4f7714768a9da1783a48e0558e7bcb3b9acb1b6"
     },
     {
       "group": "sfx",
@@ -222,9 +218,9 @@
       "repo": "thepatch/t5gemma-b-b-ul2-GGUF",
       "revision": "26caadf5cb1b6523370caff61f6a32337f46625e",
       "file": "t5gemma-b-b-ul2-v1.0-vocab.gguf",
-      "sha256": "d58ef75568789d5d394a67231c853803bd24778d136aa0d1990210bcdd485d32",
       "bytes": 13838496,
-      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=f3ae1538ab36401c190025a6267b49d613fe0db6&FilePath=t5gemma-b-b-ul2-v1.0-vocab.gguf"
+      "modelscopeUrl": "https://modelscope.cn/api/v1/models/LAVSSOFTWARE/Stable-Audio-3-Medium-GGUF/repo?Revision=f3ae1538ab36401c190025a6267b49d613fe0db6&FilePath=t5gemma-b-b-ul2-v1.0-vocab.gguf",
+      "sha256": "d58ef75568789d5d394a67231c853803bd24778d136aa0d1990210bcdd485d32"
     },
     {
       "group": "ditto",

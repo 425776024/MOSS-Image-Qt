@@ -43,10 +43,10 @@ QtObject {
     readonly property real hairline: 1 / Math.max(1,Screen.devicePixelRatio)
     readonly property int tooltipDelay: 600
     readonly property int fontWeightSemibold: Font.DemiBold
-    readonly property font bodyFont: Qt.font({family:".AppleSystemUIFont",pixelSize:13})
-    readonly property font buttonFont: Qt.font({family:".AppleSystemUIFont",pixelSize:13,weight:Font.Medium})
-    readonly property font compactButtonFont: Qt.font({family:".AppleSystemUIFont",pixelSize:12})
-    readonly property font microFont: Qt.font({family:".AppleSystemUIFont",pixelSize:10})
+    readonly property font bodyFont: Qt.font({family:Qt.application.font.family,pixelSize:13,weight:Font.Medium})
+    readonly property font buttonFont: bodyFont
+    readonly property font compactButtonFont: Qt.font({family:Qt.application.font.family,pixelSize:12,weight:Font.Medium})
+    readonly property font microFont: Qt.font({family:Qt.application.font.family,pixelSize:10,weight:Font.Medium})
     readonly property font parameterFont: bodyFont
     function isInspector(item) { return false }
 }

@@ -77,12 +77,35 @@ QString installModelFile(const QString &source,const QString &destination) {
 #endif
 }
 }
+QList<QUrl> ModelAsset::downloadUrls(const QString &endpoint) const {
+    QList<QUrl> urls;
+    if(appleOnly||!resource.isEmpty()||endpoint=="apple-assets")return urls;
+    // ModelScope repositories have independent IDs and revisions. When no
+    // verified mirror exists, use the pinned upstream file even in ModelScope mode.
+    const bool useModelScope=endpoint=="auto"||endpoint=="https://modelscope.cn";
+    if(useModelScope&&!modelscopeUrl.isEmpty())urls<<QUrl(modelscopeUrl);
+    if(!repo.isEmpty()&&(endpoint!="https://modelscope.cn"||modelscopeUrl.isEmpty())) {
+        const auto host=useModelScope?QString("https://huggingface.co"):endpoint;
+        urls<<QUrl(host+"/"+repo+"/resolve/"+revision+"/"+file);
+    }
+    return urls;
+}
 QList<ModelAsset> ModelManager::assets() {
     static const auto files=parse(channelCatalog());return files;
 }
 ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport):QObject(parent),m_testTransport(testTransport) {
     const auto data=catalog.isEmpty()?channelCatalog():QJsonDocument::fromJson(catalog).object();
     m_assets=parse(data);m_groups=data["groups"].toArray().toVariantList();
+    // Slow transfers are still useful progress. Transport backends own retries
+    // and stall handling; never cancel Apple-hosted downloads on a speed floor.
+    m_rateTimer.setInterval(500);
+    connect(&m_rateTimer,&QTimer::timeout,this,[this]{
+        const auto now=m_rateClock.elapsed();
+        while(!m_rateSamples.isEmpty()&&m_rateSamples.first().first<=now-5000)m_rateSamples.removeFirst();
+        qint64 bytes=0;for(const auto &sample:m_rateSamples)bytes+=sample.second;
+        m_downloadRate=m_rateBytes.isEmpty()?0:double(bytes)*1000/std::max<qint64>(1,std::min<qint64>(5000,now));
+        emit changed();
+    });
     QSettings settings;
 #ifdef MOSS_APP_STORE
     m_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/models";
@@ -92,10 +115,19 @@ ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport
     if(m_root.isEmpty())m_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/models";
     m_root=QDir(m_root).absolutePath();
 #ifdef MOSS_APP_STORE
-    m_endpoint=settings.value("storeModelEndpoint","apple-assets").toString();
+    m_endpoint="apple-assets";
+    settings.setValue("storeModelEndpoint",m_endpoint);
 #else
     m_endpoint=settings.value("modelEndpoint","auto").toString();
 #endif
+    if(m_endpoint=="https://hf-mirror.com") {
+        m_endpoint="auto";
+#ifdef MOSS_APP_STORE
+        settings.setValue("storeModelEndpoint",m_endpoint);
+#else
+        settings.setValue("modelEndpoint",m_endpoint);
+#endif
+    }
     if(!sourceValues().contains(m_endpoint))m_endpoint=sourceValues().first();
     m_quant=qEnvironmentVariable("MOSS_IMAGE_QUANT",settings.value("imageQuant","Q4_K").toString());
     if(m_quant!="Q4_K"&&m_quant!="Q8_0")m_quant="Q4_K";
@@ -110,16 +142,16 @@ void ModelManager::setRoot(QString value) {
 }
 QStringList ModelManager::sourceNames() const {
 #ifdef MOSS_APP_STORE
-    return {"Apple · App Store 资源包", "自动选择", "国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+    return {"Apple · App Store 资源包"};
 #else
-    return {"自动选择", "国内镜像 · hf-mirror.com", "Hugging Face · huggingface.co"};
+    return {"自动选择", "ModelScope · modelscope.cn", "Hugging Face · huggingface.co"};
 #endif
 }
 QStringList ModelManager::sourceValues() const {
 #ifdef MOSS_APP_STORE
-    return {"apple-assets", "auto", "https://hf-mirror.com", "https://huggingface.co"};
+    return {"apple-assets"};
 #else
-    return {"auto", "https://hf-mirror.com", "https://huggingface.co"};
+    return {"auto", "https://modelscope.cn", "https://huggingface.co"};
 #endif
 }
 void ModelManager::setEndpoint(QString value) {
@@ -198,7 +230,8 @@ QVariantList ModelManager::resources() const {
         qint64 total=0,missing=0;
         for(const auto &asset:files){total+=asset.bytes;if(!present(asset))missing+=asset.bytes;}
         rows.append(QVariantMap{{"id",ids[i]},{"title",titles[i]},
-            {"ready",ready(ids[i])},{"totalBytes",total},{"missingBytes",missing},{"size",sizeText(missing)}});
+            {"ready",ready(ids[i])},{"totalBytes",total},{"totalSize",sizeText(total)},
+            {"missingBytes",missing},{"size",sizeText(missing)}});
     }
     return rows;
 }
@@ -218,7 +251,7 @@ void ModelManager::setRequested(QStringList capabilities) {
     if(locked())return;
     QStringList valid;
     for(const auto &id:capabilities)if(!expand({id}).isEmpty()&&!valid.contains(id))valid<<id;
-    m_requested=valid;m_error.clear();m_status.clear();m_progress=0;emit changed();
+    m_requested=valid;m_paused=false;m_error.clear();m_status.clear();m_progress=0;emit changed();
 }
 bool ModelManager::sfxTermsAccepted() const {
     return QSettings().value("sfxModelTermsVersion").toString()=="2026-10-22";
@@ -282,19 +315,23 @@ void ModelManager::startDownload() {
     for(int i=0;i<std::min(3,int(appleCopies.size()));++i)required+=appleCopies[i];
     QStorageInfo storage(m_root);
     if(storage.isValid()&&storage.bytesAvailable()<required+64*1024*1024){m_lock.reset();m_error="磁盘空间不足，请先清理模型或更换目录";emit changed();return;}
-    m_active.clear();m_activeBytes.clear();m_stopping=false;
+    m_active.clear();m_activeBytes.clear();m_stopping=false;m_paused=false;
+    m_rateBytes.clear();m_rateSamples.clear();m_downloadRate=0;m_rateClock.start();m_rateTimer.start();
     m_queue=files;m_busy=true;m_cancelled=false;m_verifyOnly=false;m_error.clear();m_index=0;m_done=0;m_total=0;m_progress=0;
     for(const auto &a:m_queue)m_total+=a.bytes;emit changed();next();
 }
 void ModelManager::verifyGroup(QString id) {
     const auto files=selected(expand({id}));if(files.isEmpty()||!acquire())return;
-    m_active.clear();m_activeBytes.clear();m_stopping=false;
+    m_active.clear();m_activeBytes.clear();m_stopping=false;m_paused=false;
     m_queue=files;m_busy=true;m_cancelled=false;m_verifyOnly=true;m_error.clear();m_index=0;m_done=0;m_total=0;m_progress=0;
     for(const auto &a:files)m_total+=a.bytes;emit changed();next();
 }
 void ModelManager::cancel() {
     if(!m_busy)return;
-    m_cancelled=true;m_stopping=true;m_status="正在取消…";emit changed();
+    m_paused=false;stopDownloads();
+}
+void ModelManager::stopDownloads() {
+    m_cancelled=true;m_stopping=true;m_status=m_paused?"正在暂停…":"正在取消…";emit changed();
     for(auto transport:findChildren<ModelHttpDownload *>())transport->cancel();
 #ifdef MOSS_APP_STORE
     for(auto transport:findChildren<AppleAssetDownload *>())transport->cancel();
@@ -302,10 +339,12 @@ void ModelManager::cancel() {
     QTimer::singleShot(0,this,&ModelManager::next);
 }
 void ModelManager::finish(QString error,bool cancelled) {
+    m_rateTimer.stop();m_rateBytes.clear();m_rateSamples.clear();m_downloadRate=0;
     m_lock.reset();m_busy=false;m_error=error;
-    m_status=cancelled?"已取消，下载残留可续传或清理":error.isEmpty()?(m_verifyOnly?"所选模型 SHA-256 校验通过":"模型已就绪，请重新点击生成"):"操作未完成";
+    m_status=m_paused?"下载已暂停，请选择下载源后继续":cancelled?"已取消，下载残留可续传或清理":error.isEmpty()?(m_verifyOnly?"所选模型 SHA-256 校验通过":"模型已就绪，请重新点击生成"):"操作未完成";
     if(error.isEmpty()&&!cancelled)m_progress=1;
     emit changed();emit completed(error.isEmpty()&&!cancelled);
+    if(m_paused)emit downloadRequested();
 }
 void ModelManager::advance(ModelAsset a) {
     m_done+=a.bytes;m_active.remove(a.path);m_activeBytes.remove(a.path);
@@ -321,6 +360,12 @@ void ModelManager::fail(ModelAsset a,QString error) {
 #endif
     }
     QTimer::singleShot(0,this,&ModelManager::next);
+}
+void ModelManager::observeDownload(const QString &path,qint64 bytes) {
+    // First Apple callback may include a cached prefix; establish a baseline.
+    if(m_rateBytes.contains(path)&&bytes>m_rateBytes[path])
+        m_rateSamples.append({m_rateClock.elapsed(),bytes-m_rateBytes[path]});
+    m_rateBytes[path]=std::max(bytes,m_rateBytes.value(path));
 }
 void ModelManager::updateProgress(QString path,qint64 bytes) {
     m_activeBytes[path]=bytes;qint64 total=m_done;
@@ -345,7 +390,7 @@ void ModelManager::prepare(ModelAsset a) {
     if(!QDir().mkpath(QFileInfo(path).absolutePath())){fail(a,"无法创建模型目录");return;}
     if(!a.resource.isEmpty()) {
         const auto data=read(a.resource);
-        if(data.size()!=a.bytes||QCryptographicHash::hash(data,QCryptographicHash::Sha256).toHex()!=a.sha256){fail(a,"应用内模型配置校验失败");return;}
+        if(data.size()!=a.bytes||QCryptographicHash::hash(data,QCryptographicHash::Sha256).toHex()!=a.sha256){fail(a,"应用内模型配置校验失败："+a.path);return;}
         QSaveFile out(path);
         if(!out.open(QIODevice::WriteOnly)||out.write(data)!=data.size()||!out.commit()){fail(a,"无法写入模型配置");return;}
         advance(a);return;
@@ -410,11 +455,13 @@ void ModelManager::transfer(ModelAsset a) {
         }
         auto transport=new AppleAssetDownload(this);
         m_status="正在下载…";emit changed();
+        connect(transport,&AppleAssetDownload::networkProgress,this,[this,a](double value){observeDownload(a.path,qint64(a.bytes*value));});
+        connect(transport,&AppleAssetDownload::networkFinished,this,[this,a]{m_rateBytes.remove(a.path);});
         connect(transport,&AppleAssetDownload::progress,this,[this,a](double value){updateProgress(a.path,qint64(a.bytes*value));});
         connect(transport,&AppleAssetDownload::completed,this,[this,transport,a,path](QString error){
-            transport->deleteLater();
+            m_rateBytes.remove(a.path);transport->deleteLater();
             if(m_stopping){advance(a);return;}
-            if(!error.isEmpty()){fail(a,"Apple 资源包未完成："+error+(a.appleOnly?"。此模型仅通过 App Store 提供，请重试。":"。可重试或手动选择镜像源。"));return;}
+            if(!error.isEmpty()){fail(a,"Apple 资源包未完成："+error+"。请重试 App Store 资源下载。");return;}
             checkFile(a,path,true);
         });
         transport->start("model-"+a.sha256,a.path,path,m_root+"/"+notice,a.bytes);return;
@@ -424,18 +471,12 @@ void ModelManager::transfer(ModelAsset a) {
     auto transport=new ModelHttpDownload(this);
     QList<QUrl> urls;
     if(!m_testTransport.isEmpty())urls<<m_testTransport.resolved(QUrl(a.file));
-    else {
-        // ModelScope has independent repository IDs/revisions; never substitute
-        // its domain into a Hugging Face resolve URL. Explicit source choices
-        // still lock the download to that provider.
-        if(m_endpoint=="auto"&&!a.modelscopeUrl.isEmpty())urls<<QUrl(a.modelscopeUrl);
-        const QStringList endpoints=m_endpoint=="auto"?QStringList{"https://huggingface.co"}:QStringList{m_endpoint};
-        if(!a.repo.isEmpty())for(const auto &endpoint:endpoints)urls<<QUrl(endpoint+"/"+a.repo+"/resolve/"+a.revision+"/"+a.file);
-    }
+    else urls=a.downloadUrls(m_endpoint);
     m_status="正在下载…";emit changed();
-    connect(transport,&ModelHttpDownload::progress,this,[this,a](qint64 bytes){updateProgress(a.path,std::min(bytes,a.bytes));});
+    m_rateBytes[a.path]=ModelHttpDownload::savedBytes(path,a.transferBytes(),a.transferSha256());
+    connect(transport,&ModelHttpDownload::progress,this,[this,a](qint64 bytes){observeDownload(a.path,bytes);updateProgress(a.path,std::min(bytes,a.bytes));});
     connect(transport,&ModelHttpDownload::completed,this,[this,transport,a,path](QString error,bool cancelled){
-        transport->deleteLater();
+        m_rateBytes.remove(a.path);transport->deleteLater();
         if(m_stopping||cancelled){advance(a);return;}
         if(!error.isEmpty()){fail(a,error+"\n文件："+a.path+"\n下载源："+m_endpoint);return;}
         checkFile(a,path,true);
