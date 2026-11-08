@@ -157,6 +157,9 @@ ConvertTo-Json -InputObject @($results) -Compress
             raise ValueError(f'Incorrect shortcut target: {link!r}; expected {installed / "XAvatar.exe"}')
     run(installed / 'XAvatar.exe', '--home-smoke', '--minimum-window', '--check-initial-setup',
         '--ui-language', 'zh', cwd=test_root, env=installed_env, timeout=90)
+    run(installed / 'XAvatar.exe', '--home-smoke', '--minimum-window',
+        '--home-page', 'settings', '--settings-section', '1', '--check-download-source',
+        cwd=test_root, env=installed_env, timeout=90)
     media = check_media_io(installed / 'moss-ditto.exe', test_root / 'installed-media', installed_env)
     # Test uninstall without deleting files owned by the user.
     sentinel = test_root / 'works/uninstall-preserves-project.txt'
@@ -289,6 +292,10 @@ def package(qt, prefix, native, image_build, sfx_build, build):
                 run(destination / 'XAvatar.exe', '--home-smoke', '--minimum-window',
                     '--home-page', 'avatars', '--check-builtin-library', '--check-library-defaults',
                     '--ui-language', language, '--ui-theme', theme, env=env, timeout=90)
+                run(destination / 'XAvatar.exe', '--home-smoke', '--minimum-window',
+                    '--home-page', 'settings', '--settings-section', '1', '--check-download-source',
+                    '--ui-language', language, '--ui-theme', theme,
+                    env=dict(env, QT_QPA_PLATFORM='offscreen'), timeout=90)
         run(destination / 'sd-cli.exe', '--help', env=env, timeout=30, stdout=subprocess.DEVNULL)
         # The pinned sa3 CLI has no --help branch: no model arguments print
         # usage and return 1, just like our voice and Ditto workers.
@@ -322,6 +329,7 @@ def package(qt, prefix, native, image_build, sfx_build, build):
         'cudaBundledInInstaller': False, 'cudaComponentsVerified': True,
         'onnxRuntime': runtime, 'cudaRuntime': cuda_runtime,
         'mediaIo': media, 'installedMediaIo': installed_media,
+        'modelDownloadSource': 'ModelScope',
         'imports': dlls}, indent=2) + '\n')
     with installer.open('rb') as f:
         checksum = hashlib.file_digest(f, 'sha256').hexdigest()

@@ -21,6 +21,7 @@ class ModelManagerTests:public QObject {
         for(const auto &id:{"image-q4","image-q8","image-shared","ditto"}) {
             groups.append(QJsonObject{{"id",id},{"title",id}});
             files.append(QJsonObject{{"group",id},{"path",QString(id)+"/model.bin"},{"repo","test/public"},
+                {"modelscopeUrl","https://modelscope.cn/unused-fixture"},
                 {"revision",QString(40,'a')},{"file",QString(id)}, {"bytes",payload.size()},
                 {"sha256",QString::fromLatin1(QCryptographicHash::hash(payload,QCryptographicHash::Sha256).toHex())}});
         }
@@ -125,8 +126,6 @@ private slots:
     void liveDittoSupportFiles_data() {
         QTest::addColumn<QString>("endpoint");
         QTest::newRow("modelscope")<<QString("https://modelscope.cn");
-        QTest::newRow("huggingface")<<QString("https://huggingface.co");
-        QTest::newRow("automatic")<<QString("auto");
     }
     void liveDittoSupportFiles() {
         const auto evidence=qEnvironmentVariable("MOSS_LIVE_DITTO_SUPPORT");
@@ -305,29 +304,38 @@ private slots:
         QSettings().setValue("sfxModelTermsVersion","obsolete");
         QVERIFY(!manager.sfxTermsAccepted());
     }
-    void obsoleteMirrorPreferenceMigratesToAuto() {
-        QSettings().setValue("modelEndpoint","https://hf-mirror.com");
-        ModelManager manager(nullptr,catalog());QCOMPARE(manager.endpoint(),QString("auto"));
-        QCOMPARE(QSettings().value("modelEndpoint").toString(),QString("auto"));
-        QVERIFY(!manager.sourceValues().contains("https://hf-mirror.com"));
-        QVERIFY(manager.sourceValues().contains("https://modelscope.cn"));
-        manager.setEndpoint("https://hf-mirror.com");QCOMPARE(manager.endpoint(),QString("auto"));
-    }
-    void publicChannelDefaultsToAutoAndRejectsApple() {
+    void publicChannelUsesModelScopeWithPinnedFallback() {
         ModelManager first(nullptr,catalog());
-        QCOMPARE(first.endpoint(),QString("auto"));
+        QCOMPARE(first.endpoint(),QString("https://modelscope.cn"));
+        QCOMPARE(first.sourceValues(),QStringList{"https://modelscope.cn"});
+        QCOMPARE(first.sourceNames(),QStringList{"ModelScope · modelscope.cn"});
         QCOMPARE(first.imageQuant(),QString("Q4_K"));
         QVERIFY(!first.sourceValues().contains("apple-assets"));
         first.setEndpoint("apple-assets");
-        QCOMPARE(first.endpoint(),QString("auto"));
+        QCOMPARE(first.endpoint(),QString("https://modelscope.cn"));
         first.setEndpoint("https://huggingface.co");
+        QCOMPARE(first.endpoint(),QString("https://modelscope.cn"));
+        first.setEndpoint("https://hf-mirror.com");
+        QCOMPARE(first.endpoint(),QString("https://modelscope.cn"));
         first.setImageQuant("Q8_0");
         ModelManager restored(nullptr,catalog());
-        QCOMPARE(restored.endpoint(),QString("https://huggingface.co"));
+        QCOMPARE(restored.endpoint(),QString("https://modelscope.cn"));
         QCOMPARE(restored.imageQuant(),QString("Q8_0"));
-        QSettings().setValue("modelEndpoint","https://untrusted.invalid");
-        ModelManager invalid(nullptr,catalog());
-        QCOMPARE(invalid.endpoint(),QString("auto"));
+    }
+    void oldDownloadSettingsMigrateToModelScope() {
+        for(const auto old:{"auto","https://hf-mirror.com","https://huggingface.co","https://untrusted.invalid"}) {
+            QSettings().setValue("modelEndpoint",old);
+            ModelManager manager(nullptr,catalog());
+            QCOMPARE(manager.endpoint(),QString("https://modelscope.cn"));
+            QCOMPARE(QSettings().value("modelEndpoint").toString(),manager.endpoint());
+        }
+    }
+    void missingAllProviderUrlsFailsWithoutNetwork() {
+        QTemporaryDir root;ModelManager manager(nullptr,catalog().replace("modelscopeUrl","omittedModelscopeUrl").replace("\"repo\"","\"omittedRepo\""));manager.setRoot(root.path());
+        manager.requestDownload("ditto");QSignalSpy done(&manager,&ModelManager::completed);
+        manager.startDownload();QTRY_COMPARE_WITH_TIMEOUT(done.count(),1,3000);
+        QVERIFY(!done[0][0].toBool());QVERIFY(manager.error().contains("下载地址缺失"));
+        QVERIFY(!manager.ready("ditto"));
     }
     void missingModelsAskWithoutCreatingFiles() {
         QTemporaryDir root;ModelManager m(nullptr,catalog());m.setRoot(root.path());QSignalSpy prompt(&m,&ModelManager::downloadRequested);
@@ -363,7 +371,7 @@ private slots:
             socket->write(head+"Content-Length: "+QByteArray::number(body.size())+"\r\nConnection: close\r\n\r\n"+body);socket->disconnectFromHost();});connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);});
         ModelManager m(nullptr,catalog(),QUrl(QString("http://127.0.0.1:%1/").arg(server.serverPort())));m.setRoot(root.path());
         write(root.filePath("ditto/model.bin.part"),payload.left(5));m.requestDownload("ditto");m.startDownload();QTRY_VERIFY_WITH_TIMEOUT(!m.busy(),5000);
-        QVERIFY2(m.error().isEmpty(),qPrintable(m.error()));QVERIFY(request.contains("Range: bytes=5-"));QCOMPARE(read(root.filePath("ditto/model.bin")),payload);QVERIFY(!QFileInfo::exists(root.filePath("ditto/model.bin.part")));
+        QVERIFY2(m.error().isEmpty(),qPrintable(m.error()));QVERIFY2(request.toLower().contains("range: bytes=5-"),request.constData());QCOMPARE(read(root.filePath("ditto/model.bin")),payload);QVERIFY(!QFileInfo::exists(root.filePath("ditto/model.bin.part")));
     }
     void badHashNeverInstalls() {
         QTemporaryDir root;QTcpServer server;QVERIFY(server.listen(QHostAddress::LocalHost));

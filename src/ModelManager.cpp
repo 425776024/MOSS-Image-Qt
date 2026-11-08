@@ -118,10 +118,10 @@ ModelManager::ModelManager(QObject *parent,QByteArray catalog,QUrl testTransport
     m_endpoint="apple-assets";
     settings.setValue("storeModelEndpoint",m_endpoint);
 #else
-    m_endpoint=settings.value("modelEndpoint","auto").toString();
+    m_endpoint=settings.value("modelEndpoint","https://modelscope.cn").toString();
 #endif
-    if(m_endpoint=="https://hf-mirror.com") {
-        m_endpoint="auto";
+    if(!sourceValues().contains(m_endpoint)) {
+        m_endpoint=sourceValues().first();
 #ifdef MOSS_APP_STORE
         settings.setValue("storeModelEndpoint",m_endpoint);
 #else
@@ -144,14 +144,14 @@ QStringList ModelManager::sourceNames() const {
 #ifdef MOSS_APP_STORE
     return {"Apple · App Store 资源包"};
 #else
-    return {"自动选择", "ModelScope · modelscope.cn", "Hugging Face · huggingface.co"};
+    return {"ModelScope · modelscope.cn"};
 #endif
 }
 QStringList ModelManager::sourceValues() const {
 #ifdef MOSS_APP_STORE
     return {"apple-assets"};
 #else
-    return {"auto", "https://modelscope.cn", "https://huggingface.co"};
+    return {"https://modelscope.cn"};
 #endif
 }
 void ModelManager::setEndpoint(QString value) {
@@ -472,6 +472,9 @@ void ModelManager::transfer(ModelAsset a) {
     QList<QUrl> urls;
     if(!m_testTransport.isEmpty())urls<<m_testTransport.resolved(QUrl(a.file));
     else urls=a.downloadUrls(m_endpoint);
+    if(urls.isEmpty()) {
+        transport->deleteLater();fail(a,"资源下载地址缺失，请更新应用后重试");return;
+    }
     m_status="正在下载…";emit changed();
     m_rateBytes[a.path]=ModelHttpDownload::savedBytes(path,a.transferBytes(),a.transferSha256());
     connect(transport,&ModelHttpDownload::progress,this,[this,a](qint64 bytes){observeDownload(a.path,bytes);updateProgress(a.path,std::min(bytes,a.bytes));});
@@ -481,7 +484,7 @@ void ModelManager::transfer(ModelAsset a) {
         if(!error.isEmpty()){fail(a,error+"\n文件："+a.path+"\n下载源："+m_endpoint);return;}
         checkFile(a,path,true);
     });
-    transport->start(path,a.transferBytes(),a.transferSha256(),urls,a.repo+"/"+a.revision,m_endpoint=="auto");
+    transport->start(path,a.transferBytes(),a.transferSha256(),urls,a.repo+"/"+a.revision,false);
 }
 QString ModelManager::deletionDescription(QString id) const {
     QString description="删除后可重新下载。只处理此组清单文件，保留作品和未登记的本地文件。";

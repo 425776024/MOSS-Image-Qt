@@ -84,11 +84,10 @@ private slots:
         activate(toggle);QTRY_VERIFY(dialog->property("detailsExpanded").toBool());
         auto detail=window->findChild<QQuickItem *>("downloadErrorDetail");QVERIFY(detail);QVERIFY(detail->isVisible());
         QCOMPARE(detail->property("text").toString(),manager.error());QVERIFY(detail->property("readOnly").toBool());
-        auto change=window->findChild<QQuickItem *>("changeDownloadSource");QVERIFY(change);activate(change);
-        QTRY_VERIFY(dialog->property("sourceExpanded").toBool());
+        auto change=window->findChild<QQuickItem *>("changeDownloadSource");QVERIFY(change);QVERIFY(!change->isVisible());
         auto confirm=window->findChild<QQuickItem *>("confirmModelDownload");QVERIFY(confirm);
         const QRectF bounds(QPointF(),window->size());
-        for(auto item:{toggle,detail,change,confirm})QVERIFY(bounds.contains(QRectF(item->mapToScene(QPointF()),item->size())));
+        for(auto item:{toggle,detail,confirm})QVERIFY(bounds.contains(QRectF(item->mapToScene(QPointF()),item->size())));
         const auto evidence=qEnvironmentVariable("MOSS_DOWNLOAD_DIALOG_EVIDENCE");
         if(!evidence.isEmpty()){QVERIFY(QDir().mkpath(evidence));QTest::qWait(100);QVERIFY(window->grabWindow().save(evidence+"/failure-"+language+"-"+appearance+".png"));}
         retry=true;activate(confirm);QTRY_VERIFY_WITH_TIMEOUT(!manager.busy()&&manager.ready("ditto"),4000);
@@ -152,25 +151,12 @@ private slots:
         QVERIFY(manager.busy());QVERIFY(!manager.paused());
         manager.cancel();QTRY_VERIFY(!manager.busy());
         auto change=window->findChild<QQuickItem *>("changeDownloadSource");QVERIFY(change);
-        change->forceActiveFocus(Qt::TabFocusReason);QTest::keyClick(window,Qt::Key_Space);
-        QTRY_VERIFY(dialog->property("sourceExpanded").toBool());
-        QTRY_VERIFY(dialog->property("opened").toBool());
-        auto choices=window->findChild<QQuickItem *>("downloadSourceChoices");QVERIFY(choices);QTRY_VERIFY(choices->isVisible());
+        QVERIFY(!change->isVisible());
+        QVERIFY(!dialog->property("sourceExpanded").toBool());
+        auto choices=window->findChild<QQuickItem *>("downloadSourceChoices");QVERIFY(choices);QVERIFY(!choices->isVisible());
         auto confirm=window->findChild<QQuickItem *>("confirmModelDownload");QVERIFY(confirm);QVERIFY(confirm->isVisible());
         QVERIFY(confirm->isEnabled());
         const QRectF bounds(QPointF(0,0),window->size());
-        std::function<QQuickItem *(QQuickItem *,const QString &)> findItem=[&](QQuickItem *parent,const QString &name)->QQuickItem * {
-            if(parent->objectName()==name)return parent;
-            for(auto child:parent->childItems())if(auto found=findItem(child,name))return found;
-            return nullptr;
-        };
-        for(int i=0;i<manager.sourceValues().size();++i) {
-            auto radio=findItem(window->contentItem(),"downloadSource-"+QString::number(i));QVERIFY(radio);QVERIFY(radio->isVisible());
-            QVERIFY(bounds.contains(QRectF(radio->mapToScene(QPointF()),radio->size())));
-            radio->forceActiveFocus(Qt::TabFocusReason);QTest::keyClick(window,Qt::Key_Space);
-            QCOMPARE(manager.endpoint(),manager.sourceValues()[i]);
-            for(int j=0;j<manager.sourceValues().size();++j)QCOMPARE(findItem(window->contentItem(),"downloadSource-"+QString::number(j))->property("checked").toBool(),i==j);
-        }
         QVERIFY(bounds.contains(QRectF(confirm->mapToScene(QPointF()),confirm->size())));
         if(!capture.isEmpty()){QVERIFY(QDir().mkpath(capture));QVERIFY(window->grabWindow().save(capture+"/"+language+"-"+appearance+".png"));}
         resume=true;confirm->forceActiveFocus(Qt::TabFocusReason);

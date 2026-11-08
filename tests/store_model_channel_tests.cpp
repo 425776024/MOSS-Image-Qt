@@ -68,7 +68,7 @@ private slots:
         QStandardPaths::setTestModeEnabled(true);
         const QByteArray catalog=R"({"groups":[{"id":"isolated-test"}],"files":[{"group":"isolated-test","path":"isolated-channel-test.bin","file":"never-fetch","sha256":"test","bytes":10,"appleOnly":true}]})";
         ModelManager m(nullptr,catalog,QUrl("http://127.0.0.1:1/"));
-        m.setEndpoint("https://huggingface.co");QSignalSpy done(&m,&ModelManager::completed);
+        m.setEndpoint("https://modelscope.cn");QSignalSpy done(&m,&ModelManager::completed);
         m.requestDownload("isolated-test");m.startDownload();
         QTRY_COMPARE(done.count(),1);QVERIFY(!done.at(0).at(0).toBool());
         QVERIFY(m.error().contains("App Store"));QVERIFY(!m.error().contains("镜像"));

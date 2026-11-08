@@ -615,14 +615,10 @@ int main(int argc,char **argv){
                 if(app.platformName()!="offscreen"||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT")){app.exit(5);return;}
                 auto models=homeWindow->findChild<QObject *>("homeModels");
                 auto choice=models?models->findChild<QQuickItem *>("modelSourceChoice"):nullptr;
-                if(!choice||studio.models()->imageQuant()!="Q4_K"){app.exit(5);return;}
-                const auto key=[&](Qt::Key code){QKeyEvent press(QEvent::KeyPress,code,Qt::NoModifier),release(QEvent::KeyRelease,code,Qt::NoModifier);QCoreApplication::sendEvent(mainWindow,&press);QCoreApplication::sendEvent(mainWindow,&release);};
-                choice->forceActiveFocus(Qt::TabFocusReason);key(Qt::Key_Space);key(Qt::Key_End);key(Qt::Key_Return);
-                if(studio.models()->endpoint()!="https://huggingface.co"){app.exit(5);return;}
-                choice->forceActiveFocus();key(Qt::Key_Space);key(Qt::Key_Home);key(Qt::Key_Return);
-                if(studio.models()->endpoint()!="auto"){app.exit(5);return;}
-                key(Qt::Key_Space);key(Qt::Key_Escape);key(Qt::Key_Tab);
-                qInfo()<<"Download source keyboard check passed";
+                if(!choice||choice->isVisible()||studio.models()->imageQuant()!="Q4_K"||
+                   studio.models()->sourceValues()!=QStringList{"https://modelscope.cn"}||
+                   studio.models()->endpoint()!="https://modelscope.cn") {app.exit(5);return;}
+                qInfo()<<"Single download source: redundant selector hidden";
             });
             if(args.contains("--check-scope-keyboard"))QTimer::singleShot(1000,&app,[&]{
                 if(app.platformName()!="offscreen"){app.exit(5);return;}
@@ -919,7 +915,7 @@ int main(int argc,char **argv){
     if(args.contains("--download-model-test")){
         if(!qEnvironmentVariableIsSet("MOSS_MODEL_ROOT")||!qEnvironmentVariableIsSet("MOSS_SETTINGS_ROOT"))return 12;
         auto argument=[&](QString key,QString fallback){const int at=args.indexOf(key);return at>=0&&at+1<args.size()?args[at+1]:fallback;};
-        studio.models()->setEndpoint(argument("--model-endpoint","https://huggingface.co"));
+        studio.models()->setEndpoint(argument("--model-endpoint","https://modelscope.cn"));
         QObject::connect(studio.models(),&ModelManager::completed,&app,[&](bool success){qInfo()<<studio.models()->status()<<studio.models()->error();app.exit(success?0:13);});
         const auto group=argument("--model-group","voice");
         QTimer::singleShot(100,&app,[&,group]{studio.models()->requestDownload(group);studio.models()->startDownload();});
