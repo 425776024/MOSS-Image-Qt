@@ -1,6 +1,6 @@
 # 新身数字人 · XAvatar
 
-[**从 Mac App Store 下载新身数字人**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
+[**从 Mac App Store 下载新身数字人**](https://apps.apple.com/app/id6825373745)
 
 **简体中文** · [English](README-en.md)
 
