@@ -1,5 +1,7 @@
 # 新身数字人 · XAvatar
 
+[**从 Mac App Store 下载新身数字人**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
+
 **简体中文** · [English](README-en.md)
 
 本地 AI 创作工具，用对话完成图像、声音、数字人视频与成片制作。
@@ -23,7 +25,11 @@
 
 最新界面截图与预览录屏（2026-11-07，build 9）。录屏展示作品、构图、图像编辑、数字人和声音页面；不包含 build 10 新增的购买对话框。
 
-[观看中文预览视频 · 24 秒](assets/showcase/app-preview-zh.mp4) · [英文预览视频](assets/showcase/app-preview-en.mp4)
+**中文界面预览 · 24 秒，点击播放**
+
+https://github.com/user-attachments/assets/ed665219-ddf3-4031-bbbe-20ff93277b8a
+
+[英文预览](README-en.md#screenshots) · [下载中文视频](assets/showcase/app-preview-zh.mp4)
 
 | 作品与图像创作 | 内置声音 |
 | --- | --- |
@@ -62,8 +68,6 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 [下载原始视频一](assets/showcase/avatar-demo-01.mp4) · [下载原始视频二](assets/showcase/avatar-demo-02.mp4)
 
 ## 下载
-
-[**从 Mac App Store 下载新身数字人**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
 
 [**前往 Releases 下载安装包、查看更新与校验和**](https://github.com/425776024/MOSS-Image-Qt/releases)
 

@@ -1,5 +1,7 @@
 # XAvatar · 新身数字人
 
+[**Download XAvatar on the Mac App Store**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
+
 [简体中文](README.md) · **English**
 
 A local AI desktop app for creating images, voices, talking avatars, and finished videos through conversation.
@@ -23,7 +25,11 @@ A local AI desktop app for creating images, voices, talking avatars, and finishe
 
 Latest screenshots and UI recordings (2026-11-07, build 9). The recordings show projects, composition, image editing, avatars and voices; they do not include the purchase dialog added in build 10.
 
-[Watch English preview · 24 seconds](assets/showcase/app-preview-en.mp4) · [Chinese preview](assets/showcase/app-preview-zh.mp4)
+**English UI preview · 24 seconds, click to play**
+
+https://github.com/user-attachments/assets/b503ebae-7188-4945-9c03-cde3605dbd8f
+
+[Chinese preview](README.md#界面预览) · [Download English video](assets/showcase/app-preview-en.mp4)
 
 | Projects and images | Built-in voices |
 | --- | --- |
@@ -62,8 +68,6 @@ https://github.com/user-attachments/assets/cefbd02c-c2e2-4b03-85a7-4597a5fbbea8
 [Download original video 1](assets/showcase/avatar-demo-01.mp4) · [Download original video 2](assets/showcase/avatar-demo-02.mp4)
 
 ## Download
-
-[**Download XAvatar on the Mac App Store**](https://apps.apple.com/us/app/xavatar-by-ffclip/id6825373745)
 
 [**Get installers, release notes, and checksums**](https://github.com/425776024/MOSS-Image-Qt/releases)
 
